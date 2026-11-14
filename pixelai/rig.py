@@ -5,6 +5,90 @@ from pixelai.canvas import Canvas
 from pixelai.color import RGBA, brighten as _brighten, darken as _darken, parse_color
 
 
+def draw_portrait_rig(
+    canvas: Canvas,
+    x: int,
+    y: int,
+    palette: dict[str, RGBA],
+    op: dict[str, Any],
+) -> None:
+    """Draw a deterministic bust portrait with a cozy, clean-pixel silhouette.
+
+    This is intentionally separate from ``char_rig``: portraits need a larger
+    facial design language, asymmetric hair, shoulders, clothing planes and
+    explicit feature scale rather than a tiny walk-cycle body.
+    """
+    w = max(48, int(op.get("width", 64)))
+    h = max(64, int(op.get("height", 80)))
+    scale = min(w, h) / 64.0
+    def p(name: str, fallback: str) -> RGBA:
+        return parse_color(op.get(name, fallback), palette)
+    ink = p("ink", "#2b1b2b")
+    skin = p("skin", "#f2c38f")
+    skin_l = p("skin_l", "#ffe0aa")
+    skin_d = p("skin_d", "#b96d5c")
+    hair = p("hair", "#6b3f35")
+    hair_l = p("hair_l", "#925442")
+    hair_d = p("hair_d", "#402538")
+    shirt = p("shirt", "#d9e5d2")
+    garment = p("garment", "#704b3b")
+    garment_d = p("garment_d", "#4b302e")
+    accent = p("accent", "#d69b4b")
+    beard = p("beard_color", "#4b302e")
+    bg = p("background", "#d6e6cf")
+
+    def sx(v: float) -> int: return x + round(v * scale)
+    def sy(v: float) -> int: return y + round(v * scale)
+    def pts(values: list[tuple[float, float]]) -> list[tuple[int, int]]:
+        return [(sx(px), sy(py)) for px, py in values]
+
+    if op.get("fill_background", False):
+        prev_no_outline = canvas.mark_no_outline
+        canvas.mark_no_outline = True
+        canvas.draw_rect(sx(0), sy(0), round(w), round(h), bg, filled=True)
+        canvas.mark_no_outline = prev_no_outline
+    # Shoulders first: broad, readable planes, with a small rim highlight.
+    canvas.draw_polygon(pts([(4, 64), (9, 47), (20, 39), (44, 39), (56, 47), (61, 64)]), shirt, filled=True)
+    canvas.draw_polygon(pts([(14, 64), (17, 45), (24, 39), (40, 39), (48, 45), (52, 64)]), garment, filled=True)
+    canvas.draw_polygon(pts([(17, 46), (24, 39), (28, 44), (24, 49)]), garment_d, filled=True)
+    canvas.draw_polygon(pts([(47, 46), (40, 39), (36, 44), (40, 49)]), garment_d, filled=True)
+    canvas.draw_rect(sx(29), sy(50), max(2, round(7 * scale)), max(2, round(5 * scale)), accent, filled=True, bevel=True)
+
+    # Cropped forearms give the bust a lived-in, characterful pose instead of
+    # ending as a flat triangular torso. Hands remain simple pixel clusters.
+    canvas.draw_polygon(pts([(5, 63), (7, 51), (13, 47), (18, 51), (15, 57), (13, 63)]), shirt, filled=True)
+    canvas.draw_polygon(pts([(59, 63), (57, 51), (51, 47), (46, 51), (49, 57), (51, 63)]), shirt, filled=True)
+    canvas.draw_polygon(pts([(11, 54), (14, 51), (18, 53), (16, 58), (12, 58)]), skin, filled=True)
+    canvas.draw_polygon(pts([(53, 54), (50, 51), (46, 53), (48, 58), (52, 58)]), skin, filled=True)
+
+    # Neck and face with a deliberate jaw taper instead of an ellipse-only head.
+    canvas.draw_polygon(pts([(27, 35), (37, 35), (39, 44), (34, 48), (26, 44)]), skin, filled=True)
+    canvas.draw_polygon(pts([(18, 17), (25, 9), (39, 9), (47, 18), (45, 35), (37, 42), (27, 42), (19, 35)]), skin, filled=True)
+    canvas.draw_polygon(pts([(19, 30), (24, 37), (29, 41), (25, 39), (20, 34)]), skin_l, filled=True)
+    canvas.draw_polygon(pts([(40, 36), (45, 29), (44, 36), (38, 41)]), skin_d, filled=True)
+
+    # Hair mass and side locks; leave the face plane unobstructed.
+    canvas.draw_polygon(pts([(16, 22), (14, 14), (20, 6), (32, 2), (45, 7), (50, 17), (45, 27), (42, 17), (36, 11), (27, 10), (21, 16), (20, 28)]), hair, filled=True)
+    canvas.draw_polygon(pts([(16, 14), (21, 6), (32, 2), (35, 6), (24, 10), (19, 19)]), hair_l, filled=True)
+    canvas.draw_polygon(pts([(38, 5), (45, 8), (50, 17), (45, 27), (42, 16)]), hair_d, filled=True)
+    canvas.draw_polygon(pts([(15, 19), (19, 24), (20, 39), (16, 34)]), hair_d, filled=True)
+
+    if op.get("beard", False):
+        canvas.draw_polygon(pts([(25, 33), (29, 35), (36, 34), (38, 37), (34, 41), (28, 40), (25, 37)]), beard, filled=True)
+        canvas.draw_polygon(pts([(28, 34), (31, 35), (35, 34), (33, 37), (29, 37)]), skin_d, filled=True)
+
+    # Large eyes, brows, nose and a one-pixel mouth scaled consistently.
+    eye_y = sy(22)
+    for eye_x in (24, 38):
+        canvas.draw_rect(sx(eye_x - 2), eye_y, max(3, round(6 * scale)), max(3, round(4 * scale)), skin_l, filled=True)
+        canvas.draw_rect(sx(eye_x), eye_y, max(2, round(2.5 * scale)), max(3, round(3 * scale)), ink, filled=True)
+        canvas.set_pixel(sx(eye_x), eye_y, skin_l)
+    canvas.draw_line(sx(23), sy(19), sx(29), sy(18), hair_d)
+    canvas.draw_line(sx(36), sy(18), sx(42), sy(19), hair_d)
+    canvas.draw_rect(sx(31), sy(27), max(1, round(5 * scale)), max(1, round(2 * scale)), skin_d, filled=True)
+    canvas.draw_line(sx(30), sy(34), sx(36), sy(34), skin_d)
+
+
 def draw_char_rig(
     canvas: Canvas,
     x: int,
