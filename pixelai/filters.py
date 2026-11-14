@@ -112,3 +112,21 @@ def shade(canvas: Canvas, amount: float = 0.25) -> Canvas:
                 c = _adjust(c, 1.0 - amount)
             out.set_pixel(x, y, c)
     return out
+
+
+def drop_shadow(
+    canvas: Canvas, dx: int = 1, dy: int = 2, color: RGBA = (33, 24, 27, 96)
+) -> Canvas:
+    """Cast a silhouette drop shadow onto transparent background pixels."""
+    out = Canvas(canvas.width, canvas.height)
+    _copy_meta(canvas, out)
+    for y in range(canvas.height):
+        for x in range(canvas.width):
+            if canvas.get_pixel(x, y)[3] > 0:
+                out.set_pixel(x + dx, y + dy, color)
+    for y in range(canvas.height):
+        for x in range(canvas.width):
+            c = canvas.get_pixel(x, y)
+            if c[3] > 0:
+                out.set_pixel(x, y, c)
+    return out

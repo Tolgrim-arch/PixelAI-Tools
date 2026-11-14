@@ -125,7 +125,6 @@ def _execute_ops(
         elif kind == "iso_box":
             rx = int(op["rx"])
             ry = int(op.get("ry", max(1, rx // 2)))
-            edge = parse_color(op["edge"], palette) if "edge" in op else None
             iso.draw_iso_box(
                 canvas,
                 int(op["cx"]),
@@ -136,13 +135,13 @@ def _execute_ops(
                 parse_color(op["top"], palette),
                 parse_color(op["left"], palette),
                 parse_color(op["right"], palette),
-                edge_color=edge,
+                bevel=bool(op.get("bevel", True)),
+                ground_shadow=int(op.get("ground_shadow", 0)),
             )
         elif kind == "iso_roof":
             rx = int(op["rx"])
             ry = int(op.get("ry", max(1, rx // 2)))
             gable = parse_color(op["gable"], palette) if "gable" in op else None
-            ridge = parse_color(op["ridge"], palette) if "ridge" in op else None
             iso.draw_iso_roof(
                 canvas,
                 int(op["cx"]),
@@ -154,11 +153,10 @@ def _execute_ops(
                 parse_color(op["right"], palette),
                 style=op.get("style", "pyramid"),
                 gable_color=gable,
-                ridge_color=ridge,
                 eave_shadow=bool(op.get("eave_shadow", True)),
+                bevel=bool(op.get("bevel", True)),
             )
         elif kind == "iso_wall_rect":
-            border = parse_color(op["border"], palette) if "border" in op else None
             iso.draw_iso_wall_rect(
                 canvas,
                 op.get("face", "left"),
@@ -167,8 +165,8 @@ def _execute_ops(
                 int(op["w"]),
                 int(op["h"]),
                 parse_color(op["color"], palette),
-                border=border,
                 arch=bool(op.get("arch", False)),
+                recessed=bool(op.get("recessed", True)),
             )
         elif kind == "iso_structure":
             iso.draw_iso_structure(
@@ -179,9 +177,42 @@ def _execute_ops(
                 palette,
                 step_x=int(op.get("step_x", 2)),
                 step_y=int(op.get("step_y", 1)),
+                default_bevel=bool(op.get("bevel", True)),
+                default_ground_shadow=int(op.get("ground_shadow", 2)),
             )
         else:
             raise ValueError(f"Unknown op: {kind!r}")
+
+
+def _resolve_post_ops(
+    spec: dict[str, Any], palette: dict[str, RGBA]
+) -> list[dict[str, Any]]:
+    """Enforce 'ext_outline' (default when set) or 'lineless' (no external outline)."""
+    style = spec.get("style")
+    raw_post = list(spec.get("post", []))
+
+    if style == "lineless":
+        return [p for p in raw_post if p.get("op") != "outline"]
+
+    if style == "ext_outline" and not any(p.get("op") == "outline" for p in raw_post):
+        default_col = spec.get(
+            "outline_color",
+            "ink" if "ink" in palette else ("0" if "0" in palette else "#21181b"),
+        )
+        outline_op = {"op": "outline", "color": default_col}
+        # Insert before 'scale' so the outline stays 1px in art resolution
+        out: list[dict[str, Any]] = []
+        inserted = False
+        for p in raw_post:
+            if p.get("op") == "scale" and not inserted:
+                out.append(outline_op)
+                inserted = True
+            out.append(p)
+        if not inserted:
+            out.append(outline_op)
+        return out
+
+    return raw_post
 
 
 def _apply_post(
@@ -196,6 +227,18 @@ def _apply_post(
                 selout=bool(post.get("selout", False)),
                 selout_amount=float(post.get("selout_amount", 0.55)),
                 auto_pad=bool(post.get("auto_pad", False)),
+            )
+        elif kind == "drop_shadow":
+            col = (
+                parse_color(post["color"], palette)
+                if "color" in post
+                else (33, 24, 27, 96)
+            )
+            canvas = filters.drop_shadow(
+                canvas,
+                dx=int(post.get("dx", 1)),
+                dy=int(post.get("dy", 2)),
+                color=col,
             )
         elif kind == "pad":
             canvas = filters.pad(canvas, int(post.get("size", 1)))
@@ -226,7 +269,7 @@ def run_frames(spec: dict[str, Any]) -> tuple[list[Canvas], list[str]]:
         defs[name] = dc
 
     base_ops = spec.get("ops", [])
-    post_ops = spec.get("post", [])
+    post_ops = _resolve_post_ops(spec, palette)
     raw_frames = spec.get("frames")
 
     if not raw_frames:

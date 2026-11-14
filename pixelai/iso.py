@@ -14,6 +14,15 @@ def _darken(c: RGBA, factor: float = 0.72) -> RGBA:
     )
 
 
+def _brighten(c: RGBA, factor: float = 1.16) -> RGBA:
+    return (
+        min(255, int(c[0] * factor + 8)),
+        min(255, int(c[1] * factor + 8)),
+        min(255, int(c[2] * factor + 8)),
+        c[3],
+    )
+
+
 def draw_iso_tile(
     canvas: Canvas,
     cx: int,
@@ -45,10 +54,22 @@ def draw_iso_box(
     left_color: RGBA,
     right_color: RGBA,
     edge_color: RGBA | None = None,
+    bevel: bool = True,
+    ground_shadow: int = 0,
 ) -> None:
-    """Draw a 2:1 isometric 3D box with optional crease/edge lines."""
+    """Draw a lineless 2:1 isometric 3D box with specular bevels and optional ground shadow."""
+    _ = edge_color  # Internal outlines are disabled by design; use lineless bevels
     if rx <= 0 or ry <= 0 or h < 0:
         return
+
+    if ground_shadow > 0 and h > 0:
+        for dx in range(rx + 1):
+            y_base = cy + ry - int(round(ry * dx / rx)) + h - 1
+            for s in range(1, ground_shadow + 1):
+                gx, gy = cx + dx + s, y_base + (s // 2)
+                existing = canvas.get_pixel(gx, gy)
+                if existing[3] > 0:
+                    canvas.set_pixel(gx, gy, _darken(existing, 0.75))
 
     if h > 0:
         for dx in range(rx + 1):
@@ -57,17 +78,17 @@ def draw_iso_box(
             y_right = cy + ry - int(round(ry * dx / rx))
             canvas.draw_line(cx + dx, y_right, cx + dx, y_right + h - 1, right_color)
 
-    draw_iso_tile(canvas, cx, cy, rx, ry, top_color, border=edge_color)
+    draw_iso_tile(canvas, cx, cy, rx, ry, top_color, border=None)
 
-    if edge_color is not None and h > 0:
-        canvas.draw_line(cx - rx, cy, cx - rx, cy + h - 1, edge_color)
-        canvas.draw_line(cx + rx, cy, cx + rx, cy + h - 1, edge_color)
-        canvas.draw_line(cx, cy + ry, cx, cy + ry + h - 1, edge_color)
+    if bevel and h > 0:
+        hl_top = _brighten(top_color, 1.12)
+        hl_left = _brighten(left_color, 1.14)
         for dx in range(rx + 1):
-            yl = cy + int(round(ry * dx / rx)) + h - 1
-            yr = cy + ry - int(round(ry * dx / rx)) + h - 1
-            canvas.set_pixel(cx - rx + dx, yl, edge_color)
-            canvas.set_pixel(cx + dx, yr, edge_color)
+            yl = cy + int(round(ry * dx / rx))
+            yr = cy + ry - int(round(ry * dx / rx))
+            canvas.set_pixel(cx - rx + dx, yl, hl_top)
+            canvas.set_pixel(cx + dx, yr, hl_top)
+        canvas.draw_line(cx, cy + ry + 1, cx, cy + ry + h - 1, hl_left)
 
 
 def _apply_eave_shadow(canvas: Canvas, cx: int, cy: int, rx: int, ry: int) -> None:
@@ -96,8 +117,10 @@ def draw_iso_roof(
     gable_color: RGBA | None = None,
     ridge_color: RGBA | None = None,
     eave_shadow: bool = True,
+    bevel: bool = True,
 ) -> None:
-    """Draw a pitched isometric roof ('pyramid', 'gable_left', or 'gable_right')."""
+    """Draw a lineless pitched isometric roof ('pyramid', 'gable_left', or 'gable_right')."""
+    _ = ridge_color  # Internal dark ridges are disabled; use lineless specular bevels
     if rx <= 0 or ry <= 0 or h <= 0:
         return
     apex_y = cy - h
@@ -112,16 +135,12 @@ def draw_iso_roof(
         canvas.draw_polygon(
             [(cx + rx, cy), (cx, cy + ry), (cx, apex_y)], right_color
         )
-        if ridge_color is not None:
-            canvas.draw_line(cx, apex_y, cx, cy + ry, ridge_color)
-            canvas.draw_line(cx - rx, cy, cx, apex_y, ridge_color)
-            canvas.draw_line(cx + rx, cy, cx, apex_y, ridge_color)
-            canvas.draw_line(cx - rx, cy, cx, cy + ry, ridge_color)
-            canvas.draw_line(cx, cy + ry, cx + rx, cy, ridge_color)
+        if bevel:
+            canvas.draw_line(cx, apex_y, cx, cy + ry, _brighten(left_color, 1.12))
 
     elif style == "gable_left":
         g_col = gable_color or left_color
-        half_rx = (rx // 2)
+        half_rx = rx // 2
         half_ry = max(1, half_rx // 2)
         front_cx, front_cy = cx - half_rx, cy + ry - half_ry
         back_cx, back_cy = cx + rx - half_rx, cy - half_ry
@@ -138,15 +157,14 @@ def draw_iso_roof(
             [(cx - rx, cy), (cx, cy + ry), (front_cx, front_cy - h)],
             g_col,
         )
-        if ridge_color is not None:
-            canvas.draw_line(front_cx, front_cy - h, back_cx, back_cy - h, ridge_color)
-            canvas.draw_line(cx - rx, cy, front_cx, front_cy - h, ridge_color)
-            canvas.draw_line(cx, cy + ry, front_cx, front_cy - h, ridge_color)
-            canvas.draw_line(cx, cy + ry, cx + rx, cy, ridge_color)
+        if bevel:
+            hl = _brighten(g_col, 1.14)
+            canvas.draw_line(front_cx, front_cy - h, back_cx, back_cy - h, hl)
+            canvas.draw_line(cx, cy + ry, front_cx, front_cy - h, hl)
 
     elif style == "gable_right":
         g_col = gable_color or right_color
-        half_rx = (rx // 2)
+        half_rx = rx // 2
         half_ry = max(1, half_rx // 2)
         front_cx, front_cy = cx + half_rx, cy + ry - half_ry
         back_cx, back_cy = cx - rx + half_rx, cy - half_ry
@@ -163,11 +181,10 @@ def draw_iso_roof(
             [(cx, cy + ry), (cx + rx, cy), (front_cx, front_cy - h)],
             g_col,
         )
-        if ridge_color is not None:
-            canvas.draw_line(back_cx, back_cy - h, front_cx, front_cy - h, ridge_color)
-            canvas.draw_line(cx, cy + ry, front_cx, front_cy - h, ridge_color)
-            canvas.draw_line(cx + rx, cy, front_cx, front_cy - h, ridge_color)
-            canvas.draw_line(cx - rx, cy, cx, cy + ry, ridge_color)
+        if bevel:
+            hl = _brighten(left_color, 1.14)
+            canvas.draw_line(back_cx, back_cy - h, front_cx, front_cy - h, hl)
+            canvas.draw_line(cx, cy + ry, front_cx, front_cy - h, hl)
     else:
         raise ValueError(f"Unknown iso_roof style: {style!r}")
 
@@ -182,11 +199,14 @@ def draw_iso_wall_rect(
     color: RGBA,
     border: RGBA | None = None,
     arch: bool = False,
+    recessed: bool = True,
 ) -> None:
-    """Draw a rectangle sheared to a 2:1 isometric 'left' or 'right' wall with optional border/arch."""
+    """Draw a rectangle sheared to a 2:1 isometric 'left' or 'right' wall with lineless recessed depth by default."""
+    _ = border  # Internal dark borders disabled in favor of lineless recessed depth
     if w <= 0 or h <= 0:
         return
     slope = 1 if face == "left" else -1
+    recess_col = _darken(color, 0.68)
     for dx in range(w):
         sy = y + (dx * slope) // 2
         top_offset = 1 if (arch and w >= 3 and (dx == 0 or dx == w - 1)) else 0
@@ -194,11 +214,11 @@ def draw_iso_wall_rect(
         y1 = sy + h - 1
         if y0 <= y1:
             canvas.draw_line(x + dx, y0, x + dx, y1, color)
-            if border is not None:
-                canvas.set_pixel(x + dx, y0, border)
-                canvas.set_pixel(x + dx, y1, border)
-                if dx == 0 or dx == w - 1:
-                    canvas.draw_line(x + dx, y0, x + dx, y1, border)
+            if recessed:
+                canvas.set_pixel(x + dx, y0, recess_col)
+                side_dx = 0 if face == "left" else w - 1
+                if dx == side_dx:
+                    canvas.draw_line(x + dx, y0, x + dx, y1, recess_col)
 
 
 def draw_iso_structure(
@@ -209,8 +229,10 @@ def draw_iso_structure(
     palette: dict[str, RGBA],
     step_x: int = 2,
     step_y: int = 1,
+    default_bevel: bool = True,
+    default_ground_shadow: int = 2,
 ) -> None:
-    """Sort and render 3D isometric boxes/roofs by depth (gx + gy, gz) to prevent Z-overlap bugs."""
+    """Sort and render 3D lineless isometric boxes/roofs by depth (gx + gy, gz)."""
     sorted_items = sorted(
         items,
         key=lambda it: (
@@ -229,8 +251,9 @@ def draw_iso_structure(
         cy = origin_y + (gx + gy) * step_y - gz
 
         kind = it.get("type", "box")
+        bevel = bool(it.get("bevel", default_bevel))
         if kind == "box":
-            edge = parse_color(it["edge"], palette) if "edge" in it else None
+            g_shadow = int(it.get("ground_shadow", default_ground_shadow if gz == 0 else 0))
             draw_iso_box(
                 canvas,
                 cx,
@@ -241,11 +264,11 @@ def draw_iso_structure(
                 parse_color(it["top"], palette),
                 parse_color(it["left"], palette),
                 parse_color(it["right"], palette),
-                edge_color=edge,
+                bevel=bevel,
+                ground_shadow=g_shadow,
             )
         elif kind == "roof":
             gable = parse_color(it["gable"], palette) if "gable" in it else None
-            ridge = parse_color(it["ridge"], palette) if "ridge" in it else None
             draw_iso_roof(
                 canvas,
                 cx,
@@ -257,8 +280,8 @@ def draw_iso_structure(
                 parse_color(it["right"], palette),
                 style=it.get("style", "pyramid"),
                 gable_color=gable,
-                ridge_color=ridge,
                 eave_shadow=bool(it.get("eave_shadow", True)),
+                bevel=bevel,
             )
         else:
             raise ValueError(f"Unknown iso_structure item type: {kind!r}")

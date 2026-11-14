@@ -87,16 +87,16 @@ class TestMVP(unittest.TestCase):
             "height": 32,
             "palette": "cozy24",
             "ops": [
-                {"op": "iso_box", "cx": 16, "cy": 14, "rx": 8, "h": 8, "top": "stone_l", "left": "stone", "right": "stone_d", "edge": "ink"},
-                {"op": "iso_roof", "cx": 16, "cy": 14, "rx": 8, "h": 6, "style": "pyramid", "left": "roof_l", "right": "roof_d", "ridge": "ink"},
-                {"op": "iso_wall_rect", "face": "left", "x": 12, "y": 17, "w": 3, "h": 4, "color": "ink"},
+                {"op": "iso_box", "cx": 16, "cy": 14, "rx": 8, "h": 8, "top": "stone_l", "left": "stone", "right": "stone_d"},
+                {"op": "iso_roof", "cx": 16, "cy": 14, "rx": 8, "h": 6, "style": "pyramid", "left": "roof_l", "right": "roof_d"},
+                {"op": "iso_wall_rect", "face": "left", "x": 12, "y": 17, "w": 3, "h": 4, "color": "wood_d"},
             ],
         }
         canvas = run_spec(spec)
-        # Apex of pyramid roof at (16, 8) has ridge color 'ink' (#21181b)
-        self.assertEqual(canvas.get_pixel(16, 8), (33, 24, 27, 255))
-        # Door on left wall at (12, 17)
-        self.assertEqual(canvas.get_pixel(12, 17), (33, 24, 27, 255))
+        # Apex of pyramid roof at (16, 8) has brightened lineless bevel of 'roof_l' (#e87858 = 232, 120, 88)
+        self.assertGreater(canvas.get_pixel(16, 8)[0], 232)
+        # Door on left wall at (12, 17) has recessed top lip (darkened 'wood_d')
+        self.assertLess(canvas.get_pixel(12, 17)[0], 110)
 
     def test_defs_stamp_remap_and_scatter(self) -> None:
         spec = {
@@ -199,6 +199,27 @@ class TestMVP(unittest.TestCase):
         self.assertEqual(len(c_pad.warnings), 0)
         # Original pixel shifted to (1,1), outline at (1,0)
         self.assertEqual(c_pad.get_pixel(1, 0), (0, 0, 0, 255))
+
+    def test_lineless_bevel_and_external_outline(self) -> None:
+        base_spec = {
+            "width": 32,
+            "height": 32,
+            "palette": "cozy24",
+            "ops": [
+                {"op": "iso_box", "cx": 16, "cy": 20, "rx": 12, "h": 2, "top": "grass", "left": "grass_d", "right": "soil_d", "bevel": True},
+                {"op": "iso_box", "cx": 16, "cy": 14, "rx": 6, "h": 6, "top": "stone_l", "left": "stone", "right": "stone_d", "bevel": True, "ground_shadow": 2},
+                {"op": "iso_wall_rect", "face": "left", "x": 12, "y": 16, "w": 3, "h": 4, "color": "wood_d", "recessed": True},
+            ],
+            "post": [{"op": "drop_shadow", "dx": 1, "dy": 1}],
+        }
+        c_lineless = run_spec(base_spec)
+        # Center vertical ridge of the stone box at (16, 18) gets brightened from 'stone' (#828c9e = 130, 140, 158)
+        self.assertGreater(c_lineless.get_pixel(16, 18)[0], 130)
+
+        # Now add external outline only: internal ridge at (16, 18) must remain untouched!
+        ext_spec = dict(base_spec, post=[{"op": "outline", "color": "ink"}])
+        c_ext = run_spec(ext_spec)
+        self.assertEqual(c_ext.get_pixel(16, 18), c_lineless.get_pixel(16, 18))
 
 
 if __name__ == "__main__":

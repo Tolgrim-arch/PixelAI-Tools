@@ -12,8 +12,14 @@ from pixelai.runner import run_frames
 
 AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 
+## Aesthetic Standard (Mandatory)
+- **Default (`"style": "ext_outline"`):** **Lineless Interior + 1px External Outline**. Internal surfaces use pure color planes, specular bevels (`bevel: true`), eave/ground shadows, and recessed openings (`recessed: true`) with ZERO dark internal lines, wrapped in a 1px external silhouette outline.
+- **Pure Lineless (`"style": "lineless"` or `--lineless`):** **100% Lineless** (no internal or external outlines).
+- **Discarded:** Dark internal outlines (`edge`/`ridge`) are permanently disabled.
+
 ## CLI Usage
-- Single PNG: `pixelai render spec.json -o out.png` (or `-` for stdin)
+- Default (Lineless Interior + External Outline): `pixelai render spec.json -o out.png`
+- Pure Lineless (0 outlines): `pixelai render spec.json -o out.png --lineless`
 - Animated GIF: `pixelai render spec.json -o anim.gif --fps 8`
 - Spritesheet + Metadata: `pixelai render spec.json -o sheet.png --sheet --columns 4 --meta sheet.json`
 
@@ -22,6 +28,7 @@ AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 {
   "width": 32,
   "height": 32,
+  "style": "ext_outline",
   "palette": "cozy24",
   "palette_ext": {"custom": "#ff8800"},
   "defs": {
@@ -84,6 +91,10 @@ def _cmd_render(args: argparse.Namespace) -> int:
     else:
         raw = Path(args.spec).read_text(encoding="utf-8-sig")
     spec = json.loads(raw)
+    if args.lineless:
+        spec["style"] = "lineless"
+    else:
+        spec.setdefault("style", "ext_outline")
     frames, names = run_frames(spec)
     _print_diagnostics(frames, names)
 
@@ -164,6 +175,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--meta",
         default=None,
         help="Optional output path for spritesheet JSON metadata.",
+    )
+    render_p.add_argument(
+        "--lineless",
+        action="store_true",
+        help="Render in Pure Lineless mode (no internal or external outlines).",
     )
     render_p.set_defaults(func=_cmd_render)
 
