@@ -357,6 +357,47 @@ class TestMVP(unittest.TestCase):
             self.assertTrue((layers_dir / "00_ground.png").exists())
             self.assertTrue((layers_dir / "01_z_test.png").exists())
 
+    def test_iso_auto_snap_roof_door_chimney_and_shadow_order(self) -> None:
+        spec = {
+            "width": 64,
+            "height": 64,
+            "palette": "cozy24",
+            "layers": [
+                {
+                    "name": "bg",
+                    "ops": [{"op": "ellipse", "cx": 32, "cy": 48, "rx": 20, "ry": 8, "color": "shadow"}],
+                },
+                {
+                    "name": "cottage",
+                    "ops": [
+                        {
+                            "op": "iso_box",
+                            "cx": 32,
+                            "cy": 38,
+                            "rx": 12,
+                            "ry": 6,
+                            "h": 12,
+                            "top": "stone_l",
+                            "left": "stone",
+                            "right": "stone_d",
+                            "door": {"face": "left", "w": 4, "h": 6, "color": "wood_d", "arch": True},
+                            "roof": {"style": "pyramid", "h": 10, "left": "roof_l", "right": "roof_d", "chimney": True},
+                        }
+                    ],
+                },
+            ],
+            "keyframes": [
+                {"steps": 2, "ops": [{"op": "ellipse", "cx": 32, "cy": 48, "rx": 20, "ry": 8, "color": "shadow"}]},
+                {"steps": 1, "ops": [{"op": "ellipse", "cx": 32, "cy": 48, "rx": 22, "ry": 9, "color": "shadow"}]},
+            ],
+        }
+        canvas = run_spec(spec)
+        # Front bottom wall of cottage at (32, 48) must NOT be overwritten by shadow (#33293a = 51, 41, 58)
+        self.assertNotEqual(canvas.get_pixel(32, 48), (51, 41, 58, 255))
+        # Roof must cover box top center at (32, 38) (not leaving stone_l #b0bac9 = 176, 186, 201 exposed)
+        self.assertNotEqual(canvas.get_pixel(32, 38), (176, 186, 201, 255))
+        self.assertIsNotNone(canvas.last_chimney)
+
 
 if __name__ == "__main__":
     unittest.main()

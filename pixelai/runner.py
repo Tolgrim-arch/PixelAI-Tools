@@ -63,16 +63,26 @@ def _execute_ops(
                 thickness=int(op.get("thickness", 1)),
             )
         elif kind == "particles":
+            pw = int(op.get("w", canvas.width))
+            ph = int(op.get("h", canvas.height))
+            mode = op.get("mode", "smoke")
+            px = int(op.get("x", 0))
+            py = int(op.get("y", 0))
+            if mode == "smoke" and canvas.last_chimney is not None and op.get("attach_chimney", True):
+                ccx, ccy = canvas.last_chimney
+                if "x" not in op or abs((px + pw // 2) - ccx) > 3 or (py + ph) > ccy + 2:
+                    px = ccx - pw // 2
+                    py = max(0, ccy - ph)
             canvas.draw_particles(
-                int(op.get("x", 0)),
-                int(op.get("y", 0)),
-                int(op.get("w", canvas.width)),
-                int(op.get("h", canvas.height)),
+                px,
+                py,
+                pw,
+                ph,
                 int(op.get("count", 8)),
                 parse_color(op["color"], palette),
                 frame=int(op.get("frame", frame_idx)),
                 total_frames=int(op.get("total_frames", max(1, total_frames))),
-                mode=op.get("mode", "smoke"),
+                mode=mode,
                 size=int(op.get("size", 1)),
                 seed=int(op.get("seed", 42)),
             )
@@ -220,6 +230,7 @@ def _execute_ops(
         elif kind == "iso_box":
             rx = int(op["rx"])
             ry = int(op.get("ry", max(1, rx // 2)))
+            wins = op.get("windows") or ([op["window"]] if "window" in op else None)
             iso.draw_iso_box(
                 canvas,
                 int(op["cx"]),
@@ -232,36 +243,43 @@ def _execute_ops(
                 parse_color(op["right"], palette),
                 bevel=bool(op.get("bevel", True)),
                 ground_shadow=int(op.get("ground_shadow", 0)),
+                door=op.get("door"),
+                windows=wins,
+                roof=op.get("roof"),
+                palette=palette,
             )
         elif kind == "iso_roof":
-            rx = int(op["rx"])
-            ry = int(op.get("ry", max(1, rx // 2)))
+            rx = int(op["rx"]) if "rx" in op else None
+            ry = int(op["ry"]) if "ry" in op else (max(1, rx // 2) if rx is not None else None)
             gable = parse_color(op["gable"], palette) if "gable" in op else None
             iso.draw_iso_roof(
                 canvas,
-                int(op["cx"]),
-                int(op["cy"]),
+                int(op["cx"]) if "cx" in op else None,
+                int(op["cy"]) if "cy" in op else None,
                 rx,
                 ry,
-                int(op["h"]),
-                parse_color(op["left"], palette),
-                parse_color(op["right"], palette),
+                int(op.get("h", 8)),
+                parse_color(op.get("left", "roof_l"), palette),
+                parse_color(op.get("right", "roof_d"), palette),
                 style=op.get("style", "pyramid"),
                 gable_color=gable,
                 eave_shadow=bool(op.get("eave_shadow", True)),
                 bevel=bool(op.get("bevel", True)),
+                chimney=op.get("chimney", False),
+                palette=palette,
             )
         elif kind == "iso_wall_rect":
             iso.draw_iso_wall_rect(
                 canvas,
                 op.get("face", "left"),
-                int(op["x"]),
-                int(op["y"]),
-                int(op["w"]),
-                int(op["h"]),
-                parse_color(op["color"], palette),
+                int(op["x"]) if "x" in op else None,
+                int(op["y"]) if "y" in op else None,
+                int(op.get("w", 4)),
+                int(op.get("h", 6)),
+                parse_color(op.get("color", "wood_d"), palette),
                 arch=bool(op.get("arch", False)),
                 recessed=bool(op.get("recessed", True)),
+                role=op.get("role"),
             )
         elif kind == "iso_structure":
             iso.draw_iso_structure(
@@ -270,8 +288,8 @@ def _execute_ops(
                 int(op.get("origin_y", canvas.height // 2)),
                 op["items"],
                 palette,
-                step_x=int(op.get("step_x", 2)),
-                step_y=int(op.get("step_y", 1)),
+                step_x=int(op["step_x"]) if "step_x" in op else None,
+                step_y=int(op["step_y"]) if "step_y" in op else None,
                 default_bevel=bool(op.get("bevel", True)),
                 default_ground_shadow=int(op.get("ground_shadow", 2)),
             )
@@ -441,6 +459,36 @@ def run_layers(spec: dict[str, Any]) -> list[tuple[str, Canvas]]:
     return result
 
 
+def _merge_frame_ops_into_base(
+    base_ops: list[dict[str, Any]], frame_ops: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Merge frame/keyframe ops into base_ops without burying foreground structures under shadows."""
+    if not base_ops:
+        return list(frame_ops)
+    if not frame_ops:
+        return list(base_ops)
+    merged = [dict(op) for op in base_ops]
+    appended: list[dict[str, Any]] = []
+    for fop in frame_ops:
+        # If frame op matches a background/shadow op already in base_ops, update it in-place
+        replaced = False
+        for idx, bop in enumerate(merged):
+            if (
+                bop.get("op") == fop.get("op")
+                and bop.get("color") == fop.get("color")
+                and fop.get("op") in ("ellipse", "particles")
+            ):
+                merged[idx] = dict(fop)
+                replaced = True
+                break
+        if not replaced:
+            if fop.get("op") == "ellipse" and str(fop.get("color", "")).startswith("shadow"):
+                merged.insert(0, dict(fop))
+            else:
+                appended.append(dict(fop))
+    return merged + appended
+
+
 def run_frames(spec: dict[str, Any]) -> tuple[list[Canvas], list[str]]:
     """Execute a spec into one or more post-processed frames and their names."""
     spec = _resolve_extends(spec)
@@ -467,12 +515,14 @@ def run_frames(spec: dict[str, Any]) -> tuple[list[Canvas], list[str]]:
     raw_frames = spec.get("frames")
     if not raw_frames and "keyframes" in spec:
         raw_frames = _expand_keyframes(spec["keyframes"])
-    if not raw_frames and any(op.get("op") == "particles" for op in base_ops) and "frame_count" in spec:
-        raw_frames = [{"name": f"frame_{i}", "ops": []} for i in range(int(spec["frame_count"]))]
+    if not raw_frames and any(op.get("op") == "particles" for op in base_ops):
+        fc = int(spec.get("frame_count", 4))
+        if fc > 1:
+            raw_frames = [{"name": f"frame_{i}", "ops": []} for i in range(fc)]
 
     if not raw_frames:
         canvas = Canvas(width, height, fill=bg)
-        _execute_ops(canvas, base_ops, palette, defs, frame_idx=0, total_frames=1)
+        _execute_ops(canvas, _merge_frame_ops_into_base([], base_ops), palette, defs, frame_idx=0, total_frames=1)
         return [_apply_post(canvas, post_ops, palette)], ["frame_0"]
 
     total = len(raw_frames)
@@ -480,9 +530,12 @@ def run_frames(spec: dict[str, Any]) -> tuple[list[Canvas], list[str]]:
     names: list[str] = []
     for idx, fspec in enumerate(raw_frames):
         canvas = Canvas(width, height, fill=bg)
-        if fspec.get("inherit_base", True) and base_ops:
-            _execute_ops(canvas, base_ops, palette, defs, frame_idx=idx, total_frames=total)
-        _execute_ops(canvas, fspec.get("ops", []), palette, defs, frame_idx=idx, total_frames=total)
+        effective_ops = (
+            _merge_frame_ops_into_base(base_ops, fspec.get("ops", []))
+            if fspec.get("inherit_base", True)
+            else list(fspec.get("ops", []))
+        )
+        _execute_ops(canvas, effective_ops, palette, defs, frame_idx=idx, total_frames=total)
         frames.append(_apply_post(canvas, post_ops, palette))
         names.append(fspec.get("name", f"frame_{idx}"))
     return frames, names

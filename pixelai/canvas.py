@@ -17,6 +17,8 @@ class Canvas:
         self.pixels: list[RGBA] = [fill] * (width * height)
         self.z_buffer: list[float] = [float("-inf")] * (width * height)
         self.current_z: float | None = None
+        self.last_iso_box: tuple[int, int, int, int, int] | None = None
+        self.last_chimney: tuple[int, int] | None = None
         self.clipped_pixels: int = 0
         self.warnings: list[str] = []
 
@@ -25,6 +27,8 @@ class Canvas:
         out.pixels = self.pixels.copy()
         out.z_buffer = self.z_buffer.copy()
         out.current_z = self.current_z
+        out.last_iso_box = self.last_iso_box
+        out.last_chimney = self.last_chimney
         out.clipped_pixels = self.clipped_pixels
         out.warnings = self.warnings.copy()
         return out
