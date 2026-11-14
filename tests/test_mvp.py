@@ -56,6 +56,20 @@ class TestMVP(unittest.TestCase):
             self.assertTrue(out_path.exists())
             self.assertGreater(out_path.stat().st_size, 0)
 
+    def test_builtin_palette_and_grid(self) -> None:
+        spec = {
+            "width": 4,
+            "height": 4,
+            "palette": "pico8",
+            "ops": [
+                {"op": "grid", "x": 1, "y": 1, "rows": ["8.", ".b"]},
+            ],
+        }
+        canvas = run_spec(spec)
+        self.assertEqual(canvas.get_pixel(1, 1), (255, 0, 77, 255))
+        self.assertEqual(canvas.get_pixel(2, 1), TRANSPARENT)
+        self.assertEqual(canvas.get_pixel(2, 2), (0, 228, 54, 255))
+
 
 if __name__ == "__main__":
     unittest.main()

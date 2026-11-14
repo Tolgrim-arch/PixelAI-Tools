@@ -3,6 +3,7 @@
 from typing import Any
 from pixelai.canvas import Canvas
 from pixelai.color import RGBA, TRANSPARENT, parse_color
+from pixelai.palettes import get_palette
 from pixelai import filters
 
 
@@ -11,8 +12,11 @@ def run_spec(spec: dict[str, Any]) -> Canvas:
     width = int(spec["width"])
     height = int(spec["height"])
 
-    raw_palette: dict[str, Any] = spec.get("palette", {})
-    palette: dict[str, RGBA] = {k: parse_color(v) for k, v in raw_palette.items()}
+    raw_palette = spec.get("palette", {})
+    if isinstance(raw_palette, str):
+        palette: dict[str, RGBA] = get_palette(raw_palette)
+    else:
+        palette = {k: parse_color(v) for k, v in raw_palette.items()}
 
     bg = parse_color(spec["background"], palette) if "background" in spec else TRANSPARENT
     canvas = Canvas(width, height, fill=bg)
@@ -41,6 +45,11 @@ def run_spec(spec: dict[str, Any]) -> Canvas:
             canvas.mirror_x()
         elif kind == "mirror_y":
             canvas.mirror_y()
+        elif kind == "grid":
+            cmap = dict(palette)
+            if "colors" in op:
+                cmap.update({k: parse_color(v, palette) for k, v in op["colors"].items()})
+            canvas.draw_grid(op.get("x", 0), op.get("y", 0), op["rows"], cmap)
         else:
             raise ValueError(f"Unknown op: {kind!r}")
 

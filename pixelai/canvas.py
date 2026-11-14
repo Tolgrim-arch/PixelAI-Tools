@@ -126,3 +126,15 @@ class Canvas:
                 c = self.get_pixel(x, y)
                 if c[3] > 0:
                     self.set_pixel(x, self.height - 1 - y, c)
+
+    def draw_grid(
+        self, x: int, y: int, rows: list[str], color_map: dict[str, RGBA]
+    ) -> None:
+        """Draw pixels from an ASCII grid; '.' and ' ' are skipped (transparent)."""
+        for dy, row in enumerate(rows):
+            for dx, ch in enumerate(row):
+                if ch in (".", " "):
+                    continue
+                if ch not in color_map:
+                    raise ValueError(f"Grid symbol {ch!r} not found in palette/colors")
+                self.set_pixel(x + dx, y + dy, color_map[ch])
