@@ -459,6 +459,48 @@ class TestMVP(unittest.TestCase):
             self.assertEqual(stats["duplicate_frames"], 0)
             self.assertNotIn("warnings", stats)
 
+    def test_v09_building_primitive_shingle_scatter_and_outline_over_no_outline(self) -> None:
+        # 1. External outline must not leave a gap when an outline=False pixel touches an outlined shape
+        gap_spec = {
+            "width": 10,
+            "height": 10,
+            "palette": "cozy24",
+            "style": "ext_outline",
+            "ops": [
+                {"op": "rect", "x": 3, "y": 4, "w": 4, "h": 4, "color": "stone"},
+                {"op": "pixel", "x": 4, "y": 3, "color": "cream", "outline": False},
+            ],
+        }
+        c_gap = run_spec(gap_spec)
+        # Pixel (4, 3) is directly above the outlined stone rect at y=4, so it must receive the 'ink' outline
+        self.assertEqual(c_gap.get_pixel(4, 3), parse_color("ink", {"ink": (33, 24, 27, 255)}))
+
+        # 2. Top-down 3/4 building primitive (gable farmhouse & barn) + shingle/cobble scatter
+        b_spec = {
+            "width": 128,
+            "height": 128,
+            "palette": "cozy24",
+            "style": "ext_outline",
+            "ops": [
+                {"op": "building", "x": 12, "y": 14, "w": 104, "h": 98, "roof_style": "gable"},
+            ],
+        }
+        c_b = run_spec(b_spec)
+        self.assertIsNotNone(c_b.last_chimney)
+        self.assertEqual(len(c_b.warnings), 0)
+
+        barn_spec = {
+            "width": 96,
+            "height": 96,
+            "palette": "cozy24",
+            "style": "ext_outline",
+            "ops": [
+                {"op": "building", "roof_style": "barn"},
+            ],
+        }
+        c_barn = run_spec(barn_spec)
+        self.assertEqual(len(c_barn.warnings), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

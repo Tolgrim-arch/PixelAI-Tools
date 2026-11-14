@@ -386,9 +386,34 @@ class Canvas:
                     continue
                 if pattern == "brick":
                     row = (py - y) // 3
-                    offset = 2 if row % 2 == 1 else 0
-                    if (py - y) % 3 == 0 or (px - x + offset) % 4 == 0:
-                        self.set_pixel(px, py, color)
+                    offset = 3 if row % 2 == 1 else 0
+                    col = (px - x + offset) // 6
+                    cell_hash = ((row * 73856093) ^ (col * 19349663) ^ seed) & 0xFFFF
+                    if density >= 1.0 or (cell_hash / 65535.0) <= density:
+                        is_h_mortar = (py - y) % 3 == 2 and (px - x + offset) % 6 != 0
+                        is_v_mortar = (px - x + offset) % 6 == 0 and (py - y) % 3 != 2
+                        if is_h_mortar or is_v_mortar:
+                            self.set_pixel(px, py, color)
+                elif pattern == "shingle":
+                    row = (py - y) // 4
+                    offset = 3 if row % 2 == 1 else 0
+                    col = (px - x + offset) // 6
+                    tx = (px - x + offset) % 6
+                    ty = (py - y) % 4
+                    cell_hash = ((row * 83492791) ^ (col * 2971215073) ^ seed) & 0xFFFF
+                    if density >= 1.0 or (cell_hash / 65535.0) <= min(1.0, density * 1.8):
+                        if (ty == 3 and 1 <= tx <= 4) or (ty == 2 and tx in (0, 5)):
+                            self.set_pixel(px, py, color)
+                elif pattern == "cobble":
+                    row = (py - y) // 4
+                    offset = 4 if row % 2 == 1 else 0
+                    col = (px - x + offset) // 8
+                    tx = (px - x + offset) % 8
+                    ty = (py - y) % 4
+                    cell_hash = ((row * 49979693) ^ (col * 86028121) ^ seed) & 0xFFFF
+                    if density >= 1.0 or (cell_hash / 65535.0) <= density:
+                        if (ty == 3 and 2 <= tx <= 6) or (ty in (1, 2) and tx == 1):
+                            self.set_pixel(px, py, color)
                 elif pattern == "wood":
                     if (px - x) % 3 == 0 or ((py - y + (px - x) * 2) % 7 == 0 and rng.random() < 0.5):
                         self.set_pixel(px, py, color)
