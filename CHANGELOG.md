@@ -2,6 +2,11 @@
 
 All notable changes to `pixelai-tools` are documented in this file.
 
+## [0.7.1] - 2026-11-14
+### Fixed
+- **Isometric Auto-Snapping (`iso.py`):** Roofs, doors, windows, and chimneys automatically snap to their parent box/roof geometry, preventing floating roofs or misplaced openings.
+- **Shadow Layer Ordering (`runner.py`):** Keyframe/frame shadow ellipses merge into the background layer so foreground structures are never buried.
+
 ## [0.7.0] - 2026-11-14
 ### Added
 - **Hue-Shifted Color Ramps (`color.py`):** Consolidated `darken()` (shifts shadows toward cool indigo/violet) and `brighten()` (shifts highlights toward warm golden sunlight) + `nearest_palette_color()`, eliminating duplicate color math across modules (DRY).
