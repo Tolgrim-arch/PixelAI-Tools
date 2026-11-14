@@ -74,6 +74,11 @@ def draw_portrait_rig(
     canvas.draw_polygon(pts([(16, 14), (21, 6), (32, 2), (35, 6), (24, 10), (19, 19)]), hair_l, filled=True)
     canvas.draw_polygon(pts([(38, 5), (45, 8), (50, 17), (45, 27), (42, 16)]), hair_d, filled=True)
     canvas.draw_polygon(pts([(15, 19), (19, 24), (20, 39), (16, 34)]), hair_d, filled=True)
+    # Short, stepped locks break the large silhouette into the clustered
+    # strands visible in the reference portraits.
+    canvas.draw_polygon(pts([(19, 7), (23, 4), (25, 6), (22, 12)]), hair_l, filled=True)
+    canvas.draw_polygon(pts([(31, 3), (35, 1), (38, 5), (35, 10)]), hair_l, filled=True)
+    canvas.draw_polygon(pts([(44, 12), (49, 15), (48, 21), (44, 18)]), hair_d, filled=True)
 
     if op.get("beard", False):
         canvas.draw_polygon(pts([(25, 33), (29, 35), (36, 34), (38, 37), (34, 41), (28, 40), (25, 37)]), beard, filled=True)
@@ -89,6 +94,9 @@ def draw_portrait_rig(
     canvas.draw_line(sx(36), sy(18), sx(42), sy(19), hair_d)
     canvas.draw_rect(sx(31), sy(27), max(1, round(5 * scale)), max(1, round(2 * scale)), skin_d, filled=True)
     canvas.draw_line(sx(30), sy(34), sx(36), sy(34), skin_d)
+    # Restrained garment folds: colored planes, never interior ink outlines.
+    canvas.draw_polygon(pts([(19, 47), (23, 45), (26, 63), (22, 63)]), garment_d, filled=True)
+    canvas.draw_polygon(pts([(45, 47), (41, 45), (38, 63), (42, 63)]), garment_d, filled=True)
 
 
 def draw_char_rig(

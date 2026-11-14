@@ -23,5 +23,5 @@
       "garment":"garment", "garment_d":"garment_d", "accent":"accent", "ink":"ink",
       "beard_color":"hair_d", "beard":true}
   ],
-  "post": [{"op":"outline", "color":"ink", "auto_pad":true}]
+  "post": [{"op":"pad", "size":1}, {"op":"outline", "color":"ink"}]
 }
