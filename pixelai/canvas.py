@@ -1,4 +1,4 @@
-"""Core pixel canvas and deterministic drawing primitives."""
+"""Core pixel canvas, per-pixel Z-buffer, and deterministic drawing primitives."""
 
 from collections import deque
 import math
@@ -7,7 +7,7 @@ from pixelai.color import RGBA, TRANSPARENT
 
 
 class Canvas:
-    """2D RGBA pixel grid with deterministic drawing primitives."""
+    """2D RGBA pixel grid with optional per-pixel Z-buffer and deterministic primitives."""
 
     def __init__(self, width: int, height: int, fill: RGBA = TRANSPARENT) -> None:
         if width <= 0 or height <= 0:
@@ -15,12 +15,16 @@ class Canvas:
         self.width = width
         self.height = height
         self.pixels: list[RGBA] = [fill] * (width * height)
+        self.z_buffer: list[float] = [float("-inf")] * (width * height)
+        self.current_z: float | None = None
         self.clipped_pixels: int = 0
         self.warnings: list[str] = []
 
     def copy(self) -> "Canvas":
         out = Canvas(self.width, self.height)
         out.pixels = self.pixels.copy()
+        out.z_buffer = self.z_buffer.copy()
+        out.current_z = self.current_z
         out.clipped_pixels = self.clipped_pixels
         out.warnings = self.warnings.copy()
         return out
@@ -43,9 +47,15 @@ class Canvas:
             return TRANSPARENT
         return self.pixels[y * self.width + x]
 
-    def set_pixel(self, x: int, y: int, color: RGBA) -> None:
+    def set_pixel(self, x: int, y: int, color: RGBA, z: float | None = None) -> None:
         if self.in_bounds(x, y):
-            self.pixels[y * self.width + x] = color
+            idx = y * self.width + x
+            eff_z = z if z is not None else self.current_z
+            if eff_z is not None and color[3] > 0:
+                if eff_z < self.z_buffer[idx]:
+                    return
+                self.z_buffer[idx] = eff_z
+            self.pixels[idx] = color
         elif color[3] > 0:
             self.clipped_pixels += 1
 
@@ -116,6 +126,68 @@ class Canvas:
             else:
                 x -= 1
                 err += 2 * (y - x) + 1
+
+    def draw_ellipse(
+        self, cx: int, cy: int, rx: int, ry: int, color: RGBA, filled: bool = True
+    ) -> None:
+        """Draw a filled or outlined pixel-art ellipse centered at (cx, cy)."""
+        if rx < 0 or ry < 0:
+            return
+        if rx == 0 and ry == 0:
+            self.set_pixel(cx, cy, color)
+            return
+        if ry == 0:
+            self.draw_line(cx - rx, cy, cx + rx, cy, color)
+            return
+        if rx == 0:
+            self.draw_line(cx, cy - ry, cx, cy + ry, color)
+            return
+
+        if filled:
+            for dy in range(-ry, ry + 1):
+                span = int(round(rx * math.sqrt(max(0.0, 1.0 - (dy / ry) ** 2))))
+                self.draw_line(cx - span, cy + dy, cx + span, cy + dy, color)
+        else:
+            steps = max(16, int((rx + ry) * 4))
+            prev: tuple[int, int] | None = None
+            for i in range(steps + 1):
+                theta = (2.0 * math.pi * i) / steps
+                px = cx + int(round(rx * math.cos(theta)))
+                py = cy + int(round(ry * math.sin(theta)))
+                if prev is not None:
+                    self.draw_line(prev[0], prev[1], px, py, color)
+                prev = (px, py)
+
+    def draw_bezier(
+        self, points: list[tuple[int, int]], color: RGBA, thickness: int = 1
+    ) -> None:
+        """Draw a quadratic or N-degree Bézier curve using de Casteljau subdivision."""
+        if len(points) < 2:
+            return
+        total_dist = sum(
+            math.hypot(points[i + 1][0] - points[i][0], points[i + 1][1] - points[i][1])
+            for i in range(len(points) - 1)
+        )
+        steps = max(8, int(total_dist * 2))
+        prev: tuple[int, int] | None = None
+
+        for step in range(steps + 1):
+            t = step / steps
+            work = [(float(p[0]), float(p[1])) for p in points]
+            while len(work) > 1:
+                work = [
+                    (
+                        work[i][0] * (1.0 - t) + work[i + 1][0] * t,
+                        work[i][1] * (1.0 - t) + work[i + 1][1] * t,
+                    )
+                    for i in range(len(work) - 1)
+                ]
+            px, py = int(round(work[0][0])), int(round(work[0][1]))
+            if prev is not None:
+                self.draw_line(prev[0], prev[1], px, py, color)
+                if thickness > 1:
+                    self.draw_circle(px, py, thickness // 2, color, filled=True)
+            prev = (px, py)
 
     def draw_polygon(
         self, points: list[tuple[int, int]], color: RGBA, filled: bool = True
@@ -236,7 +308,6 @@ class Canvas:
 
         for dy in range(-radius, radius + 1):
             for dx in range(-radius, radius + 1):
-                # Inverse rotate from destination offset back to source coordinates
                 sx_f = px + dx * cos_a + dy * sin_a
                 sy_f = py - dx * sin_a + dy * cos_a
                 sx, sy = int(round(sx_f)), int(round(sy_f))
@@ -287,6 +358,55 @@ class Canvas:
                             and (target_color is None or self.get_pixel(px, py - 1) == target_color)
                         ):
                             self.set_pixel(px, py - 1, color)
-                else:  # "noise"
+                else:
                     if rng.random() < density:
                         self.set_pixel(px, py, color)
+
+    def draw_particles(
+        self,
+        x: int,
+        y: int,
+        w: int,
+        h: int,
+        count: int,
+        color: RGBA,
+        frame: int = 0,
+        total_frames: int = 4,
+        mode: str = "smoke",
+        size: int = 1,
+        seed: int = 42,
+    ) -> None:
+        """Render a deterministic looping particle system (smoke, leaves, rain, sparks)."""
+        if w <= 0 or h <= 0 or count <= 0:
+            return
+        rng = random.Random(seed)
+        phase = (frame % max(1, total_frames)) / max(1, total_frames)
+
+        for i in range(count):
+            base_x = rng.random()
+            base_y = rng.random()
+            p_phase = (base_y + phase) % 1.0
+
+            if mode == "smoke":
+                # Rises upward and drifts sideways in a sine wave
+                py = y + int((1.0 - p_phase) * (h - 1))
+                sway = math.sin((p_phase + i * 0.3) * math.pi * 2.0) * (w * 0.25)
+                px = x + int(w * 0.5 + sway)
+                r = max(1, int(size + p_phase * 1.5))
+                self.draw_circle(px, py, r - 1, color, filled=True)
+            elif mode == "leaves":
+                # Drifts down and right with flutter
+                py = y + int(p_phase * (h - 1))
+                sway = math.sin((p_phase + i * 0.5) * math.pi * 2.0) * 3.0
+                px = x + int(((base_x * w) + p_phase * (w * 0.4) + sway) % w)
+                self.draw_rect(px, py, size, size, color)
+            elif mode == "rain":
+                py = y + int(p_phase * (h - 1))
+                px = x + int((base_x * w) % w)
+                self.draw_line(px, py, px - 1, py + max(1, size), color)
+            else:  # "sparks"
+                angle = base_x * math.pi * 2.0
+                dist = p_phase * min(w, h) * 0.5
+                px = x + w // 2 + int(math.cos(angle) * dist)
+                py = y + h // 2 + int(math.sin(angle) * dist)
+                self.draw_rect(px, py, size, size, color)

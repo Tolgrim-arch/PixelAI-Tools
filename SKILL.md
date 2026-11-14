@@ -18,8 +18,10 @@ description: Generate deterministic pixel art sprites, isometric buildings, 16-t
 - **Forbidden:** Never use dark internal outlines.
 
 ## Key Capabilities
-- **Isometric 3D Architecture:** `iso_structure` (automatic back-to-front depth sorting by `gx + gy, gz`), `iso_box`, `iso_roof` (`pyramid`, `gable_left`, `gable_right`), `iso_wall_rect` (`arch: true`, `recessed: true`).
+- **Isometric 3D Architecture (with Per-Pixel Z-Buffer):** `iso_structure` (per-pixel Z-buffering + depth sorting by `gx + gy, gz`), `iso_box`, `iso_roof` (`pyramid`, `gable_left`, `gable_right`), `iso_wall_rect` (`arch: true`, `recessed: true`).
+- **Organic Primitives & Particles:** `ellipse` (`rx`, `ry`), `bezier` (`points`, `thickness`), and looping `particles` (`smoke`, `leaves`, `rain`, `sparks`).
+- **Keyframe Tweening & Multi-Layer Export:** Automatic interpolation via `"keyframes": [{"steps": 4, "ops": [...]}]` and separate layer export via `"layers": [...]` + `--layers-dir <dir>`.
 - **Auto-Tilesets (16-tile Wang Bitmask):** `{"op": "autotile", "tile_size": 16, "inner": "water", "outer": "grass", "lip": "soil_d"}`
-- **4-Direction Character Rigs:** `{"op": "char_rig", "dir": "down|up|left|right", "pose": "idle|walk|work", "frame": 0..3}`
+- **4-Direction Character Rigs:** `{"op": "char_rig", "size": 16, "dir": "down|up|left|right", "pose": "idle|walk|work", "frame": 0..3}`
 - **Isometric & Ortho Tilemaps:** `{"op": "tilemap", "mode": "iso|ortho", "tile_w": 16, "tile_h": 16, "rows": [...]}`
-- **Exporters:** `.png`, `.gif` (`--fps`), Spritesheet + JSON (`--sheet --meta`), Godot 4 `.tres` (`--godot`), and terminal inspection (`pixelai inspect out.png --ascii`).
+- **Exporters & Introspection:** `.png` (with embedded `pixelai_spec` metadata), `.gif` (`--fps`), Spritesheet + JSON (`--sheet --meta`), Godot 4 `.tres` (`--godot`), `pixelai extract <img.png>`, and `pixelai inspect <img.png> --ascii`.

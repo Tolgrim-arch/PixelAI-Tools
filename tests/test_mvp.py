@@ -296,6 +296,67 @@ class TestMVP(unittest.TestCase):
             self.assertEqual(main(["render", str(child_spec_p), "-o", str(child_gif_p)]), 0)
             self.assertTrue(child_gif_p.exists())
 
+    def test_v07_zbuffer_ellipse_bezier_particles_keyframes_and_layers(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            spec_p = Path(tmp) / "v07.json"
+            out_gif = Path(tmp) / "v07.gif"
+            layers_dir = Path(tmp) / "layers"
+
+            spec = {
+                "width": 32,
+                "height": 32,
+                "palette": "cozy24",
+                "layers": [
+                    {
+                        "name": "ground",
+                        "ops": [
+                            {"op": "ellipse", "cx": 16, "cy": 26, "rx": 10, "ry": 3, "color": "shadow"},
+                            {"op": "bezier", "points": [[4, 24], [16, 8], [28, 24]], "color": "wood", "thickness": 2},
+                        ],
+                    },
+                    {
+                        "name": "z_test",
+                        "ops": [
+                            {"op": "rect", "x": 12, "y": 12, "w": 8, "h": 8, "color": "roof", "z": 10},
+                            {"op": "rect", "x": 12, "y": 12, "w": 8, "h": 8, "color": "water", "z": 5},
+                        ],
+                    },
+                ],
+                "keyframes": [
+                    {
+                        "name": "start",
+                        "steps": 3,
+                        "ops": [
+                            {"op": "rect", "x": 2, "y": 2, "w": 4, "h": 4, "color": "wheat"},
+                            {"op": "particles", "x": 0, "y": 0, "w": 32, "h": 32, "count": 6, "color": "cream", "mode": "smoke"},
+                        ],
+                    },
+                    {
+                        "name": "end",
+                        "steps": 1,
+                        "ops": [
+                            {"op": "rect", "x": 14, "y": 2, "w": 4, "h": 4, "color": "wheat"},
+                            {"op": "particles", "x": 0, "y": 0, "w": 32, "h": 32, "count": 6, "color": "cream", "mode": "smoke"},
+                        ],
+                    },
+                ],
+            }
+            frames, names = run_frames(spec)
+            # 3 interpolated frames from 'start' + 1 final 'end' frame = 4 frames
+            self.assertEqual(len(frames), 4)
+            self.assertEqual(names[0], "start_0")
+            # Z-buffer: 'roof' (z=10) at (15,15) must NOT be overwritten by 'water' (z=5)
+            self.assertEqual(frames[0].get_pixel(15, 15), (194, 75, 56, 255))
+
+            spec_p.write_text(json.dumps(spec), encoding="utf-8")
+            self.assertEqual(
+                main(["render", str(spec_p), "-o", str(out_gif), "--layers-dir", str(layers_dir)]),
+                0,
+            )
+            self.assertTrue(out_gif.exists())
+            self.assertTrue((layers_dir / "00_ground.png").exists())
+            self.assertTrue((layers_dir / "01_z_test.png").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

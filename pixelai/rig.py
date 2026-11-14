@@ -2,25 +2,7 @@
 
 from typing import Any
 from pixelai.canvas import Canvas
-from pixelai.color import RGBA, parse_color
-
-
-def _darken(c: RGBA, factor: float = 0.78) -> RGBA:
-    return (
-        max(0, int(c[0] * factor)),
-        max(0, int(c[1] * factor)),
-        max(0, int(c[2] * factor)),
-        c[3],
-    )
-
-
-def _brighten(c: RGBA, factor: float = 1.15) -> RGBA:
-    return (
-        min(255, int(c[0] * factor + 8)),
-        min(255, int(c[1] * factor + 8)),
-        min(255, int(c[2] * factor + 8)),
-        c[3],
-    )
+from pixelai.color import RGBA, brighten as _brighten, darken as _darken, parse_color
 
 
 def draw_char_rig(

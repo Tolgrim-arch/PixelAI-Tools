@@ -187,3 +187,18 @@ def export_godot_tres(
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8")
     return out
+
+
+def export_layers(
+    layers: list[tuple[str, Canvas]], layers_dir: str | Path
+) -> list[Path]:
+    """Export named layers as individual numbered PNG files for Aseprite/Photoshop editing."""
+    out_dir = Path(layers_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    paths: list[Path] = []
+    for idx, (name, canvas) in enumerate(layers):
+        safe_name = "".join(c if c.isalnum() or c in ("_", "-") else "_" for c in name)
+        p = out_dir / f"{idx:02d}_{safe_name}.png"
+        export_png(canvas, p)
+        paths.append(p)
+    return paths

@@ -16,10 +16,17 @@ def _execute_ops(
     ops: list[dict[str, Any]],
     palette: dict[str, RGBA],
     defs: dict[str, Canvas],
+    frame_idx: int = 0,
+    total_frames: int = 1,
 ) -> None:
     """Execute a sequence of drawing operations on a Canvas."""
     for op in ops:
         kind = op["op"]
+        if "z" in op:
+            canvas.current_z = float(op["z"])
+        else:
+            canvas.current_z = None
+
         if kind == "pixel":
             canvas.set_pixel(op["x"], op["y"], parse_color(op["color"], palette))
         elif kind == "line":
@@ -38,6 +45,36 @@ def _execute_ops(
                 op["cx"], op["cy"], op["r"],
                 parse_color(op["color"], palette),
                 filled=op.get("filled", False),
+            )
+        elif kind == "ellipse":
+            canvas.draw_ellipse(
+                int(op["cx"]),
+                int(op["cy"]),
+                int(op["rx"]),
+                int(op["ry"]),
+                parse_color(op["color"], palette),
+                filled=bool(op.get("filled", True)),
+            )
+        elif kind == "bezier":
+            pts = [(int(p[0]), int(p[1])) for p in op["points"]]
+            canvas.draw_bezier(
+                pts,
+                parse_color(op["color"], palette),
+                thickness=int(op.get("thickness", 1)),
+            )
+        elif kind == "particles":
+            canvas.draw_particles(
+                int(op.get("x", 0)),
+                int(op.get("y", 0)),
+                int(op.get("w", canvas.width)),
+                int(op.get("h", canvas.height)),
+                int(op.get("count", 8)),
+                parse_color(op["color"], palette),
+                frame=int(op.get("frame", frame_idx)),
+                total_frames=int(op.get("total_frames", max(1, total_frames))),
+                mode=op.get("mode", "smoke"),
+                size=int(op.get("size", 1)),
+                seed=int(op.get("seed", 42)),
             )
         elif kind == "polygon":
             pts = [(int(p[0]), int(p[1])) for p in op["points"]]
@@ -301,7 +338,11 @@ def _apply_post(
         elif kind == "pad":
             canvas = filters.pad(canvas, int(post.get("size", 1)))
         elif kind == "shade":
-            canvas = filters.shade(canvas, float(post.get("amount", 0.25)))
+            canvas = filters.shade(
+                canvas,
+                float(post.get("amount", 0.25)),
+                hue_shift=bool(post.get("hue_shift", False)),
+            )
         elif kind == "scale":
             canvas = filters.scale(canvas, int(post["factor"]))
         else:
@@ -334,6 +375,72 @@ def _resolve_extends(spec: dict[str, Any]) -> dict[str, Any]:
     return merged
 
 
+_TWEEN_KEYS = ("x", "y", "cx", "cy", "rx", "ry", "r", "w", "h", "angle", "x0", "y0", "x1", "y1")
+
+
+def _expand_keyframes(keyframes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Interpolate numeric op properties across consecutive keyframes."""
+    if not keyframes:
+        return []
+    expanded: list[dict[str, Any]] = []
+    for k_idx, kf in enumerate(keyframes):
+        steps = max(1, int(kf.get("steps", 1)))
+        base_name = kf.get("name", f"kf_{k_idx}")
+        ops_a = kf.get("ops", [])
+        if k_idx + 1 >= len(keyframes) or steps == 1:
+            expanded.append({"name": base_name, "ops": ops_a, "inherit_base": kf.get("inherit_base", True)})
+            continue
+        ops_b = keyframes[k_idx + 1].get("ops", [])
+        for s in range(steps):
+            t = s / steps
+            interp_ops: list[dict[str, Any]] = []
+            for idx, op_a in enumerate(ops_a):
+                if idx < len(ops_b) and ops_b[idx].get("op") == op_a.get("op"):
+                    op_b = ops_b[idx]
+                    new_op = dict(op_a)
+                    for tk in _TWEEN_KEYS:
+                        if tk in op_a and tk in op_b:
+                            val = float(op_a[tk]) * (1.0 - t) + float(op_b[tk]) * t
+                            new_op[tk] = val if tk == "angle" else int(round(val))
+                    interp_ops.append(new_op)
+                else:
+                    interp_ops.append(dict(op_a))
+            expanded.append({
+                "name": f"{base_name}_{s}",
+                "ops": interp_ops,
+                "inherit_base": kf.get("inherit_base", True),
+            })
+    return expanded
+
+
+def run_layers(spec: dict[str, Any]) -> list[tuple[str, Canvas]]:
+    """Render each named layer in `spec['layers']` into its own separate Canvas."""
+    spec = _resolve_extends(spec)
+    width = int(spec["width"])
+    height = int(spec["height"])
+    palette = resolve_palette(spec.get("palette"), spec.get("palette_ext"))
+
+    defs: dict[str, Canvas] = {}
+    for name, dspec in spec.get("defs", {}).items():
+        dw = int(dspec.get("width", width))
+        dh = int(dspec.get("height", height))
+        dc = Canvas(dw, dh, fill=TRANSPARENT)
+        _execute_ops(dc, dspec.get("ops", []), palette, defs)
+        if "post" in dspec:
+            dc = _apply_post(dc, dspec["post"], palette)
+        defs[name] = dc
+
+    result: list[tuple[str, Canvas]] = []
+    for idx, lspec in enumerate(spec.get("layers", [])):
+        lname = lspec.get("name", f"layer_{idx}")
+        lc = Canvas(width, height, fill=TRANSPARENT)
+        _execute_ops(lc, lspec.get("ops", []), palette, defs)
+        if "post" in lspec:
+            lc = _apply_post(lc, lspec["post"], palette)
+        result.append((lname, lc))
+    return result
+
+
 def run_frames(spec: dict[str, Any]) -> tuple[list[Canvas], list[str]]:
     """Execute a spec into one or more post-processed frames and their names."""
     spec = _resolve_extends(spec)
@@ -352,22 +459,30 @@ def run_frames(spec: dict[str, Any]) -> tuple[list[Canvas], list[str]]:
             dc = _apply_post(dc, dspec["post"], palette)
         defs[name] = dc
 
-    base_ops = spec.get("ops", [])
+    base_ops = list(spec.get("ops", []))
+    for lspec in spec.get("layers", []):
+        base_ops.extend(lspec.get("ops", []))
+
     post_ops = _resolve_post_ops(spec, palette)
     raw_frames = spec.get("frames")
+    if not raw_frames and "keyframes" in spec:
+        raw_frames = _expand_keyframes(spec["keyframes"])
+    if not raw_frames and any(op.get("op") == "particles" for op in base_ops) and "frame_count" in spec:
+        raw_frames = [{"name": f"frame_{i}", "ops": []} for i in range(int(spec["frame_count"]))]
 
     if not raw_frames:
         canvas = Canvas(width, height, fill=bg)
-        _execute_ops(canvas, base_ops, palette, defs)
+        _execute_ops(canvas, base_ops, palette, defs, frame_idx=0, total_frames=1)
         return [_apply_post(canvas, post_ops, palette)], ["frame_0"]
 
+    total = len(raw_frames)
     frames: list[Canvas] = []
     names: list[str] = []
     for idx, fspec in enumerate(raw_frames):
         canvas = Canvas(width, height, fill=bg)
         if fspec.get("inherit_base", True) and base_ops:
-            _execute_ops(canvas, base_ops, palette, defs)
-        _execute_ops(canvas, fspec.get("ops", []), palette, defs)
+            _execute_ops(canvas, base_ops, palette, defs, frame_idx=idx, total_frames=total)
+        _execute_ops(canvas, fspec.get("ops", []), palette, defs, frame_idx=idx, total_frames=total)
         frames.append(_apply_post(canvas, post_ops, palette))
         names.append(fspec.get("name", f"frame_{idx}"))
     return frames, names

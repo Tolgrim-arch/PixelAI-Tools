@@ -2,6 +2,14 @@
 
 All notable changes to `pixelai-tools` are documented in this file.
 
+## [0.7.0] - 2026-11-14
+### Added
+- **Hue-Shifted Color Ramps (`color.py`):** Consolidated `darken()` (shifts shadows toward cool indigo/violet) and `brighten()` (shifts highlights toward warm golden sunlight) + `nearest_palette_color()`, eliminating duplicate color math across modules (DRY).
+- **Per-Pixel Z-Buffer (`canvas.py`, `iso.py`):** Added `z_buffer` to `Canvas` and per-pixel depth emission in `iso_tile`, `iso_box`, and `iso_structure` (`use_zbuffer: true`), solving Painter's Algorithm sorting artifacts on intersecting L-shaped walls and bridges.
+- **Organic Primitives (`ellipse`, `bezier`):** Added midpoint ellipse rasterization (`rx`, `ry`) and de Casteljau Bezier curves (`points`, `thickness`) for shadows, arches, vines, and cables.
+- **Keyframe Tweening & Deterministic Particles:** Added automatic keyframe interpolation (`"keyframes": [{"steps": N, "ops": [...]}]`) and seamlessly looping particle emitters (`"op": "particles"`, modes: `smoke`, `leaves`, `rain`, `sparks`).
+- **Multi-Layer Rendering & Export (`layers`, `--layers-dir`):** Specs can define `"layers": [{"name": "bg", ...}, {"name": "fg", ...}]` to composite automatically or export separate transparent PNG layers via `--layers-dir`.
+
 ## [0.6.0] - 2026-11-14
 ### Added
 - **PNG Spec Embedding & Extraction:** Every rendered `.png` embeds its source JSON spec in `tEXt` metadata (`pixelai_spec`). Added `pixelai extract <image.png>` to recover specs from any generated PNG.

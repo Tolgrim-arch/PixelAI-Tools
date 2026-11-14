@@ -9,13 +9,14 @@ from pixelai import __version__
 from pixelai.exporter import (
     export_gif,
     export_godot_tres,
+    export_layers,
     export_png,
     export_spritesheet,
     extract_spec_from_png,
 )
 from pixelai.inspect_tool import analyze_canvas, load_png_as_canvas, render_ascii
 from pixelai.palettes import list_palettes
-from pixelai.runner import run_frames
+from pixelai.runner import run_frames, run_layers
 
 AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 
@@ -38,6 +39,9 @@ AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 - `{"op": "line", "x0": 0, "y0": 0, "x1": 5, "y1": 5, "color": "ink"}`
 - `{"op": "rect", "x": 0, "y": 0, "w": 8, "h": 8, "color": "wood", "filled": true}`
 - `{"op": "circle", "cx": 8, "cy": 8, "r": 4, "color": "grass", "filled": true}`
+- `{"op": "ellipse", "cx": 16, "cy": 28, "rx": 8, "ry": 3, "color": "shadow", "filled": true}`
+- `{"op": "bezier", "points": [[2, 20], [16, 4], [30, 20]], "color": "wood", "thickness": 2}`
+- `{"op": "particles", "x": 0, "y": 0, "w": 32, "h": 32, "count": 10, "color": "cream", "mode": "smoke|leaves|rain|sparks", "size": 1, "seed": 42}`
 - `{"op": "polygon", "points": [[0,0], [8,4], [0,8]], "color": "roof", "filled": true}`
 - `{"op": "fill", "x": 4, "y": 4, "color": "water"}`
 - `{"op": "grid", "x": 0, "y": 0, "rows": ["..oo..", ".oggo."]}` (`.` and ` ` = transparent)
@@ -115,6 +119,11 @@ def _cmd_render(args: argparse.Namespace) -> int:
             out_path, args.godot, frames, frame_names=names, columns=cols, fps=fps
         )
         print(f"Exported Godot 4 SpriteFrames -> {tres_out}")
+
+    if args.layers_dir:
+        layers = run_layers(spec)
+        paths = export_layers(layers, args.layers_dir)
+        print(f"Exported {len(paths)} layer PNGs -> {args.layers_dir}")
 
     if args.ascii:
         print(render_ascii(frames[0]))
@@ -200,6 +209,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--godot",
         default=None,
         help="Optional output path for Godot 4 SpriteFrames (.tres) resource.",
+    )
+    render_p.add_argument(
+        "--layers-dir",
+        default=None,
+        help="Optional directory to export individual named layers as separate PNGs.",
     )
     render_p.add_argument(
         "--lineless",

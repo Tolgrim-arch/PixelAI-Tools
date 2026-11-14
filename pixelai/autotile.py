@@ -2,25 +2,7 @@
 
 import random
 from pixelai.canvas import Canvas
-from pixelai.color import RGBA
-
-
-def _darken(c: RGBA, factor: float = 0.78) -> RGBA:
-    return (
-        max(0, int(c[0] * factor)),
-        max(0, int(c[1] * factor)),
-        max(0, int(c[2] * factor)),
-        c[3],
-    )
-
-
-def _brighten(c: RGBA, factor: float = 1.12) -> RGBA:
-    return (
-        min(255, int(c[0] * factor + 6)),
-        min(255, int(c[1] * factor + 6)),
-        min(255, int(c[2] * factor + 6)),
-        c[3],
-    )
+from pixelai.color import RGBA, brighten as _brighten, darken as _darken
 
 
 def draw_autotile_atlas(

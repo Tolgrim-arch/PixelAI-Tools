@@ -1,4 +1,4 @@
-"""Color parsing and palette resolution utilities."""
+"""Color parsing, hue-shifted shading, and palette resolution utilities."""
 
 from typing import Mapping
 
@@ -42,3 +42,36 @@ def parse_color(
         return (r, g, b, a)
 
     raise ValueError(f"Invalid color value: {value!r}")
+
+
+def darken(c: RGBA, factor: float = 0.75) -> RGBA:
+    """Darken an RGBA color with cool-purple pixel-art hue shifting."""
+    r, g, b, a = c
+    # Cool shift: red & green drop faster than blue so shadows lean indigo/violet
+    nr = max(0, min(255, int(r * (factor * 0.94))))
+    ng = max(0, min(255, int(g * (factor * 0.98))))
+    nb = max(0, min(255, int(b * min(1.0, factor * 1.08) + 2)))
+    return (nr, ng, nb, a)
+
+
+def brighten(c: RGBA, factor: float = 1.16) -> RGBA:
+    """Brighten an RGBA color with warm-sunlight pixel-art hue shifting."""
+    r, g, b, a = c
+    # Warm shift: red & green gain slightly more than blue so highlights lean golden
+    nr = max(0, min(255, int(r * (factor * 1.04) + 8)))
+    ng = max(0, min(255, int(g * (factor * 1.01) + 6)))
+    nb = max(0, min(255, int(b * (factor * 0.95) + 3)))
+    return (nr, ng, nb, a)
+
+
+def nearest_palette_color(target: RGBA, palette: Mapping[str, RGBA]) -> RGBA:
+    """Snap an RGBA color to the closest opaque color in `palette`."""
+    candidates = [c for c in palette.values() if c[3] > 0]
+    if not candidates:
+        return target
+    tr, tg, tb, ta = target
+    best = min(
+        candidates,
+        key=lambda c: (c[0] - tr) ** 2 * 2 + (c[1] - tg) ** 2 * 4 + (c[2] - tb) ** 2 * 3,
+    )
+    return (best[0], best[1], best[2], ta)

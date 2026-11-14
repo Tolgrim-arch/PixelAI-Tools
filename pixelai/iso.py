@@ -1,26 +1,8 @@
-"""2:1 Isometric projection primitives and 3D structure sorter for pixelai-tools."""
+"""2:1 Isometric projection primitives and per-pixel Z-buffered 3D structure engine."""
 
 from typing import Any
 from pixelai.canvas import Canvas
-from pixelai.color import RGBA, parse_color
-
-
-def _darken(c: RGBA, factor: float = 0.72) -> RGBA:
-    return (
-        max(0, int(c[0] * factor)),
-        max(0, int(c[1] * factor)),
-        max(0, int(c[2] * factor)),
-        c[3],
-    )
-
-
-def _brighten(c: RGBA, factor: float = 1.16) -> RGBA:
-    return (
-        min(255, int(c[0] * factor + 8)),
-        min(255, int(c[1] * factor + 8)),
-        min(255, int(c[2] * factor + 8)),
-        c[3],
-    )
+from pixelai.color import RGBA, brighten, darken, parse_color
 
 
 def draw_iso_tile(
@@ -35,12 +17,16 @@ def draw_iso_tile(
     """Draw a 2:1 isometric diamond tile centered at (cx, cy)."""
     if rx <= 0 or ry <= 0:
         return
+    base_z = canvas.current_z
     for dy in range(-ry, ry + 1):
+        if base_z is not None:
+            canvas.current_z = base_z + (dy / max(1, ry)) * 2.0 + 0.2
         half_w = int(round(rx * (1.0 - abs(dy) / ry)))
         canvas.draw_line(cx - half_w, cy + dy, cx + half_w, cy + dy, color)
         if border is not None:
             canvas.set_pixel(cx - half_w, cy + dy, border)
             canvas.set_pixel(cx + half_w, cy + dy, border)
+    canvas.current_z = base_z
 
 
 def draw_iso_box(
@@ -57,51 +43,69 @@ def draw_iso_box(
     bevel: bool = True,
     ground_shadow: int = 0,
 ) -> None:
-    """Draw a lineless 2:1 isometric 3D box with specular bevels and optional ground shadow."""
-    _ = edge_color  # Internal outlines are disabled by design; use lineless bevels
+    """Draw a lineless 2:1 isometric 3D box with specular bevels, ground shadow, and per-column Z-depth."""
+    _ = edge_color  # Internal dark outlines are disabled by design
     if rx <= 0 or ry <= 0 or h < 0:
         return
 
+    base_z = canvas.current_z
+
     if ground_shadow > 0 and h > 0:
+        canvas.current_z = None
         for dx in range(rx + 1):
             y_base = cy + ry - int(round(ry * dx / rx)) + h - 1
             for s in range(1, ground_shadow + 1):
                 gx, gy = cx + dx + s, y_base + (s // 2)
                 existing = canvas.get_pixel(gx, gy)
                 if existing[3] > 0:
-                    canvas.set_pixel(gx, gy, _darken(existing, 0.75))
+                    canvas.set_pixel(gx, gy, darken(existing, 0.75))
+        canvas.current_z = base_z
 
     if h > 0:
         for dx in range(rx + 1):
+            # Left face advances toward viewer as dx goes 0 -> rx
+            if base_z is not None:
+                canvas.current_z = base_z + (dx / rx) * 2.0
             y_left = cy + int(round(ry * dx / rx))
             canvas.draw_line(cx - rx + dx, y_left, cx - rx + dx, y_left + h - 1, left_color)
+
+            # Right face recedes from viewer as dx goes 0 -> rx
+            if base_z is not None:
+                canvas.current_z = base_z + ((rx - dx) / rx) * 2.0
             y_right = cy + ry - int(round(ry * dx / rx))
             canvas.draw_line(cx + dx, y_right, cx + dx, y_right + h - 1, right_color)
+        canvas.current_z = base_z
 
     draw_iso_tile(canvas, cx, cy, rx, ry, top_color, border=None)
 
     if bevel and h > 0:
-        hl_top = _brighten(top_color, 1.12)
-        hl_left = _brighten(left_color, 1.14)
+        if base_z is not None:
+            canvas.current_z = base_z + 2.5
+        hl_top = brighten(top_color, 1.12)
+        hl_left = brighten(left_color, 1.14)
         for dx in range(rx + 1):
             yl = cy + int(round(ry * dx / rx))
             yr = cy + ry - int(round(ry * dx / rx))
             canvas.set_pixel(cx - rx + dx, yl, hl_top)
             canvas.set_pixel(cx + dx, yr, hl_top)
         canvas.draw_line(cx, cy + ry + 1, cx, cy + ry + h - 1, hl_left)
+        canvas.current_z = base_z
 
 
 def _apply_eave_shadow(canvas: Canvas, cx: int, cy: int, rx: int, ry: int) -> None:
     """Darken 1px directly under the front-left and front-right roof eaves."""
+    prev_z = canvas.current_z
+    canvas.current_z = None
     for dx in range(rx + 1):
         yl = cy + int(round(ry * dx / rx)) + 1
         yr = cy + ry - int(round(ry * dx / rx)) + 1
         cl = canvas.get_pixel(cx - rx + dx, yl)
         if cl[3] > 0:
-            canvas.set_pixel(cx - rx + dx, yl, _darken(cl, 0.72))
+            canvas.set_pixel(cx - rx + dx, yl, darken(cl, 0.72))
         cr = canvas.get_pixel(cx + dx, yr)
         if cr[3] > 0:
-            canvas.set_pixel(cx + dx, yr, _darken(cr, 0.72))
+            canvas.set_pixel(cx + dx, yr, darken(cr, 0.72))
+    canvas.current_z = prev_z
 
 
 def draw_iso_roof(
@@ -120,7 +124,7 @@ def draw_iso_roof(
     bevel: bool = True,
 ) -> None:
     """Draw a lineless pitched isometric roof ('pyramid', 'gable_left', or 'gable_right')."""
-    _ = ridge_color  # Internal dark ridges are disabled; use lineless specular bevels
+    _ = ridge_color
     if rx <= 0 or ry <= 0 or h <= 0:
         return
     apex_y = cy - h
@@ -136,7 +140,7 @@ def draw_iso_roof(
             [(cx + rx, cy), (cx, cy + ry), (cx, apex_y)], right_color
         )
         if bevel:
-            canvas.draw_line(cx, apex_y, cx, cy + ry, _brighten(left_color, 1.12))
+            canvas.draw_line(cx, apex_y, cx, cy + ry, brighten(left_color, 1.12))
 
     elif style == "gable_left":
         g_col = gable_color or left_color
@@ -158,7 +162,7 @@ def draw_iso_roof(
             g_col,
         )
         if bevel:
-            hl = _brighten(g_col, 1.14)
+            hl = brighten(g_col, 1.14)
             canvas.draw_line(front_cx, front_cy - h, back_cx, back_cy - h, hl)
             canvas.draw_line(cx, cy + ry, front_cx, front_cy - h, hl)
 
@@ -182,7 +186,7 @@ def draw_iso_roof(
             g_col,
         )
         if bevel:
-            hl = _brighten(left_color, 1.14)
+            hl = brighten(left_color, 1.14)
             canvas.draw_line(back_cx, back_cy - h, front_cx, front_cy - h, hl)
             canvas.draw_line(cx, cy + ry, front_cx, front_cy - h, hl)
     else:
@@ -201,12 +205,12 @@ def draw_iso_wall_rect(
     arch: bool = False,
     recessed: bool = True,
 ) -> None:
-    """Draw a rectangle sheared to a 2:1 isometric 'left' or 'right' wall with lineless recessed depth by default."""
-    _ = border  # Internal dark borders disabled in favor of lineless recessed depth
+    """Draw a rectangle sheared to a 2:1 isometric 'left' or 'right' wall with lineless recessed depth."""
+    _ = border
     if w <= 0 or h <= 0:
         return
     slope = 1 if face == "left" else -1
-    recess_col = _darken(color, 0.68)
+    recess_col = darken(color, 0.68)
     for dx in range(w):
         sy = y + (dx * slope) // 2
         top_offset = 1 if (arch and w >= 3 and (dx == 0 or dx == w - 1)) else 0
@@ -231,8 +235,9 @@ def draw_iso_structure(
     step_y: int = 1,
     default_bevel: bool = True,
     default_ground_shadow: int = 2,
+    use_zbuffer: bool = True,
 ) -> None:
-    """Sort and render 3D lineless isometric boxes/roofs by depth (gx + gy, gz)."""
+    """Sort and render 3D lineless isometric boxes/roofs with per-pixel Z-buffering."""
     sorted_items = sorted(
         items,
         key=lambda it: (
@@ -240,6 +245,7 @@ def draw_iso_structure(
             float(it.get("gz", 0)),
         ),
     )
+    prev_z = canvas.current_z
     for it in sorted_items:
         gx = int(it.get("gx", 0))
         gy = int(it.get("gy", 0))
@@ -252,6 +258,9 @@ def draw_iso_structure(
 
         kind = it.get("type", "box")
         bevel = bool(it.get("bevel", default_bevel))
+        if use_zbuffer:
+            canvas.current_z = (gx + gy) * 10.0 + gz * 2.0 + (3.0 if kind == "roof" else 0.0)
+
         if kind == "box":
             g_shadow = int(it.get("ground_shadow", default_ground_shadow if gz == 0 else 0))
             draw_iso_box(
@@ -284,4 +293,6 @@ def draw_iso_structure(
                 bevel=bevel,
             )
         else:
+            canvas.current_z = prev_z
             raise ValueError(f"Unknown iso_structure item type: {kind!r}")
+    canvas.current_z = prev_z

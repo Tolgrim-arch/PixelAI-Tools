@@ -1,7 +1,7 @@
 """Post-processing filters for pixel art canvases."""
 
 from pixelai.canvas import Canvas
-from pixelai.color import RGBA
+from pixelai.color import RGBA, brighten, darken
 
 
 def _copy_meta(src: Canvas, dst: Canvas) -> None:
@@ -93,7 +93,7 @@ def _adjust(c: RGBA, factor: float) -> RGBA:
     )
 
 
-def shade(canvas: Canvas, amount: float = 0.25) -> Canvas:
+def shade(canvas: Canvas, amount: float = 0.25, hue_shift: bool = False) -> Canvas:
     """Apply top-left directional edge shading to non-transparent pixels."""
     out = Canvas(canvas.width, canvas.height)
     _copy_meta(canvas, out)
@@ -107,9 +107,9 @@ def shade(canvas: Canvas, amount: float = 0.25) -> Canvas:
             bottom_empty = canvas.get_pixel(x, y + 1)[3] == 0
             right_empty = canvas.get_pixel(x + 1, y)[3] == 0
             if top_empty or left_empty:
-                c = _adjust(c, 1.0 + amount)
+                c = brighten(c, 1.0 + amount) if hue_shift else _adjust(c, 1.0 + amount)
             elif bottom_empty or right_empty:
-                c = _adjust(c, 1.0 - amount)
+                c = darken(c, 1.0 - amount) if hue_shift else _adjust(c, 1.0 - amount)
             out.set_pixel(x, y, c)
     return out
 
