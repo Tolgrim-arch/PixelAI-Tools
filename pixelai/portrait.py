@@ -1,5 +1,6 @@
 """Native pixel clusters for a three-quarter field farmer bust."""
 
+from pixelai.canvas import Canvas
 from pixelai.color import parse_color
 
 
@@ -59,14 +60,17 @@ _PLANES = (
     ("eye", "76,53 78,53 79,55 78,58 76,58"),
     ("white", "76,53 77,53 77,54 76,54"),
     ("skin_d", "70,59 72,62 71,65 74,65 76,66 72,67 69,66"),
-    ("lip", "59,72 63,73 69,73 76,70 74,74 70,77 64,76"),
-    ("skin_l", "63,73 70,73 74,72 71,74 65,75"),
+    ("smile", "59,72 63,73 69,73 76,70 74,74 70,77 64,76"),
+    ("smile_light", "63,73 70,73 74,72 71,74 65,75"),
     ("blush", "55,71 58,74 62,77 60,78 57,76"),
     ("skin_l", "65,79 70,79 73,77 72,80 69,81 66,81"),
     ("hair_d", "27,42 36,31 52,29 69,31 73,35 68,40 61,41 53,46 49,52 47,59 44,55 43,48 38,52 33,56 34,49 29,53"),
     ("hair", "31,43 40,35 57,32 69,35 66,38 53,40 45,45 41,51 42,44 35,49 36,44 31,48"),
     ("hair_l", "36,41 43,36 56,34 61,35 51,38 44,40 39,44"),
     ("hair", "71,34 80,35 86,41 86,47 83,52 84,47 80,43 78,43 75,39"),
+)
+
+_HAT = (
     ("straw_d", "14,35 19,29 29,25 34,23 37,14 43,8 51,5 63,5 73,8 79,14 82,22 92,24 101,28 106,33 105,38 99,42 91,43 78,41 67,37 52,35 39,38 26,43 19,43 15,40"),
     ("straw", "16,34 24,29 35,25 39,15 46,9 53,7 64,7 74,11 78,16 80,24 96,27 103,32 103,36 98,38 90,38 75,34 65,31 51,30 38,33 25,38 19,39 16,37"),
     ("straw_l", "41,15 47,10 54,8 66,9 73,12 76,16 67,13 55,13 47,15 43,19 39,22"),
@@ -78,6 +82,19 @@ _PLANES = (
     ("straw", "85,38 91,39 99,39 96,41 91,41"),
 )
 
+_CROWN = (
+    ("hair_d", "27,44 26,35 29,29 29,25 35,25 36,19 42,21 48,17 56,18 64,21 72,20 77,23 82,23 81,27 87,31 90,39 89,47 82,50 61,40 40,45"),
+    ("hair", "28,38 33,29 40,26 43,22 48,23 52,19 61,22 65,25 73,23 79,26 76,29 82,30 86,35 87,41 75,39 66,33 51,35 40,39 33,44"),
+    ("hair_l", "32,35 38,28 45,26 48,26 43,30 39,31 36,35"),
+    ("hair_l", "47,28 52,23 57,22 63,25 65,28 60,26 55,26 51,28"),
+    ("hair", "59,28 64,28 70,31 75,35 79,40 75,38 68,33"),
+    ("hair_l", "70,28 75,27 76,30 82,32 84,36 78,33 73,32"),
+)
+
+_NEUTRAL = (
+    ("lip", "61,73 66,73 72,72 75,71 73,73 68,74 64,74"),
+)
+
 _DEFAULTS = {
     "shirt": "#e8ce9e", "shirt_d": "#b58764", "shirt_l": "#ffe5b4",
     "skin": "#f4be87", "skin_d": "#b97660", "skin_l": "#ffda9f",
@@ -87,22 +104,43 @@ _DEFAULTS = {
     "straw": "#e1ad5e", "straw_d": "#9d643f", "straw_l": "#f8d487", "band": "#835055",
 }
 
-_PLANES = tuple(
-    (color, tuple(tuple(map(int, point.split(","))) for point in points.split()))
-    for color, points in _PLANES
-)
+def _parse_planes(planes):
+    return tuple(
+        (color, tuple(tuple(map(int, point.split(","))) for point in points.split()))
+        for color, points in planes
+    )
+
+
+_BODY = _parse_planes(_PLANES)
+_HEADWEAR = {True: _parse_planes(_HAT), False: _parse_planes(_CROWN)}
+_NEUTRAL = _parse_planes(_NEUTRAL)
 
 
 def draw_field_farmer(canvas, x, y, palette, op):
-    """Draw an original field farmer with reusable material colors and mirroring."""
+    """Rasterize native portrait layers, then stamp them in either direction."""
+    expression = op.get("expression", "smile")
+    if expression not in ("smile", "neutral"):
+        raise ValueError("field_farmer expression must be smile or neutral")
+    hat = op.get("hat", True)
+    if not isinstance(hat, bool):
+        raise ValueError("field_farmer hat must be true or false")
+
     colors = {
         name: parse_color(op.get(name, value), palette)
         for name, value in _DEFAULTS.items()
     }
+    colors["smile"] = colors["lip"]
+    colors["smile_light"] = colors["skin_l"]
+    bust = Canvas(116, 144)
+    for name, points in _BODY:
+        if expression == "neutral" and name in ("smile", "smile_light"):
+            continue
+        bust.draw_polygon(list(points), colors[name], filled=True)
+    if expression == "neutral":
+        for name, points in _NEUTRAL:
+            bust.draw_polygon(list(points), colors[name], filled=True)
+    for name, points in _HEADWEAR[hat]:
+        bust.draw_polygon(list(points), colors[name], filled=True)
+
     mirrored = op.get("face_dir") in ("left", "three_quarter_left", "3q_left")
-    for name, points in _PLANES:
-        canvas.draw_polygon(
-            [(x + (115 - px if mirrored else px), y + py) for px, py in points],
-            colors[name],
-            filled=True,
-        )
+    canvas.blit(bust, x, y, flip_x=mirrored)
