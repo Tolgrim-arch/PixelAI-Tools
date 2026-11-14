@@ -230,6 +230,14 @@ def _execute_ops(
                 palette,
                 op,
             )
+        elif kind == "portrait_rig":
+            rig.draw_portrait_rig(
+                canvas,
+                int(op.get("x", 0)),
+                int(op.get("y", 0)),
+                palette,
+                op,
+            )
         elif kind == "animal_rig":
             creatures.draw_animal_rig(
                 canvas,

@@ -4,6 +4,161 @@ from typing import Any
 from pixelai.canvas import Canvas
 from pixelai.color import RGBA, brighten as _brighten, darken as _darken, parse_color
 
+from pixelai.portrait import draw_field_farmer
+
+
+def draw_portrait_rig(
+    canvas: Canvas,
+    x: int,
+    y: int,
+    palette: dict[str, RGBA],
+    op: dict[str, Any],
+) -> None:
+    """Draw a deterministic bust portrait with a cozy, clean-pixel silhouette.
+
+    This is intentionally separate from ``char_rig``: portraits need a larger
+    facial design language, asymmetric hair, shoulders, clothing planes and
+    explicit feature scale rather than a tiny walk-cycle body.
+    """
+    if op.get("preset") == "field_farmer":
+        draw_field_farmer(canvas, x, y, palette, op)
+        return
+
+    w = max(48, int(op.get("width", 64)))
+    h = max(64, int(op.get("height", 80)))
+    scale = min(w, h) / 64.0
+    def p(name: str, fallback: str) -> RGBA:
+        return parse_color(op.get(name, fallback), palette)
+    ink = p("ink", "#2b1b2b")
+    skin = p("skin", "#f2c38f")
+    skin_l = p("skin_l", "#ffe0aa")
+    skin_d = p("skin_d", "#b96d5c")
+    hair = p("hair", "#6b3f35")
+    hair_l = p("hair_l", "#925442")
+    hair_d = p("hair_d", "#402538")
+    shirt = p("shirt", "#d9e5d2")
+    garment = p("garment", "#704b3b")
+    garment_d = p("garment_d", "#4b302e")
+    accent = p("accent", "#d69b4b")
+    beard = p("beard_color", "#4b302e")
+    eye_color = p("eye_color", "#2b1b2b")
+    hat = p("hat_color", "#d69b4b")
+    hat_l = p("hat_light", "#f1c66b")
+    hat_d = p("hat_dark", "#9a613b")
+    bg = p("background", "#d6e6cf")
+
+    def sx(v: float) -> int:
+        return max(0, min(canvas.width - 1, x + round(v * scale)))
+    def sy(v: float) -> int:
+        return max(0, min(canvas.height - 1, y + round(v * scale)))
+    def pts(values: list[tuple[float, float]]) -> list[tuple[int, int]]:
+        return [(sx(px), sy(py)) for px, py in values]
+
+    if op.get("fill_background", False):
+        prev_no_outline = canvas.mark_no_outline
+        canvas.mark_no_outline = True
+        canvas.draw_rect(sx(0), sy(0), round(w), round(h), bg, filled=True)
+        canvas.mark_no_outline = prev_no_outline
+    # Shoulders first: broad, readable planes, with a small rim highlight.
+    canvas.draw_polygon(pts([(4, 64), (9, 47), (20, 39), (44, 39), (56, 47), (61, 64)]), shirt, filled=True)
+    canvas.draw_polygon(pts([(14, 64), (17, 45), (24, 39), (40, 39), (48, 45), (52, 64)]), garment, filled=True)
+    canvas.draw_polygon(pts([(17, 46), (24, 39), (28, 44), (24, 49)]), garment_d, filled=True)
+    canvas.draw_polygon(pts([(47, 46), (40, 39), (36, 44), (40, 49)]), garment_d, filled=True)
+    canvas.draw_rect(sx(29), sy(50), max(2, round(7 * scale)), max(2, round(5 * scale)), accent, filled=True, bevel=True)
+
+    # Cropped forearms give the bust a lived-in, characterful pose instead of
+    # ending as a flat triangular torso. Hands remain simple pixel clusters.
+    canvas.draw_polygon(pts([(5, 63), (7, 51), (13, 47), (18, 51), (15, 57), (13, 63)]), shirt, filled=True)
+    canvas.draw_polygon(pts([(59, 63), (57, 51), (51, 47), (46, 51), (49, 57), (51, 63)]), shirt, filled=True)
+    canvas.draw_polygon(pts([(11, 54), (14, 51), (18, 53), (16, 58), (12, 58)]), skin, filled=True)
+    canvas.draw_polygon(pts([(53, 54), (50, 51), (46, 53), (48, 58), (52, 58)]), skin, filled=True)
+    gesture = str(op.get("gesture", "idle")).lower()
+    if gesture == "wave":
+        # Raised forearm and open hand, inspired by the expressive asymmetry
+        # in the reference portraits. Skin stays in flat pixel planes.
+        canvas.draw_polygon(pts([(51, 52), (55, 45), (57, 33), (59, 23), (62, 24), (60, 37), (59, 48), (57, 56)]), skin, filled=True)
+        canvas.draw_polygon(pts([(57, 25), (56, 20), (57, 18), (59, 24)]), skin_l, filled=True)
+        canvas.draw_polygon(pts([(59, 24), (60, 18), (62, 17), (62, 25)]), skin_l, filled=True)
+        canvas.draw_polygon(pts([(61, 25), (62, 21), (63, 21), (63, 27)]), skin_l, filled=True)
+        canvas.draw_line(sx(57), sy(33), sx(60), sy(35), skin_d)
+        canvas.draw_line(sx(57), sy(22), sx(59), sy(23), skin_d)
+        canvas.draw_line(sx(59), sy(21), sx(61), sy(22), skin_d)
+    elif gesture == "hip":
+        canvas.draw_polygon(pts([(7, 51), (12, 48), (18, 53), (15, 59), (10, 58)]), skin, filled=True)
+        canvas.draw_rect(sx(11), sy(55), max(2, round(5 * scale)), max(1, round(2 * scale)), skin_d, filled=True)
+
+    # Neck and face with a deliberate jaw taper instead of an ellipse-only head.
+    canvas.draw_polygon(pts([(27, 35), (37, 35), (39, 44), (34, 48), (26, 44)]), skin, filled=True)
+    canvas.draw_polygon(pts([(18, 17), (25, 9), (39, 9), (47, 18), (45, 35), (37, 42), (27, 42), (19, 35)]), skin, filled=True)
+    canvas.draw_polygon(pts([(19, 30), (24, 37), (29, 41), (25, 39), (20, 34)]), skin_l, filled=True)
+    canvas.draw_polygon(pts([(40, 36), (45, 29), (44, 36), (38, 41)]), skin_d, filled=True)
+    # Ears and cheek planes keep the face from reading as a blank oval.
+    canvas.draw_polygon(pts([(17, 24), (20, 22), (21, 30), (18, 32)]), skin, filled=True)
+    canvas.draw_polygon(pts([(43, 23), (47, 25), (46, 31), (43, 30)]), skin, filled=True)
+    canvas.draw_rect(sx(18), sy(26), max(1, round(2 * scale)), max(1, round(2 * scale)), skin_d, filled=True)
+    canvas.draw_rect(sx(44), sy(26), max(1, round(2 * scale)), max(1, round(2 * scale)), skin_d, filled=True)
+
+    # Hair mass and side locks; leave the face plane unobstructed.
+    canvas.draw_polygon(pts([(16, 22), (14, 14), (20, 6), (32, 2), (45, 7), (50, 17), (45, 27), (42, 17), (36, 11), (27, 10), (21, 16), (20, 28)]), hair, filled=True)
+    canvas.draw_polygon(pts([(16, 14), (21, 6), (32, 2), (35, 6), (24, 10), (19, 19)]), hair_l, filled=True)
+    canvas.draw_polygon(pts([(38, 5), (45, 8), (50, 17), (45, 27), (42, 16)]), hair_d, filled=True)
+    canvas.draw_polygon(pts([(15, 19), (19, 24), (20, 39), (16, 34)]), hair_d, filled=True)
+    # Short, stepped locks break the large silhouette into the clustered
+    # strands visible in the reference portraits.
+    canvas.draw_polygon(pts([(19, 7), (23, 4), (25, 6), (22, 12)]), hair_l, filled=True)
+    canvas.draw_polygon(pts([(31, 3), (35, 1), (38, 5), (35, 10)]), hair_l, filled=True)
+    canvas.draw_polygon(pts([(44, 12), (49, 15), (48, 21), (44, 18)]), hair_d, filled=True)
+    if op.get("hat", False):
+        canvas.draw_polygon(pts([(22, 9), (24, 4), (29, 1), (36, 2), (41, 6), (42, 10)]), hat, filled=True)
+        canvas.draw_polygon(pts([(25, 4), (29, 1), (35, 2), (38, 5), (29, 6)]), hat_l, filled=True)
+        canvas.draw_polygon(pts([(16, 10), (23, 7), (33, 8), (42, 8), (49, 11), (47, 14), (34, 13), (23, 13)]), hat_d, filled=True)
+        canvas.draw_polygon(pts([(18, 9), (25, 7), (34, 8), (43, 9), (47, 10), (30, 11)]), hat_l, filled=True)
+        canvas.draw_rect(sx(35), sy(10), max(1, round(5 * scale)), max(1, round(1 * scale)), hat_d, filled=True)
+
+    if op.get("beard", False):
+        canvas.draw_polygon(pts([(25, 33), (29, 35), (36, 34), (38, 37), (34, 41), (28, 40), (25, 37)]), beard, filled=True)
+        canvas.draw_polygon(pts([(28, 34), (31, 35), (35, 34), (33, 37), (29, 37)]), skin_d, filled=True)
+
+    # Facial features use physical pixel clusters at portrait resolutions.
+    # Scaling every feature by the body factor produced coarse square eyes.
+    eye_y = sy(22)
+    if w >= 128:
+        for logical_x in (25, 39):
+            ex = sx(logical_x)
+            canvas.draw_rect(ex - 6, eye_y - 2, 13, 7, skin_l, filled=True)
+            canvas.draw_rect(ex - 6, eye_y - 3, 13, 2, hair_d, filled=True)
+            canvas.draw_rect(ex - 1, eye_y - 2, 5, 7, eye_color, filled=True)
+            canvas.set_pixel(ex, eye_y - 1, (255, 246, 220, 255))
+            canvas.set_pixel(ex + 4, eye_y + 4, skin_d)
+        canvas.draw_rect(sx(23), sy(18), 17, 3, hair_d, filled=True)
+        canvas.draw_rect(sx(36), sy(18), 17, 3, hair_d, filled=True)
+        nx, ny = sx(32), sy(27)
+        canvas.draw_line(nx, ny - 2, nx - 1, ny + 4, skin_d)
+        canvas.draw_line(nx - 1, ny + 4, nx + 4, ny + 4, skin_d)
+        canvas.set_pixel(nx + 2, ny + 3, skin_l)
+        my = sy(34)
+        canvas.draw_line(sx(30), my, sx(36), my, skin_d)
+        canvas.set_pixel(sx(33), my + 1, skin_l)
+    else:
+        for eye_x in (24, 38):
+            canvas.draw_rect(sx(eye_x - 2), eye_y, max(3, round(6 * scale)), max(3, round(4 * scale)), skin_l, filled=True)
+            canvas.draw_rect(sx(eye_x), eye_y, max(2, round(2.5 * scale)), max(3, round(3 * scale)), eye_color, filled=True)
+            canvas.set_pixel(sx(eye_x), eye_y, skin_l)
+        canvas.draw_line(sx(23), sy(19), sx(29), sy(18), hair_d)
+        canvas.draw_line(sx(36), sy(18), sx(42), sy(19), hair_d)
+        canvas.draw_rect(sx(31), sy(27), max(1, round(5 * scale)), max(1, round(2 * scale)), skin_d, filled=True)
+        canvas.draw_line(sx(30), sy(34), sx(36), sy(34), skin_d)
+    # Shirt collar and neck seam provide the layered construction visible in
+    # the source portraits without introducing forbidden dark interior ink.
+    canvas.draw_polygon(pts([(24, 40), (30, 46), (27, 49), (21, 42)]), shirt, filled=True)
+    canvas.draw_polygon(pts([(36, 46), (42, 40), (45, 42), (39, 49)]), shirt, filled=True)
+    # Restrained garment folds: colored planes, never interior ink outlines.
+    canvas.draw_polygon(pts([(19, 47), (23, 45), (26, 63), (22, 63)]), garment_d, filled=True)
+    canvas.draw_polygon(pts([(45, 47), (41, 45), (38, 63), (42, 63)]), garment_d, filled=True)
+    canvas.draw_polygon(pts([(27, 44), (31, 47), (35, 44), (37, 63), (25, 63)]), garment, filled=True)
+    canvas.draw_rect(sx(29), sy(52), max(2, round(6 * scale)), max(1, round(4 * scale)), garment_d, filled=True)
+    canvas.draw_rect(sx(30), sy(52), max(1, round(4 * scale)), max(1, round(1 * scale)), accent, filled=True)
+
 
 def draw_char_rig(
     canvas: Canvas,
