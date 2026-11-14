@@ -119,11 +119,15 @@ def draw_portrait_rig(
         canvas.draw_rect(sx(eye_x - 2), eye_y, max(3, round(6 * scale)), max(3, round(4 * scale)), skin_l, filled=True)
         canvas.draw_rect(sx(eye_x), eye_y, max(2, round(2.5 * scale)), max(3, round(3 * scale)), eye_color, filled=True)
         canvas.set_pixel(sx(eye_x), eye_y, skin_l)
-    canvas.draw_line(sx(23), sy(19), sx(29), sy(18), hair_d)
-    canvas.draw_line(sx(36), sy(18), sx(42), sy(19), hair_d)
+    canvas.draw_rect(sx(23), sy(18), max(3, round(6 * scale)), max(1, round(2 * scale)), hair_d, filled=True)
+    canvas.draw_rect(sx(36), sy(18), max(3, round(6 * scale)), max(1, round(2 * scale)), hair_d, filled=True)
     canvas.draw_rect(sx(31), sy(27), max(1, round(5 * scale)), max(1, round(2 * scale)), skin_d, filled=True)
     canvas.set_pixel(sx(34), sy(27), skin_l)
     canvas.draw_line(sx(30), sy(34), sx(36), sy(34), skin_d)
+    # Shirt collar and neck seam provide the layered construction visible in
+    # the source portraits without introducing forbidden dark interior ink.
+    canvas.draw_polygon(pts([(24, 40), (30, 46), (27, 49), (21, 42)]), shirt, filled=True)
+    canvas.draw_polygon(pts([(36, 46), (42, 40), (45, 42), (39, 49)]), shirt, filled=True)
     # Restrained garment folds: colored planes, never interior ink outlines.
     canvas.draw_polygon(pts([(19, 47), (23, 45), (26, 63), (22, 63)]), garment_d, filled=True)
     canvas.draw_polygon(pts([(45, 47), (41, 45), (38, 63), (42, 63)]), garment_d, filled=True)
