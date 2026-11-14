@@ -54,7 +54,7 @@ AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 - `{"op": "tilemap", "mode": "ortho|iso", "tile_w": 16, "tile_h": 16, "map": {"G": "grass_tile"}, "rows": ["GGG", "GGG"]}`
 - `{"op": "autotile", "x": 0, "y": 0, "tile_size": 16, "inner": "water", "outer": "grass", "lip": "soil_d", "seed": 42}` (Generates 4x4 16-tile Wang bitmask atlas)
 - `{"op": "char_rig", "x": 0, "y": 0, "size": 16, "dir": "down|up|left|right", "pose": "idle|walk|work", "frame": 0, "hat": "wheat", "shirt": "roof", "pants": "water_d"}` (Supports native sizes 16, 32, 64, 128 and direction-coherent work swings)
-- `{"op": "portrait_rig", "x": 0, "y": 0, "width": 64, "height": 80, "skin": "#f2c38f", "hair": "#6b3f35", "shirt": "#d9e5d2", "garment": "#704b3b"}` (Bust portrait with tapered face, large eyes, hair locks, clothing planes, and clean external silhouette)
+- `{"op": "portrait_rig", "x": 0, "y": 0, "width": 64, "height": 80, "gesture": "idle|wave|hip", "skin": "#f2c38f", "hair": "#6b3f35", "shirt": "#d9e5d2", "garment": "#704b3b"}` (Bust portrait with expressive gesture, tapered face, large eyes, hair locks, clothing planes, and clean external silhouette)
 - `{"op": "animal_rig", "x": 0, "y": 0, "species": "chicken", "dir": "down|up|left|right", "pose": "walk|peck|nest|sleep|surprised|happy|sad|angry|sick", "frame": 0}` (Cozy farm creature rig with auto-looping frames, hip-pivot peck, and emotes)
 - `{"op": "emote", "x": 18, "y": 2, "kind": "heart|angry|sweat|zzz|exclamation|sick", "frame": 0, "outline": false}`
 - Universal op flags: `"inside": true` (clips shading/markings strictly inside existing opaque silhouette), `"outline": false` (excludes floating particles/emotes/shadows from external outline).

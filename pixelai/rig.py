@@ -62,6 +62,18 @@ def draw_portrait_rig(
     canvas.draw_polygon(pts([(59, 63), (57, 51), (51, 47), (46, 51), (49, 57), (51, 63)]), shirt, filled=True)
     canvas.draw_polygon(pts([(11, 54), (14, 51), (18, 53), (16, 58), (12, 58)]), skin, filled=True)
     canvas.draw_polygon(pts([(53, 54), (50, 51), (46, 53), (48, 58), (52, 58)]), skin, filled=True)
+    gesture = str(op.get("gesture", "idle")).lower()
+    if gesture == "wave":
+        # Raised forearm and open hand, inspired by the expressive asymmetry
+        # in the reference portraits. Skin stays in flat pixel planes.
+        canvas.draw_polygon(pts([(51, 52), (55, 45), (57, 33), (59, 23), (62, 24), (60, 37), (59, 48), (57, 56)]), skin, filled=True)
+        canvas.draw_polygon(pts([(57, 25), (56, 20), (57, 18), (59, 24)]), skin_l, filled=True)
+        canvas.draw_polygon(pts([(59, 24), (60, 18), (62, 17), (62, 25)]), skin_l, filled=True)
+        canvas.draw_polygon(pts([(61, 25), (62, 21), (63, 21), (63, 27)]), skin_l, filled=True)
+        canvas.draw_line(sx(57), sy(33), sx(60), sy(35), skin_d)
+    elif gesture == "hip":
+        canvas.draw_polygon(pts([(7, 51), (12, 48), (18, 53), (15, 59), (10, 58)]), skin, filled=True)
+        canvas.draw_rect(sx(11), sy(55), max(2, round(5 * scale)), max(1, round(2 * scale)), skin_d, filled=True)
 
     # Neck and face with a deliberate jaw taper instead of an ellipse-only head.
     canvas.draw_polygon(pts([(27, 35), (37, 35), (39, 44), (34, 48), (26, 44)]), skin, filled=True)

@@ -21,7 +21,7 @@
       "skin":"skin", "skin_l":"skin_l", "skin_d":"skin_d",
       "hair":"hair", "hair_l":"hair_l", "hair_d":"hair_d", "shirt":"shirt",
       "garment":"garment", "garment_d":"garment_d", "accent":"accent", "ink":"ink",
-      "beard_color":"hair_d", "beard":true}
+      "beard_color":"hair_d", "beard":true, "gesture":"wave"}
   ],
   "post": [{"op":"pad", "size":1}, {"op":"outline", "color":"ink"}]
 }
