@@ -2,6 +2,18 @@
 
 All notable changes to `pixelai-tools` are documented in this file.
 
+## [0.8.0] - 2026-11-14
+### Added
+- **Direct Package CLI Execution (`pixelai/__main__.py`):** `python -m pixelai` now executes the CLI directly (`render`, `pack`, `showcase`, `inspect`, `extract`, `guide`).
+- **Cozy Farm Creature & Emote Engine (`creatures.py`):** Added `"op": "animal_rig"` (`species: "chicken"`, `variant: "white|brown|golden|dark"`, `dir: "down|up|left|right"`, `pose: "walk|peck|nest|sleep|surprised|happy|sad|angry|sick"`) and `"op": "emote"` (`heart`, `angry`, `sweat`, `zzz`, `exclamation`, `sick`).
+- **Itch.io Pack & Showcase CLI (`pixelai pack`, `pixelai showcase`):** Single-command generation of complete 13-animation creature packs, spritesheets, contact sheets (`.png`), and animated showcase banners (`.gif`).
+- **Universal Silhouette Clipping & Outline Exclusion:** Added `"inside": true` (clips internal shading/wings strictly inside existing opaque pixels) and `"outline": false` (excludes floating emotes/particles/ground shadows from receiving dark external outlines).
+- **Multi-Frame GIF Inspector & Island Detector (`inspect_tool.py`):** `pixelai inspect <file.gif> --all-frames` now analyzes every frame of a GIF and counts 8-connected pixel islands (`islands` / `max_islands`) to detect detached anatomy.
+
+### Fixed
+- **Ellipse Polar Spike Bug (`canvas.py`):** Fixed `draw_ellipse` midpoint sampling (`eff_ry = ry + 0.45`) so top and bottom caps never collapse into 1px needles (`span = 0`).
+- **Ground Shadow Outline Bleed (`filters.py`):** Ground shadows (`shadow_pixels`) no longer trigger a 1px external outline around themselves while allowing the character's 1px silhouette outline to render cleanly over the shadow.
+
 ## [0.7.1] - 2026-11-14
 ### Fixed
 - **Isometric Auto-Snapping (`iso.py`):** Roofs, doors, windows, and chimneys automatically snap to their parent box/roof geometry, preventing floating roofs or misplaced openings.

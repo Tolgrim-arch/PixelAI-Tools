@@ -22,6 +22,10 @@ description: Generate deterministic pixel art sprites, isometric buildings, 16-t
 - **Organic Primitives & Particles:** `ellipse` (`rx`, `ry`), `bezier` (`points`, `thickness`), and looping `particles` (`smoke`, `leaves`, `rain`, `sparks`).
 - **Keyframe Tweening & Multi-Layer Export:** Automatic interpolation via `"keyframes": [{"steps": 4, "ops": [...]}]` and separate layer export via `"layers": [...]` + `--layers-dir <dir>`.
 - **Auto-Tilesets (16-tile Wang Bitmask):** `{"op": "autotile", "tile_size": 16, "inner": "water", "outer": "grass", "lip": "soil_d"}`
-- **4-Direction Character Rigs:** `{"op": "char_rig", "size": 16, "dir": "down|up|left|right", "pose": "idle|walk|work", "frame": 0..3}`
+- **4-Direction Character & Cozy Creature Rigs:**
+  - `{"op": "char_rig", "size": 16, "dir": "down|up|left|right", "pose": "idle|walk|work", "frame": 0..3}`
+  - `{"op": "animal_rig", "species": "chicken", "dir": "down|up|left|right", "pose": "walk|peck|nest|sleep|surprised|happy|sad|angry|sick"}`
+  - `{"op": "emote", "x": 18, "y": 2, "kind": "heart|angry|sweat|zzz|exclamation|sick", "outline": false}`
+  - Universal silhouette masks: `"inside": true` (clips internal shading to opaque silhouette) and `"outline": false` (excludes floating emotes/particles/shadows from external outline).
 - **Isometric & Ortho Tilemaps:** `{"op": "tilemap", "mode": "iso|ortho", "tile_w": 16, "tile_h": 16, "rows": [...]}`
-- **Exporters & Introspection:** `.png` (with embedded `pixelai_spec` metadata), `.gif` (`--fps`), Spritesheet + JSON (`--sheet --meta`), Godot 4 `.tres` (`--godot`), `pixelai extract <img.png>`, and `pixelai inspect <img.png> --ascii`.
+- **Exporters, Showcase & Introspection:** `.png` (with embedded `pixelai_spec` metadata), `.gif` (`--fps`), Spritesheet + JSON (`--sheet --meta`), Godot 4 `.tres` (`--godot`), Itch.io Showcase (`pixelai showcase <dir> -o showcase.png --scale 4`), `pixelai extract <img.png>`, and multi-frame `pixelai inspect <img.png|anim.gif> --ascii --all-frames`.

@@ -202,3 +202,99 @@ def export_layers(
         export_png(canvas, p)
         paths.append(p)
     return paths
+
+
+def export_showcase(
+    sources: list[str | Path],
+    out_path: str | Path,
+    scale: int = 4,
+    columns: int = 4,
+    fps: int = 8,
+) -> Path:
+    """Build an Itch.io showcase sheet (.png) or animated pack banner (.gif) from sprites/GIFs."""
+    from PIL import ImageDraw, ImageSequence
+
+    out = Path(out_path).resolve()
+    files: list[Path] = []
+    for s in sources:
+        p = Path(s)
+        if p.is_dir():
+            files.extend(
+                sorted(
+                    f
+                    for f in p.iterdir()
+                    if f.suffix.lower() in (".gif", ".png")
+                    and not f.stem.lower().startswith("itch_showcase")
+                    and f.resolve() != out
+                )
+            )
+        elif p.exists() and p.resolve() != out:
+            files.append(p)
+    if not files:
+        raise ValueError("No valid .png or .gif files found for showcase")
+
+    loaded: list[list[Image.Image]] = []
+    max_w, max_h, max_frames = 16, 16, 1
+    for f in files:
+        with Image.open(f) as im:
+            raw_seq = [
+                (fr.convert("RGBA"), int(fr.info.get("duration", 0) or 0))
+                for fr in ImageSequence.Iterator(im)
+            ]
+            valid_durs = [d for _, d in raw_seq if d > 0]
+            min_dur = min(valid_durs) if valid_durs else 0
+            seq: list[Image.Image] = []
+            for img_fr, dur in raw_seq:
+                repeats = max(1, int(round(dur / min_dur))) if (min_dur > 0 and dur > 0) else 1
+                for _ in range(repeats):
+                    seq.append(img_fr.copy() if len(seq) > 0 else img_fr)
+            loaded.append(seq)
+            max_w = max(max_w, seq[0].width)
+            max_h = max(max_h, seq[0].height)
+            max_frames = max(max_frames, len(seq))
+
+    out = Path(out_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    cell_w = (max_w + 4) * scale
+    cell_h = (max_h + 4) * scale
+    bg_col = (34, 32, 42, 255)
+    card_col = (46, 43, 56, 255)
+    border_col = (68, 63, 82, 255)
+
+    if out.suffix.lower() == ".gif":
+        cols = max(1, min(columns, len(loaded)))
+        rows = math.ceil(len(loaded) / cols)
+        total_t = max(12, max_frames)
+        gif_frames: list[Image.Image] = []
+        for t in range(total_t):
+            sheet = Image.new("RGBA", (cols * cell_w + 8, rows * cell_h + 8), bg_col)
+            draw = ImageDraw.Draw(sheet)
+            for idx, seq in enumerate(loaded):
+                c, r = idx % cols, idx // cols
+                x0, y0 = 4 + c * cell_w, 4 + r * cell_h
+                draw.rectangle([x0 + 2, y0 + 2, x0 + cell_w - 3, y0 + cell_h - 3], fill=card_col, outline=border_col)
+                fr = seq[t % len(seq)]
+                up = fr.resize((fr.width * scale, fr.height * scale), Image.Resampling.NEAREST)
+                px = x0 + (cell_w - up.width) // 2
+                py = y0 + (cell_h - up.height) // 2
+                sheet.paste(up, (px, py), up)
+            gif_frames.append(_rgba_to_gif_frame(sheet))
+        duration_ms = max(20, int(round(1000 / max(1, fps))))
+        gif_frames[0].save(
+            out, format="GIF", save_all=True, append_images=gif_frames[1:], duration=duration_ms, loop=0
+        )
+        return out
+
+    # PNG contact sheet: each asset is a row showing all its animation frames
+    sheet = Image.new("RGBA", (max_frames * cell_w + 8, len(loaded) * cell_h + 8), bg_col)
+    draw = ImageDraw.Draw(sheet)
+    for row_idx, seq in enumerate(loaded):
+        for col_idx, fr in enumerate(seq):
+            x0, y0 = 4 + col_idx * cell_w, 4 + row_idx * cell_h
+            draw.rectangle([x0 + 2, y0 + 2, x0 + cell_w - 3, y0 + cell_h - 3], fill=card_col, outline=border_col)
+            up = fr.resize((fr.width * scale, fr.height * scale), Image.Resampling.NEAREST)
+            px = x0 + (cell_w - up.width) // 2
+            py = y0 + (cell_h - up.height) // 2
+            sheet.paste(up, (px, py), up)
+    sheet.save(out, format="PNG")
+    return out

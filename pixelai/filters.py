@@ -33,7 +33,7 @@ def outline(
     selout_amount: float = 0.55,
     auto_pad: bool = False,
 ) -> Canvas:
-    """Add a 1px 4-connected outline (flat or selective) around opaque pixels."""
+    """Add a 1px 4-connected outline (flat or selective) around outline-eligible opaque pixels."""
     if canvas.touches_border():
         if auto_pad:
             canvas = pad(canvas, 1)
@@ -44,19 +44,23 @@ def outline(
             )
 
     out = canvas.copy()
+    out.mark_no_outline = False
+    out.mark_shadow = False
+    out.clip_to_opaque = False
     for y in range(canvas.height):
         for x in range(canvas.width):
-            if canvas.get_pixel(x, y)[3] != 0:
+            idx = y * canvas.width + x
+            # Outline can be drawn on transparent pixels OR over ground shadow pixels
+            if canvas.pixels[idx][3] != 0 and idx not in canvas.shadow_pixels:
                 continue
             neighbors = [
                 canvas.get_pixel(x + dx, y + dy)
                 for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
-                if canvas.get_pixel(x + dx, y + dy)[3] > 0
+                if canvas.is_outline_source(x + dx, y + dy)
             ]
             if not neighbors:
                 continue
             if selout:
-                # Pick darkest neighbor for crisp yet soft selective outline
                 darkest = min(neighbors, key=lambda c: c[0] + c[1] + c[2])
                 out.set_pixel(x, y, _blend_selout(darkest, color, selout_amount))
             else:

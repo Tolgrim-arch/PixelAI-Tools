@@ -16,6 +16,11 @@ class Canvas:
         self.height = height
         self.pixels: list[RGBA] = [fill] * (width * height)
         self.z_buffer: list[float] = [float("-inf")] * (width * height)
+        self.no_outline: set[int] = set()
+        self.shadow_pixels: set[int] = set()
+        self.mark_no_outline: bool = False
+        self.mark_shadow: bool = False
+        self.clip_to_opaque: bool = False
         self.current_z: float | None = None
         self.last_iso_box: tuple[int, int, int, int, int] | None = None
         self.last_chimney: tuple[int, int] | None = None
@@ -26,6 +31,11 @@ class Canvas:
         out = Canvas(self.width, self.height)
         out.pixels = self.pixels.copy()
         out.z_buffer = self.z_buffer.copy()
+        out.no_outline = self.no_outline.copy()
+        out.shadow_pixels = self.shadow_pixels.copy()
+        out.mark_no_outline = self.mark_no_outline
+        out.mark_shadow = self.mark_shadow
+        out.clip_to_opaque = self.clip_to_opaque
         out.current_z = self.current_z
         out.last_iso_box = self.last_iso_box
         out.last_chimney = self.last_chimney
@@ -36,13 +46,20 @@ class Canvas:
     def in_bounds(self, x: int, y: int) -> bool:
         return 0 <= x < self.width and 0 <= y < self.height
 
+    def is_outline_source(self, x: int, y: int) -> bool:
+        """Return True if pixel (x, y) is opaque and eligible to cast an external outline."""
+        if not self.in_bounds(x, y):
+            return False
+        idx = y * self.width + x
+        return self.pixels[idx][3] > 0 and idx not in self.no_outline
+
     def touches_border(self) -> bool:
-        """Return True if any non-transparent pixel sits on the outer 1px border."""
+        """Return True if any outline-eligible opaque pixel sits on the outer 1px border."""
         for x in range(self.width):
-            if self.get_pixel(x, 0)[3] > 0 or self.get_pixel(x, self.height - 1)[3] > 0:
+            if self.is_outline_source(x, 0) or self.is_outline_source(x, self.height - 1):
                 return True
         for y in range(self.height):
-            if self.get_pixel(0, y)[3] > 0 or self.get_pixel(self.width - 1, y)[3] > 0:
+            if self.is_outline_source(0, y) or self.is_outline_source(self.width - 1, y):
                 return True
         return False
 
@@ -54,13 +71,28 @@ class Canvas:
     def set_pixel(self, x: int, y: int, color: RGBA, z: float | None = None) -> None:
         if self.in_bounds(x, y):
             idx = y * self.width + x
+            if self.clip_to_opaque:
+                if self.pixels[idx][3] == 0 or idx in self.no_outline:
+                    return
             eff_z = z if z is not None else self.current_z
             if eff_z is not None and color[3] > 0:
                 if eff_z < self.z_buffer[idx]:
                     return
                 self.z_buffer[idx] = eff_z
             self.pixels[idx] = color
-        elif color[3] > 0:
+            if color[3] == 0:
+                self.no_outline.discard(idx)
+                self.shadow_pixels.discard(idx)
+            else:
+                if self.mark_no_outline or self.mark_shadow:
+                    self.no_outline.add(idx)
+                else:
+                    self.no_outline.discard(idx)
+                if self.mark_shadow:
+                    self.shadow_pixels.add(idx)
+                else:
+                    self.shadow_pixels.discard(idx)
+        elif color[3] > 0 and not self.clip_to_opaque:
             self.clipped_pixels += 1
 
     def draw_line(self, x0: int, y0: int, x1: int, y1: int, color: RGBA) -> None:
@@ -148,8 +180,9 @@ class Canvas:
             return
 
         if filled:
+            eff_ry = ry + 0.45
             for dy in range(-ry, ry + 1):
-                span = int(round(rx * math.sqrt(max(0.0, 1.0 - (dy / ry) ** 2))))
+                span = int(round(rx * math.sqrt(max(0.0, 1.0 - (dy / eff_ry) ** 2))))
                 self.draw_line(cx - span, cy + dy, cx + span, cy + dy, color)
         else:
             steps = max(16, int((rx + ry) * 4))
@@ -292,6 +325,7 @@ class Canvas:
     ) -> None:
         """Stamp another Canvas at (x, y) with optional flip, remap, and pivot rotation."""
         if abs(angle) < 1e-6:
+            prev_no, prev_sh = self.mark_no_outline, self.mark_shadow
             for sy in range(other.height):
                 for sx in range(other.width):
                     src_x = (other.width - 1 - sx) if flip_x else sx
@@ -301,7 +335,11 @@ class Canvas:
                         continue
                     if remap and c in remap:
                         c = remap[c]
+                    src_idx = src_y * other.width + src_x
+                    self.mark_no_outline = prev_no or (src_idx in other.no_outline)
+                    self.mark_shadow = prev_sh or (src_idx in other.shadow_pixels)
                     self.set_pixel(x + sx, y + sy, c)
+            self.mark_no_outline, self.mark_shadow = prev_no, prev_sh
             return
 
         px, py = pivot if pivot is not None else ((other.width - 1) / 2.0, (other.height - 1) / 2.0)

@@ -398,6 +398,67 @@ class TestMVP(unittest.TestCase):
         self.assertNotEqual(canvas.get_pixel(32, 38), (176, 186, 201, 255))
         self.assertIsNotNone(canvas.last_chimney)
 
+    def test_v08_animal_rig_inside_clip_no_outline_and_showcase(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            spec_p = Path(tmp) / "chicken.json"
+            gif_p = Path(tmp) / "chicken_peck.gif"
+            showcase_p = Path(tmp) / "showcase.png"
+
+            spec = {
+                "width": 24,
+                "height": 24,
+                "palette": "cozy24",
+                "frame_count": 6,
+                "ops": [
+                    {"op": "animal_rig", "species": "chicken", "dir": "right", "pose": "peck"},
+                ],
+            }
+            spec_p.write_text(json.dumps(spec), encoding="utf-8")
+            self.assertEqual(main(["render", str(spec_p), "-o", str(gif_p), "--fps", "10"]), 0)
+            self.assertTrue(gif_p.exists())
+            self.assertEqual(main(["inspect", str(gif_p), "--all-frames"]), 0)
+            self.assertEqual(main(["showcase", str(gif_p), "-o", str(showcase_p), "--scale", "2"]), 0)
+            self.assertTrue(showcase_p.exists())
+
+            # Test 'inside: true' clipping and 'outline: false' exclusion
+            clip_spec = {
+                "width": 12,
+                "height": 12,
+                "palette": "cozy24",
+                "style": "ext_outline",
+                "ops": [
+                    {"op": "rect", "x": 4, "y": 4, "w": 4, "h": 4, "color": "cream"},
+                    {"op": "rect", "x": 0, "y": 0, "w": 12, "h": 12, "color": "roof", "inside": True},
+                    {"op": "pixel", "x": 1, "y": 1, "color": "water_l", "outline": False},
+                ],
+            }
+            c = run_spec(clip_spec)
+            # Inside clip: (4,4) became 'roof', but (2,2) stayed transparent
+            self.assertEqual(c.get_pixel(4, 4), parse_color("roof", {"roof": (194, 75, 56, 255)}))
+            self.assertEqual(c.get_pixel(2, 2), TRANSPARENT)
+            # (1,1) has outline=False so its neighbor (1,0) must remain transparent!
+            self.assertEqual(c.get_pixel(1, 0), TRANSPARENT)
+
+            # Test CLI `pack` command with variant
+            pack_dir = Path(tmp) / "pack_out"
+            self.assertEqual(
+                main(["pack", "chicken", "-o", str(pack_dir), "--variant", "brown", "--scale", "2"]),
+                0,
+            )
+            self.assertTrue((pack_dir / "chicken_peck_right.gif").exists())
+            self.assertTrue((pack_dir / "itch_showcase_sheet.png").exists())
+            self.assertTrue((pack_dir / "itch_showcase_banner.gif").exists())
+
+            # Test 'cow' pack + QA diagnostics (zero duplicate frames, positive margins)
+            cow_dir = Path(tmp) / "cow_pack"
+            self.assertEqual(main(["pack", "cow", "-o", str(cow_dir), "--scale", "2"]), 0)
+            self.assertTrue((cow_dir / "cow_graze_left.gif").exists())
+            from pixelai.inspect_tool import analyze_image_file
+            stats, _ = analyze_image_file(cow_dir / "cow_lie_right.gif")
+            self.assertEqual(stats["frame_count"], 4)
+            self.assertEqual(stats["duplicate_frames"], 0)
+            self.assertNotIn("warnings", stats)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -8,7 +8,7 @@ from pixelai.color import RGBA, TRANSPARENT, parse_color
 from pixelai.exporter import extract_spec_from_png
 from pixelai.inspect_tool import load_png_as_canvas
 from pixelai.palettes import resolve_palette
-from pixelai import autotile, filters, iso, rig
+from pixelai import autotile, creatures, filters, iso, rig
 
 
 def _execute_ops(
@@ -26,6 +26,20 @@ def _execute_ops(
             canvas.current_z = float(op["z"])
         else:
             canvas.current_z = None
+
+        is_shadow_op = (
+            bool(op.get("shadow", False))
+            or (kind in ("ellipse", "rect") and str(op.get("color", "")) == "shadow" and op.get("outline") is not True)
+        )
+        canvas.mark_shadow = is_shadow_op
+        if "outline" in op:
+            canvas.mark_no_outline = not bool(op["outline"])
+        elif kind == "particles":
+            canvas.mark_no_outline = True
+        else:
+            canvas.mark_no_outline = is_shadow_op
+
+        canvas.clip_to_opaque = bool(op.get("inside", op.get("clip", False)))
 
         if kind == "pixel":
             canvas.set_pixel(op["x"], op["y"], parse_color(op["color"], palette))
@@ -214,6 +228,26 @@ def _execute_ops(
                 palette,
                 op,
             )
+        elif kind == "animal_rig":
+            creatures.draw_animal_rig(
+                canvas,
+                int(op.get("x", 0)),
+                int(op.get("y", 0)),
+                palette,
+                op,
+                frame_idx=frame_idx,
+                total_frames=total_frames,
+            )
+        elif kind == "emote":
+            creatures.draw_emote(
+                canvas,
+                int(op.get("x", 0)),
+                int(op.get("y", 0)),
+                op.get("kind", "heart"),
+                frame=int(op.get("frame", frame_idx)),
+                palette=palette,
+                outline=bool(op.get("outline", False)),
+            )
         elif kind == "iso_tile":
             rx = int(op["rx"])
             ry = int(op.get("ry", max(1, rx // 2)))
@@ -295,6 +329,9 @@ def _execute_ops(
             )
         else:
             raise ValueError(f"Unknown op: {kind!r}")
+        canvas.mark_no_outline = False
+        canvas.mark_shadow = False
+        canvas.clip_to_opaque = False
 
 
 def _resolve_post_ops(
@@ -515,8 +552,14 @@ def run_frames(spec: dict[str, Any]) -> tuple[list[Canvas], list[str]]:
     raw_frames = spec.get("frames")
     if not raw_frames and "keyframes" in spec:
         raw_frames = _expand_keyframes(spec["keyframes"])
-    if not raw_frames and any(op.get("op") == "particles" for op in base_ops):
-        fc = int(spec.get("frame_count", 4))
+    if not raw_frames and (
+        "frame_count" in spec
+        or any(op.get("op") in ("particles", "animal_rig", "emote") for op in base_ops)
+    ):
+        default_fc = 6 if any(op.get("pose") == "peck" for op in base_ops) else (
+            4 if any(op.get("op") in ("particles", "animal_rig", "emote") for op in base_ops) else 1
+        )
+        fc = int(spec.get("frame_count", default_fc))
         if fc > 1:
             raw_frames = [{"name": f"frame_{i}", "ops": []} for i in range(fc)]
 

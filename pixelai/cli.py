@@ -11,10 +11,11 @@ from pixelai.exporter import (
     export_godot_tres,
     export_layers,
     export_png,
+    export_showcase,
     export_spritesheet,
     extract_spec_from_png,
 )
-from pixelai.inspect_tool import analyze_canvas, load_png_as_canvas, render_ascii
+from pixelai.inspect_tool import analyze_image_file, render_ascii
 from pixelai.palettes import list_palettes
 from pixelai.runner import run_frames, run_layers
 
@@ -52,8 +53,13 @@ AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 - `{"op": "tilemap", "mode": "ortho|iso", "tile_w": 16, "tile_h": 16, "map": {"G": "grass_tile"}, "rows": ["GGG", "GGG"]}`
 - `{"op": "autotile", "x": 0, "y": 0, "tile_size": 16, "inner": "water", "outer": "grass", "lip": "soil_d", "seed": 42}` (Generates 4x4 16-tile Wang bitmask atlas)
 - `{"op": "char_rig", "x": 0, "y": 0, "size": 16, "dir": "down|up|left|right", "pose": "idle|walk|work", "frame": 0, "hat": "wheat", "shirt": "roof", "pants": "water_d"}` (Supports native sizes 16, 32, 64, 128 and direction-coherent work swings)
+- `{"op": "animal_rig", "x": 0, "y": 0, "species": "chicken", "dir": "down|up|left|right", "pose": "walk|peck|nest|sleep|surprised|happy|sad|angry|sick", "frame": 0}` (Cozy farm creature rig with auto-looping frames, hip-pivot peck, and emotes)
+- `{"op": "emote", "x": 18, "y": 2, "kind": "heart|angry|sweat|zzz|exclamation|sick", "frame": 0, "outline": false}`
+- Universal op flags: `"inside": true` (clips shading/markings strictly inside existing opaque silhouette), `"outline": false` (excludes floating particles/emotes/shadows from external outline).
 - `{"op": "mirror_x"}` / `{"op": "mirror_y"}`
 - Top-level `"extends": "sprite.png | spec.json"` inherits palette, defs, and ops from an existing PNG or JSON!
+- Showcase Exporter (Itch.io Pack Banner / Contact Sheet): `pixelai showcase <dir_or_files...> -o showcase.png --scale 4`
+- Complete Creature Asset Pack (13 GIFs + Spritesheets + Showcase): `pixelai pack chicken -o chicken_pack/ --variant white`
 
 ## 2:1 Isometric Operations (`ops`)
 - `{"op": "iso_tile", "cx": 32, "cy": 32, "rx": 16, "ry": 8, "color": "grass"}`
@@ -132,11 +138,85 @@ def _cmd_render(args: argparse.Namespace) -> int:
 
 
 def _cmd_inspect(args: argparse.Namespace) -> int:
-    canvas = load_png_as_canvas(args.image)
-    stats = analyze_canvas(canvas)
+    stats, frames = analyze_image_file(args.image)
     print(json.dumps(stats, indent=2))
     if args.ascii:
-        print(render_ascii(canvas))
+        for idx, f in enumerate(frames if args.all_frames else frames[:1]):
+            if len(frames) > 1 and args.all_frames:
+                print(f"--- frame_{idx} ---")
+            print(render_ascii(f))
+    return 0
+
+
+def _cmd_showcase(args: argparse.Namespace) -> int:
+    out = export_showcase(
+        args.sources,
+        args.output,
+        scale=args.scale,
+        columns=args.columns,
+        fps=args.fps,
+    )
+    print(f"Exported showcase -> {out}")
+    return 0
+
+
+def _cmd_pack(args: argparse.Namespace) -> int:
+    out_dir = Path(args.output)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    species = args.species.lower()
+    raw_var = args.variant
+    if species == "cow" and raw_var == "white":
+        raw_var = "holstein"
+    variants = [v.strip() for v in raw_var.split(",") if v.strip()]
+    is_cow = species == "cow"
+    w, h = (32, 32) if is_cow else (24, 24)
+    jobs = [
+        ("walk_down", "down", "walk", 4, 8),
+        ("walk_up", "up", "walk", 4, 8),
+        ("walk_left", "left", "walk", 4, 8),
+        ("walk_right", "right", "walk", 4, 8),
+        ("graze_left" if is_cow else "peck_left", "left", "graze" if is_cow else "peck", 6, 8 if is_cow else 10),
+        ("graze_right" if is_cow else "peck_right", "right", "graze" if is_cow else "peck", 6, 8 if is_cow else 10),
+        ("lie_right" if is_cow else "nest_right", "right", "lie" if is_cow else "nest", 4, 4),
+        ("sleep_right", "right", "sleep", 4, 4),
+        ("surprised", "down", "surprised", 4, 8),
+        ("sick", "right", "sick", 4, 5),
+        ("angry", "right", "angry", 4, 8),
+        ("sad", "right", "sad", 4, 5),
+        ("happy", "right", "happy", 4, 7),
+    ]
+    gif_paths: list[Path] = []
+    for var in variants:
+        prefix = f"{species}_{var}_" if len(variants) > 1 else f"{species}_"
+        for suffix, direction, pose, fc, fps in jobs:
+            spec = {
+                "width": w,
+                "height": h,
+                "palette": "cozy24",
+                "style": "lineless" if args.lineless else "ext_outline",
+                "frame_count": fc,
+                "ops": [
+                    {
+                        "op": "animal_rig",
+                        "species": species,
+                        "variant": var,
+                        "dir": direction,
+                        "pose": pose,
+                    }
+                ],
+            }
+            frames, names = run_frames(spec)
+            gif_p = out_dir / f"{prefix}{suffix}.gif"
+            export_gif(frames, gif_p, fps=fps)
+            gif_paths.append(gif_p)
+            if args.sheets:
+                sheet_p = out_dir / "sheets" / f"{prefix}{suffix}.png"
+                meta_p = out_dir / "sheets" / f"{prefix}{suffix}.json"
+                export_spritesheet(frames, sheet_p, frame_names=names, meta_path=meta_p, spec_json=json.dumps(spec))
+
+    sheet_out = export_showcase(gif_paths, out_dir / "itch_showcase_sheet.png", scale=args.scale)
+    banner_out = export_showcase(gif_paths, out_dir / "itch_showcase_banner.gif", scale=args.scale, columns=5)
+    print(f"Generated {len(gif_paths)} animations + showcase ({sheet_out.name}, {banner_out.name}) -> {out_dir}")
     return 0
 
 
@@ -229,15 +309,92 @@ def build_parser() -> argparse.ArgumentParser:
 
     inspect_p = sub.add_parser(
         "inspect",
-        help="Inspect an existing PNG (bounding box, margins, color count, and optional ASCII preview).",
+        help="Inspect a PNG or multi-frame GIF (bounding box, margins, islands, color count, and ASCII preview).",
     )
-    inspect_p.add_argument("image", help="Path to PNG file to inspect.")
+    inspect_p.add_argument("image", help="Path to PNG or GIF file to inspect.")
     inspect_p.add_argument(
         "--ascii",
         action="store_true",
         help="Print ASCII luminance preview to stdout.",
     )
+    inspect_p.add_argument(
+        "--all-frames",
+        action="store_true",
+        help="Print ASCII preview for every frame of a GIF.",
+    )
     inspect_p.set_defaults(func=_cmd_inspect)
+
+    showcase_p = sub.add_parser(
+        "showcase",
+        help="Generate an Itch.io showcase contact sheet (.png) or animated pack banner (.gif).",
+    )
+    showcase_p.add_argument(
+        "sources",
+        nargs="+",
+        help="Directory or list of .png/.gif files to include in the showcase.",
+    )
+    showcase_p.add_argument(
+        "-o", "--output",
+        required=True,
+        help="Output showcase path (.png for frame contact sheet, .gif for animated pack grid).",
+    )
+    showcase_p.add_argument(
+        "--scale",
+        type=int,
+        default=4,
+        help="Integer upscale factor (default: 4).",
+    )
+    showcase_p.add_argument(
+        "--columns",
+        type=int,
+        default=4,
+        help="Columns when rendering an animated .gif showcase grid (default: 4).",
+    )
+    showcase_p.add_argument(
+        "--fps",
+        type=int,
+        default=8,
+        help="Frames per second for animated .gif showcase (default: 8).",
+    )
+    showcase_p.set_defaults(func=_cmd_showcase)
+
+    pack_p = sub.add_parser(
+        "pack",
+        help="Generate a complete Itch.io creature animation pack (13 animations + sheets + showcase) in one call.",
+    )
+    pack_p.add_argument(
+        "species",
+        default="chicken",
+        nargs="?",
+        help="Creature species preset (default: 'chicken').",
+    )
+    pack_p.add_argument(
+        "-o", "--output",
+        required=True,
+        help="Output directory for the generated asset pack.",
+    )
+    pack_p.add_argument(
+        "--variant",
+        default="white",
+        help="Breed/color variant or comma-separated list: 'white,brown,golden,dark' (default: 'white').",
+    )
+    pack_p.add_argument(
+        "--sheets",
+        action="store_true",
+        help="Also export PNG spritesheets + JSON metadata per animation under <output>/sheets/.",
+    )
+    pack_p.add_argument(
+        "--scale",
+        type=int,
+        default=4,
+        help="Upscale factor for showcase sheet and banner (default: 4).",
+    )
+    pack_p.add_argument(
+        "--lineless",
+        action="store_true",
+        help="Render pack in Pure Lineless mode.",
+    )
+    pack_p.set_defaults(func=_cmd_pack)
 
     extract_p = sub.add_parser(
         "extract",
