@@ -1,8 +1,12 @@
 """Declarative JSON spec and multi-frame runner for pixelai-tools."""
 
+from pathlib import Path
+import json
 from typing import Any
 from pixelai.canvas import Canvas
 from pixelai.color import RGBA, TRANSPARENT, parse_color
+from pixelai.exporter import extract_spec_from_png
+from pixelai.inspect_tool import load_png_as_canvas
 from pixelai.palettes import resolve_palette
 from pixelai import autotile, filters, iso, rig
 
@@ -86,6 +90,11 @@ def _execute_ops(
                     parse_color(k, palette): parse_color(v, palette)
                     for k, v in op["remap"].items()
                 }
+            pivot = (
+                (float(op["pivot"][0]), float(op["pivot"][1]))
+                if "pivot" in op
+                else None
+            )
             canvas.blit(
                 defs[def_name],
                 int(op.get("x", 0)),
@@ -93,6 +102,22 @@ def _execute_ops(
                 flip_x=bool(op.get("flip_x", False)),
                 flip_y=bool(op.get("flip_y", False)),
                 remap=remap,
+                angle=float(op.get("angle", 0.0)),
+                pivot=pivot,
+            )
+        elif kind == "load_png":
+            src = load_png_as_canvas(op["path"])
+            if "crop" in op:
+                cx, cy, cw, ch = (int(v) for v in op["crop"])
+                cropped = Canvas(cw, ch)
+                cropped.blit(src, -cx, -cy)
+                src = cropped
+            canvas.blit(
+                src,
+                int(op.get("x", 0)),
+                int(op.get("y", 0)),
+                flip_x=bool(op.get("flip_x", False)),
+                flip_y=bool(op.get("flip_y", False)),
             )
         elif kind == "tilemap":
             tw = int(op.get("tile_w", 16))
@@ -284,8 +309,34 @@ def _apply_post(
     return canvas
 
 
+def _resolve_extends(spec: dict[str, Any]) -> dict[str, Any]:
+    """Merge parent spec from 'extends' (.png with embedded spec or .json file)."""
+    if "extends" not in spec:
+        return spec
+    parent_path = Path(spec["extends"])
+    if parent_path.suffix.lower() == ".png":
+        parent = extract_spec_from_png(parent_path)
+    else:
+        parent = json.loads(parent_path.read_text(encoding="utf-8-sig"))
+
+    merged = dict(parent)
+    for k, v in spec.items():
+        if k == "extends":
+            continue
+        if k in ("defs", "palette_ext") and isinstance(merged.get(k), dict) and isinstance(v, dict):
+            combined = dict(merged[k])
+            combined.update(v)
+            merged[k] = combined
+        elif k == "ops" and spec.get("inherit_ops", False):
+            merged["ops"] = list(parent.get("ops", [])) + list(v)
+        else:
+            merged[k] = v
+    return merged
+
+
 def run_frames(spec: dict[str, Any]) -> tuple[list[Canvas], list[str]]:
     """Execute a spec into one or more post-processed frames and their names."""
+    spec = _resolve_extends(spec)
     width = int(spec["width"])
     height = int(spec["height"])
     palette = resolve_palette(spec.get("palette"), spec.get("palette_ext"))

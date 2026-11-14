@@ -74,9 +74,10 @@ def render_ascii(canvas: Canvas, max_width: int = 64) -> str:
 
 def load_png_as_canvas(path: str | Path) -> Canvas:
     """Load an existing PNG into a Canvas for inspection."""
-    img = Image.open(path).convert("RGBA")
-    w, h = img.size
-    canvas = Canvas(w, h)
-    getter = getattr(img, "get_flattened_data", img.getdata)
-    canvas.pixels = list(getter())
+    with Image.open(path) as raw_img:
+        img = raw_img.convert("RGBA")
+        w, h = img.size
+        canvas = Canvas(w, h)
+        getter = getattr(img, "get_flattened_data", img.getdata)
+        canvas.pixels = list(getter())
     return canvas

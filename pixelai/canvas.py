@@ -1,6 +1,7 @@
 """Core pixel canvas and deterministic drawing primitives."""
 
 from collections import deque
+import math
 import random
 from pixelai.color import RGBA, TRANSPARENT
 
@@ -210,10 +211,37 @@ class Canvas:
         flip_x: bool = False,
         flip_y: bool = False,
         remap: dict[RGBA, RGBA] | None = None,
+        angle: float = 0.0,
+        pivot: tuple[float, float] | None = None,
     ) -> None:
-        """Stamp another Canvas at (x, y) with optional flip and color remapping."""
-        for sy in range(other.height):
-            for sx in range(other.width):
+        """Stamp another Canvas at (x, y) with optional flip, remap, and pivot rotation."""
+        if abs(angle) < 1e-6:
+            for sy in range(other.height):
+                for sx in range(other.width):
+                    src_x = (other.width - 1 - sx) if flip_x else sx
+                    src_y = (other.height - 1 - sy) if flip_y else sy
+                    c = other.get_pixel(src_x, src_y)
+                    if c[3] == 0:
+                        continue
+                    if remap and c in remap:
+                        c = remap[c]
+                    self.set_pixel(x + sx, y + sy, c)
+            return
+
+        px, py = pivot if pivot is not None else ((other.width - 1) / 2.0, (other.height - 1) / 2.0)
+        rad = math.radians(angle)
+        cos_a, sin_a = math.cos(rad), math.sin(rad)
+        radius = int(math.ceil(math.hypot(other.width, other.height)))
+        cx_dst, cy_dst = x + px, y + py
+
+        for dy in range(-radius, radius + 1):
+            for dx in range(-radius, radius + 1):
+                # Inverse rotate from destination offset back to source coordinates
+                sx_f = px + dx * cos_a + dy * sin_a
+                sy_f = py - dx * sin_a + dy * cos_a
+                sx, sy = int(round(sx_f)), int(round(sy_f))
+                if not other.in_bounds(sx, sy):
+                    continue
                 src_x = (other.width - 1 - sx) if flip_x else sx
                 src_y = (other.height - 1 - sy) if flip_y else sy
                 c = other.get_pixel(src_x, src_y)
@@ -221,7 +249,7 @@ class Canvas:
                     continue
                 if remap and c in remap:
                     c = remap[c]
-                self.set_pixel(x + sx, y + sy, c)
+                self.set_pixel(int(round(cx_dst + dx)), int(round(cy_dst + dy)), c)
 
     def scatter(
         self,

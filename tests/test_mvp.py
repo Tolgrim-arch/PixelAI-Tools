@@ -258,6 +258,44 @@ class TestMVP(unittest.TestCase):
             self.assertIn("SpriteFrames", tres_p.read_text(encoding="utf-8"))
             self.assertEqual(main(["inspect", str(sheet_p), "--ascii"]), 0)
 
+    def test_png_embed_extract_extends_rotation_and_multires_rig(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base_spec_p = Path(tmp) / "base.json"
+            base_png_p = Path(tmp) / "base.png"
+            child_spec_p = Path(tmp) / "child.json"
+            child_gif_p = Path(tmp) / "child.gif"
+
+            base_spec = {
+                "width": 64,
+                "height": 64,
+                "palette": "cozy24",
+                "defs": {
+                    "axe": {
+                        "width": 8,
+                        "height": 8,
+                        "ops": [{"op": "rect", "x": 3, "y": 0, "w": 2, "h": 8, "color": "wood"}],
+                    }
+                },
+                "ops": [
+                    {"op": "char_rig", "x": 0, "y": 0, "size": 64, "dir": "down", "pose": "work", "frame": 2, "hat": "wheat"},
+                ],
+            }
+            base_spec_p.write_text(json.dumps(base_spec), encoding="utf-8")
+            self.assertEqual(main(["render", str(base_spec_p), "-o", str(base_png_p)]), 0)
+            self.assertEqual(main(["extract", str(base_png_p)]), 0)
+
+            # Child spec extends the generated PNG directly and uses rotated stamp + load_png
+            child_spec = {
+                "extends": str(base_png_p),
+                "frames": [
+                    {"name": "f0", "ops": [{"op": "stamp", "def": "axe", "x": 28, "y": 28, "angle": 45, "pivot": [4, 4]}]},
+                    {"name": "f1", "ops": [{"op": "load_png", "path": str(base_png_p), "crop": [16, 16, 32, 32], "x": 16, "y": 16}]},
+                ],
+            }
+            child_spec_p.write_text(json.dumps(child_spec), encoding="utf-8")
+            self.assertEqual(main(["render", str(child_spec_p), "-o", str(child_gif_p)]), 0)
+            self.assertTrue(child_gif_p.exists())
+
 
 if __name__ == "__main__":
     unittest.main()

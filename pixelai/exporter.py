@@ -1,9 +1,10 @@
-"""Exporters for pixel art canvases, spritesheets, and GIF animations."""
+"""Exporters for pixel art canvases, spritesheets, Godot .tres, and GIF animations."""
 
 import json
 import math
 from pathlib import Path
-from PIL import Image
+from typing import Any
+from PIL import Image, PngImagePlugin
 from pixelai.canvas import Canvas
 
 
@@ -13,31 +14,72 @@ def _canvas_to_image(canvas: Canvas) -> Image.Image:
     return img
 
 
-def export_png(canvas: Canvas, path: str | Path) -> Path:
-    """Export a single Canvas to a lossless RGBA PNG file."""
+def _build_pnginfo(spec_json: str | None) -> PngImagePlugin.PngInfo | None:
+    if not spec_json:
+        return None
+    info = PngImagePlugin.PngInfo()
+    info.add_text("pixelai_spec", spec_json)
+    return info
+
+
+def extract_spec_from_png(path: str | Path) -> dict[str, Any]:
+    """Extract the embedded pixelai JSON spec from a PNG's tEXt metadata."""
+    with Image.open(path) as img:
+        raw = img.info.get("pixelai_spec")
+    if not raw:
+        raise ValueError(f"No embedded pixelai_spec found in {path}")
+    return json.loads(raw)
+
+
+def _rgba_to_gif_frame(img: Image.Image) -> Image.Image:
+    """Convert an RGBA image into a P-mode GIF frame with index 0 reserved for transparency."""
+    alpha = img.getchannel("A")
+    rgb = img.convert("RGB").quantize(colors=255, method=Image.Quantize.FASTOCTREE)
+    pal = rgb.getpalette() or [0] * 768
+    # Shift palette indices by +1 so index 0 is dedicated to transparent
+    shifted_pal = [0, 0, 0] + pal[: 255 * 3]
+    out = Image.new("P", img.size, 0)
+    out.putpalette(shifted_pal)
+
+    getter = getattr(rgb, "get_flattened_data", rgb.getdata)
+    a_getter = getattr(alpha, "get_flattened_data", alpha.getdata)
+    out.putdata([
+        (px + 1) if a >= 128 else 0
+        for px, a in zip(getter(), a_getter())
+    ])
+    return out
+
+
+def export_png(
+    canvas: Canvas, path: str | Path, spec_json: str | None = None
+) -> Path:
+    """Export a single Canvas to a lossless RGBA PNG file (with optional embedded spec)."""
     out_path = Path(path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    _canvas_to_image(canvas).save(out_path, format="PNG")
+    _canvas_to_image(canvas).save(
+        out_path, format="PNG", pnginfo=_build_pnginfo(spec_json)
+    )
     return out_path
 
 
 def export_gif(
     frames: list[Canvas], path: str | Path, fps: int = 8
 ) -> Path:
-    """Export a list of Canvases as a looping animated GIF."""
+    """Export a list of Canvases as a clean transparent looping animated GIF."""
     if not frames:
         raise ValueError("Cannot export GIF with zero frames")
     out_path = Path(path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     duration_ms = max(20, int(round(1000 / max(1, fps))))
-    images = [_canvas_to_image(f) for f in frames]
-    images[0].save(
+    p_frames = [_rgba_to_gif_frame(_canvas_to_image(f)) for f in frames]
+    p_frames[0].save(
         out_path,
         format="GIF",
         save_all=True,
-        append_images=images[1:],
+        append_images=p_frames[1:],
         duration=duration_ms,
         loop=0,
+        transparency=0,
         disposal=2,
     )
     return out_path
@@ -49,6 +91,7 @@ def export_spritesheet(
     frame_names: list[str] | None = None,
     columns: int | None = None,
     meta_path: str | Path | None = None,
+    spec_json: str | None = None,
 ) -> Path:
     """Pack multiple Canvases into a spritesheet PNG and optional JSON metadata."""
     if not frames:
@@ -73,7 +116,7 @@ def export_spritesheet(
 
     out_path = Path(path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    sheet.save(out_path, format="PNG")
+    sheet.save(out_path, format="PNG", pnginfo=_build_pnginfo(spec_json))
 
     if meta_path:
         mp = Path(meta_path)
