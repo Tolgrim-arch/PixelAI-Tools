@@ -37,8 +37,10 @@ def draw_portrait_rig(
     beard = p("beard_color", "#4b302e")
     bg = p("background", "#d6e6cf")
 
-    def sx(v: float) -> int: return x + round(v * scale)
-    def sy(v: float) -> int: return y + round(v * scale)
+    def sx(v: float) -> int:
+        return max(0, min(canvas.width - 1, x + round(v * scale)))
+    def sy(v: float) -> int:
+        return max(0, min(canvas.height - 1, y + round(v * scale)))
     def pts(values: list[tuple[float, float]]) -> list[tuple[int, int]]:
         return [(sx(px), sy(py)) for px, py in values]
 
