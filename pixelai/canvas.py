@@ -3,7 +3,7 @@
 from collections import deque
 import math
 import random
-from pixelai.color import RGBA, TRANSPARENT
+from pixelai.color import RGBA, TRANSPARENT, brighten, darken
 
 
 class Canvas:
@@ -115,15 +115,36 @@ class Canvas:
                 y0 += sy
 
     def draw_rect(
-        self, x: int, y: int, w: int, h: int, color: RGBA, filled: bool = True
+        self,
+        x: int,
+        y: int,
+        w: int,
+        h: int,
+        color: RGBA,
+        filled: bool = True,
+        bevel: bool = False,
+        recessed: bool = False,
     ) -> None:
-        """Draw a filled or outlined rectangle."""
+        """Draw a filled or outlined rectangle with optional lineless bevel or recessed lip."""
         if w <= 0 or h <= 0:
             return
         if filled:
             for py in range(y, y + h):
                 for px in range(x, x + w):
                     self.set_pixel(px, py, color)
+            if recessed and w >= 2 and h >= 2:
+                rec_col = darken(color, 0.72)
+                self.draw_line(x, y, x + w - 1, y, rec_col)
+                self.draw_line(x, y, x, y + h - 1, rec_col)
+            elif bevel and w >= 2 and h >= 2:
+                hl_col = brighten(color, 1.15)
+                sh_col = darken(color, 0.80)
+                self.draw_line(x, y, x + w - 1, y, hl_col)
+                self.draw_line(x, y, x, y + h - 1, hl_col)
+                if h >= 3:
+                    self.draw_line(x, y + h - 1, x + w - 1, y + h - 1, sh_col)
+                if w >= 3:
+                    self.draw_line(x + w - 1, y + 1, x + w - 1, y + h - 1, sh_col)
         else:
             x2, y2 = x + w - 1, y + h - 1
             self.draw_line(x, y, x2, y, color)

@@ -53,6 +53,8 @@ def _execute_ops(
                 op["x"], op["y"], op["w"], op["h"],
                 parse_color(op["color"], palette),
                 filled=op.get("filled", True),
+                bevel=bool(op.get("bevel", False)),
+                recessed=bool(op.get("recessed", False)),
             )
         elif kind == "circle":
             canvas.draw_circle(

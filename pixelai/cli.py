@@ -38,7 +38,7 @@ AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 ## Drawing Operations (`ops`)
 - `{"op": "pixel", "x": 0, "y": 0, "color": "ink"}`
 - `{"op": "line", "x0": 0, "y0": 0, "x1": 5, "y1": 5, "color": "ink"}`
-- `{"op": "rect", "x": 0, "y": 0, "w": 8, "h": 8, "color": "wood", "filled": true}`
+- `{"op": "rect", "x": 0, "y": 0, "w": 8, "h": 8, "color": "wood", "filled": true, "bevel": false, "recessed": false}`
 - `{"op": "circle", "cx": 8, "cy": 8, "r": 4, "color": "grass", "filled": true}`
 - `{"op": "ellipse", "cx": 16, "cy": 28, "rx": 8, "ry": 3, "color": "shadow", "filled": true}`
 - `{"op": "bezier", "points": [[2, 20], [16, 4], [30, 20]], "color": "wood", "thickness": 2}`

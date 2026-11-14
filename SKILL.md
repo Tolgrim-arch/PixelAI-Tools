@@ -18,7 +18,9 @@ description: Generate deterministic pixel art sprites, isometric buildings, 16-t
 - **Forbidden:** Never use dark internal outlines.
 
 ## Key Capabilities
+- **Top-Down 3/4 Cozy Architecture (`building`):** `{"op": "building", "x": 12, "y": 14, "w": 104, "h": 98, "roof_style": "gable|pitched|barn", "wall_color": "cream", "roof_color": "roof", "timber_frame": true, "chimney": true, "smoke": true}` — generates complete farmhouses, cottages, or barns with shingle roofs, gable dormers, timber framing, shutters, flowerboxes, and chimney smoke in 1 op.
 - **Isometric 3D Architecture (with Per-Pixel Z-Buffer):** `iso_structure` (per-pixel Z-buffering + depth sorting by `gx + gy, gz`), `iso_box`, `iso_roof` (`pyramid`, `gable_left`, `gable_right`), `iso_wall_rect` (`arch: true`, `recessed: true`).
+- **Ortho Bevels & Procedural Textures:** `rect` supports `"bevel": true` and `"recessed": true`; `scatter` supports `"pattern": "noise|brick|shingle|cobble|wood|grass"` with deterministic `density` and `seed`.
 - **Organic Primitives & Particles:** `ellipse` (`rx`, `ry`), `bezier` (`points`, `thickness`), and looping `particles` (`smoke`, `leaves`, `rain`, `sparks`).
 - **Keyframe Tweening & Multi-Layer Export:** Automatic interpolation via `"keyframes": [{"steps": 4, "ops": [...]}]` and separate layer export via `"layers": [...]` + `--layers-dir <dir>`.
 - **Auto-Tilesets (16-tile Wang Bitmask):** `{"op": "autotile", "tile_size": 16, "inner": "water", "outer": "grass", "lip": "soil_d"}`
