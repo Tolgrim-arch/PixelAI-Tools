@@ -50,8 +50,12 @@ def outline(
     for y in range(canvas.height):
         for x in range(canvas.width):
             idx = y * canvas.width + x
-            # Outline can be drawn on transparent pixels OR over ground shadow pixels
-            if canvas.pixels[idx][3] != 0 and idx not in canvas.shadow_pixels:
+            # Outline can be drawn on transparent pixels OR over ground shadow / no_outline pixels
+            if (
+                canvas.pixels[idx][3] != 0
+                and idx not in canvas.shadow_pixels
+                and idx not in canvas.no_outline
+            ):
                 continue
             neighbors = [
                 canvas.get_pixel(x + dx, y + dy)

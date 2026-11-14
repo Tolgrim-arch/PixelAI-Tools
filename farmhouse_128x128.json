@@ -1,0 +1,22 @@
+{
+  "width": 128,
+  "height": 128,
+  "palette": "cozy24",
+  "ops": [
+    {
+      "op": "building",
+      "x": 12,
+      "y": 14,
+      "w": 104,
+      "h": 98,
+      "roof_style": "gable",
+      "wall_color": "cream",
+      "roof_color": "roof",
+      "trim_color": "wood",
+      "foundation_color": "stone",
+      "timber_frame": true,
+      "chimney": true,
+      "smoke": true
+    }
+  ]
+}

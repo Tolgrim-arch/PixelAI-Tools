@@ -8,7 +8,7 @@ from pixelai.color import RGBA, TRANSPARENT, parse_color
 from pixelai.exporter import extract_spec_from_png
 from pixelai.inspect_tool import load_png_as_canvas
 from pixelai.palettes import resolve_palette
-from pixelai import autotile, creatures, filters, iso, rig
+from pixelai import autotile, building, creatures, filters, iso, rig
 
 
 def _execute_ops(
@@ -247,6 +247,14 @@ def _execute_ops(
                 frame=int(op.get("frame", frame_idx)),
                 palette=palette,
                 outline=bool(op.get("outline", False)),
+            )
+        elif kind == "building":
+            building.draw_building(
+                canvas,
+                palette,
+                op,
+                frame_idx=frame_idx,
+                total_frames=total_frames,
             )
         elif kind == "iso_tile":
             rx = int(op["rx"])
