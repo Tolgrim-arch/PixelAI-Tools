@@ -113,17 +113,35 @@ def draw_portrait_rig(
         canvas.draw_polygon(pts([(25, 33), (29, 35), (36, 34), (38, 37), (34, 41), (28, 40), (25, 37)]), beard, filled=True)
         canvas.draw_polygon(pts([(28, 34), (31, 35), (35, 34), (33, 37), (29, 37)]), skin_d, filled=True)
 
-    # Large eyes, brows, nose and a one-pixel mouth scaled consistently.
+    # Facial features use physical pixel clusters at portrait resolutions.
+    # Scaling every feature by the body factor produced coarse square eyes.
     eye_y = sy(22)
-    for eye_x in (24, 38):
-        canvas.draw_rect(sx(eye_x - 2), eye_y, max(3, round(6 * scale)), max(3, round(4 * scale)), skin_l, filled=True)
-        canvas.draw_rect(sx(eye_x), eye_y, max(2, round(2.5 * scale)), max(3, round(3 * scale)), eye_color, filled=True)
-        canvas.set_pixel(sx(eye_x), eye_y, skin_l)
-    canvas.draw_rect(sx(23), sy(18), max(3, round(6 * scale)), max(1, round(2 * scale)), hair_d, filled=True)
-    canvas.draw_rect(sx(36), sy(18), max(3, round(6 * scale)), max(1, round(2 * scale)), hair_d, filled=True)
-    canvas.draw_rect(sx(31), sy(27), max(1, round(5 * scale)), max(1, round(2 * scale)), skin_d, filled=True)
-    canvas.set_pixel(sx(34), sy(27), skin_l)
-    canvas.draw_line(sx(30), sy(34), sx(36), sy(34), skin_d)
+    if w >= 128:
+        for logical_x in (25, 39):
+            ex = sx(logical_x)
+            canvas.draw_rect(ex - 6, eye_y - 2, 13, 7, skin_l, filled=True)
+            canvas.draw_rect(ex - 6, eye_y - 3, 13, 2, hair_d, filled=True)
+            canvas.draw_rect(ex - 1, eye_y - 2, 5, 7, eye_color, filled=True)
+            canvas.set_pixel(ex, eye_y - 1, (255, 246, 220, 255))
+            canvas.set_pixel(ex + 4, eye_y + 4, skin_d)
+        canvas.draw_rect(sx(23), sy(18), 17, 3, hair_d, filled=True)
+        canvas.draw_rect(sx(36), sy(18), 17, 3, hair_d, filled=True)
+        nx, ny = sx(32), sy(27)
+        canvas.draw_line(nx, ny - 2, nx - 1, ny + 4, skin_d)
+        canvas.draw_line(nx - 1, ny + 4, nx + 4, ny + 4, skin_d)
+        canvas.set_pixel(nx + 2, ny + 3, skin_l)
+        my = sy(34)
+        canvas.draw_line(sx(30), my, sx(36), my, skin_d)
+        canvas.set_pixel(sx(33), my + 1, skin_l)
+    else:
+        for eye_x in (24, 38):
+            canvas.draw_rect(sx(eye_x - 2), eye_y, max(3, round(6 * scale)), max(3, round(4 * scale)), skin_l, filled=True)
+            canvas.draw_rect(sx(eye_x), eye_y, max(2, round(2.5 * scale)), max(3, round(3 * scale)), eye_color, filled=True)
+            canvas.set_pixel(sx(eye_x), eye_y, skin_l)
+        canvas.draw_line(sx(23), sy(19), sx(29), sy(18), hair_d)
+        canvas.draw_line(sx(36), sy(18), sx(42), sy(19), hair_d)
+        canvas.draw_rect(sx(31), sy(27), max(1, round(5 * scale)), max(1, round(2 * scale)), skin_d, filled=True)
+        canvas.draw_line(sx(30), sy(34), sx(36), sy(34), skin_d)
     # Shirt collar and neck seam provide the layered construction visible in
     # the source portraits without introducing forbidden dark interior ink.
     canvas.draw_polygon(pts([(24, 40), (30, 46), (27, 49), (21, 42)]), shirt, filled=True)
