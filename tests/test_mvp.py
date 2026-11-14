@@ -496,10 +496,15 @@ class TestMVP(unittest.TestCase):
             "style": "ext_outline",
             "ops": [
                 {"op": "building", "roof_style": "barn"},
+                {"op": "rect", "x": 4, "y": 4, "w": 6, "h": 6, "color": "wood", "bevel": True},
+                {"op": "rect", "x": 12, "y": 4, "w": 6, "h": 6, "color": "wood", "recessed": True},
             ],
         }
         c_barn = run_spec(barn_spec)
         self.assertEqual(len(c_barn.warnings), 0)
+        # Beveled rect top-left (4,4) is brightened (>143), recessed rect top-left (12,4) is darkened (<143)
+        self.assertGreater(c_barn.get_pixel(4, 4)[0], 143)
+        self.assertLess(c_barn.get_pixel(12, 4)[0], 143)
 
 
 if __name__ == "__main__":
