@@ -1,4 +1,4 @@
-"""Unit tests for pixelai-tools MVP."""
+"""Unit tests for pixelai-tools v0.2."""
 
 import json
 import tempfile
@@ -7,7 +7,7 @@ from pathlib import Path
 
 from pixelai.cli import main
 from pixelai.color import parse_color, TRANSPARENT
-from pixelai.runner import run_spec
+from pixelai.runner import run_frames, run_spec
 
 
 class TestMVP(unittest.TestCase):
@@ -33,10 +33,8 @@ class TestMVP(unittest.TestCase):
         }
         canvas = run_spec(spec)
         self.assertEqual((canvas.width, canvas.height), (16, 16))
-        # Mirrored pixel at (1,1) and (6,1), scaled 2x -> (2,2) and (12,2)
         self.assertEqual(canvas.get_pixel(2, 2), (255, 0, 0, 255))
         self.assertEqual(canvas.get_pixel(12, 2), (255, 0, 0, 255))
-        # Outline at (0,1) scaled 2x -> (0,2)
         self.assertEqual(canvas.get_pixel(0, 2), (0, 0, 0, 255))
 
     def test_cli_render_file(self) -> None:
@@ -80,10 +78,84 @@ class TestMVP(unittest.TestCase):
             "post": [{"op": "shade", "amount": 0.25}],
         }
         canvas = run_spec(spec)
-        # Top-left pixel (1,1) is brightened from #808080 (128 -> 160)
         self.assertEqual(canvas.get_pixel(1, 1), (160, 160, 160, 255))
-        # Bottom-right pixel (4,4) is darkened from #808080 (128 -> 96)
         self.assertEqual(canvas.get_pixel(4, 4), (96, 96, 96, 255))
+
+    def test_iso_primitives(self) -> None:
+        spec = {
+            "width": 32,
+            "height": 32,
+            "palette": "cozy24",
+            "ops": [
+                {"op": "iso_box", "cx": 16, "cy": 14, "rx": 8, "h": 8, "top": "stone_l", "left": "stone", "right": "stone_d", "edge": "ink"},
+                {"op": "iso_roof", "cx": 16, "cy": 14, "rx": 8, "h": 6, "style": "pyramid", "left": "roof_l", "right": "roof_d", "ridge": "ink"},
+                {"op": "iso_wall_rect", "face": "left", "x": 12, "y": 17, "w": 3, "h": 4, "color": "ink"},
+            ],
+        }
+        canvas = run_spec(spec)
+        # Apex of pyramid roof at (16, 8) has ridge color 'ink' (#21181b)
+        self.assertEqual(canvas.get_pixel(16, 8), (33, 24, 27, 255))
+        # Door on left wall at (12, 17)
+        self.assertEqual(canvas.get_pixel(12, 17), (33, 24, 27, 255))
+
+    def test_defs_stamp_remap_and_scatter(self) -> None:
+        spec = {
+            "width": 8,
+            "height": 8,
+            "palette": {"a": "#ff0000", "b": "#0000ff", "g": "#00ff00"},
+            "defs": {
+                "dot": {
+                    "width": 2,
+                    "height": 2,
+                    "ops": [{"op": "pixel", "x": 0, "y": 0, "color": "a"}],
+                }
+            },
+            "ops": [
+                {"op": "stamp", "def": "dot", "x": 0, "y": 0},
+                {"op": "stamp", "def": "dot", "x": 2, "y": 0, "flip_x": True, "remap": {"a": "b"}},
+                {"op": "scatter", "x": 0, "y": 0, "w": 8, "h": 8, "color": "g", "target_color": "b", "density": 1.0},
+            ],
+        }
+        canvas = run_spec(spec)
+        self.assertEqual(canvas.get_pixel(0, 0), (255, 0, 0, 255))
+        # Flipped (0,0) in 2x2 becomes (1,0) -> placed at x=2+1=3, remapped to 'b' then scattered to 'g'
+        self.assertEqual(canvas.get_pixel(3, 0), (0, 255, 0, 255))
+
+    def test_animation_gif_and_spritesheet(self) -> None:
+        spec = {
+            "width": 4,
+            "height": 4,
+            "palette": "cozy24",
+            "frames": [
+                {"name": "f0", "ops": [{"op": "pixel", "x": 1, "y": 1, "color": "roof"}]},
+                {"name": "f1", "ops": [{"op": "pixel", "x": 2, "y": 1, "color": "roof"}]},
+            ],
+        }
+        frames, names = run_frames(spec)
+        self.assertEqual(len(frames), 2)
+        self.assertEqual(names, ["f0", "f1"])
+
+        with tempfile.TemporaryDirectory() as tmp:
+            spec_p = Path(tmp) / "anim.json"
+            gif_p = Path(tmp) / "anim.gif"
+            sheet_p = Path(tmp) / "sheet.png"
+            meta_p = Path(tmp) / "sheet.json"
+            spec_p.write_text(json.dumps(spec), encoding="utf-8")
+
+            self.assertEqual(main(["render", str(spec_p), "-o", str(gif_p), "--fps", "6"]), 0)
+            self.assertTrue(gif_p.exists())
+
+            self.assertEqual(
+                main(["render", str(spec_p), "-o", str(sheet_p), "--meta", str(meta_p)]),
+                0,
+            )
+            self.assertTrue(sheet_p.exists())
+            meta = json.loads(meta_p.read_text(encoding="utf-8"))
+            self.assertEqual(len(meta["frames"]), 2)
+            self.assertEqual(meta["frames"][1]["x"], 4)
+
+    def test_cli_guide(self) -> None:
+        self.assertEqual(main(["guide"]), 0)
 
 
 if __name__ == "__main__":
