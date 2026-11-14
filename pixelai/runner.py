@@ -50,6 +50,12 @@ def run_spec(spec: dict[str, Any]) -> Canvas:
             if "colors" in op:
                 cmap.update({k: parse_color(v, palette) for k, v in op["colors"].items()})
             canvas.draw_grid(op.get("x", 0), op.get("y", 0), op["rows"], cmap)
+        elif kind == "dither":
+            canvas.draw_dither_rect(
+                op["x"], op["y"], op["w"], op["h"],
+                parse_color(op["color_a"], palette),
+                parse_color(op["color_b"], palette),
+            )
         else:
             raise ValueError(f"Unknown op: {kind!r}")
 
@@ -57,6 +63,8 @@ def run_spec(spec: dict[str, Any]) -> Canvas:
         kind = post["op"]
         if kind == "outline":
             canvas = filters.outline(canvas, parse_color(post["color"], palette))
+        elif kind == "shade":
+            canvas = filters.shade(canvas, float(post.get("amount", 0.25)))
         elif kind == "scale":
             canvas = filters.scale(canvas, int(post["factor"]))
         else:

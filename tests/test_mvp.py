@@ -70,6 +70,21 @@ class TestMVP(unittest.TestCase):
         self.assertEqual(canvas.get_pixel(2, 1), TRANSPARENT)
         self.assertEqual(canvas.get_pixel(2, 2), (0, 228, 54, 255))
 
+    def test_dither_and_shade(self) -> None:
+        spec = {
+            "width": 6,
+            "height": 6,
+            "ops": [
+                {"op": "dither", "x": 1, "y": 1, "w": 4, "h": 4, "color_a": "#808080", "color_b": "#404040"},
+            ],
+            "post": [{"op": "shade", "amount": 0.25}],
+        }
+        canvas = run_spec(spec)
+        # Top-left pixel (1,1) is brightened from #808080 (128 -> 160)
+        self.assertEqual(canvas.get_pixel(1, 1), (160, 160, 160, 255))
+        # Bottom-right pixel (4,4) is darkened from #808080 (128 -> 96)
+        self.assertEqual(canvas.get_pixel(4, 4), (96, 96, 96, 255))
+
 
 if __name__ == "__main__":
     unittest.main()

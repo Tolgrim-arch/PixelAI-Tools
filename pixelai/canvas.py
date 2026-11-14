@@ -138,3 +138,11 @@ class Canvas:
                 if ch not in color_map:
                     raise ValueError(f"Grid symbol {ch!r} not found in palette/colors")
                 self.set_pixel(x + dx, y + dy, color_map[ch])
+
+    def draw_dither_rect(
+        self, x: int, y: int, w: int, h: int, color_a: RGBA, color_b: RGBA
+    ) -> None:
+        """Fill a rectangle with a 2-color checkerboard dither pattern."""
+        for py in range(y, y + h):
+            for px in range(x, x + w):
+                self.set_pixel(px, py, color_a if (px + py) % 2 == 0 else color_b)

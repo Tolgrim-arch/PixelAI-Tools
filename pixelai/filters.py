@@ -35,3 +35,33 @@ def scale(canvas: Canvas, factor: int) -> Canvas:
                 for sx in range(factor):
                     out.set_pixel(x * factor + sx, y * factor + sy, c)
     return out
+
+
+def _adjust(c: RGBA, factor: float) -> RGBA:
+    r, g, b, a = c
+    return (
+        max(0, min(255, int(r * factor))),
+        max(0, min(255, int(g * factor))),
+        max(0, min(255, int(b * factor))),
+        a,
+    )
+
+
+def shade(canvas: Canvas, amount: float = 0.25) -> Canvas:
+    """Apply top-left directional edge shading to non-transparent pixels."""
+    out = Canvas(canvas.width, canvas.height)
+    for y in range(canvas.height):
+        for x in range(canvas.width):
+            c = canvas.get_pixel(x, y)
+            if c[3] == 0:
+                continue
+            top_empty = canvas.get_pixel(x, y - 1)[3] == 0
+            left_empty = canvas.get_pixel(x - 1, y)[3] == 0
+            bottom_empty = canvas.get_pixel(x, y + 1)[3] == 0
+            right_empty = canvas.get_pixel(x + 1, y)[3] == 0
+            if top_empty or left_empty:
+                c = _adjust(c, 1.0 + amount)
+            elif bottom_empty or right_empty:
+                c = _adjust(c, 1.0 - amount)
+            out.set_pixel(x, y, c)
+    return out
