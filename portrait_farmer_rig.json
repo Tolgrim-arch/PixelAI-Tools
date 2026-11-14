@@ -2,23 +2,7 @@
   "name": "farmer_portrait_mistria_rig",
   "width": 180,
   "height": 256,
-  "palette": {
-    "ink": "#2b1b2b",
-    "bg": "#d6e6cf",
-    "skin": "#f2c38f",
-    "skin_l": "#ffe0aa",
-    "skin_d": "#b96d5c",
-    "hair": "#6b3f35",
-    "hair_l": "#925442",
-    "hair_d": "#402538",
-    "shirt": "#d9e5d2",
-    "garment": "#704b3b",
-    "garment_d": "#4b302e",
-    "accent": "#d69b4b"
-    ,"gold": "#d69b4b",
-    "soil": "#9a613b",
-    "cream": "#fff0c9"
-  },
+  "palette": "mistria_portrait",
   "ops": [
     {"op":"portrait_rig", "x":1, "y":1, "width":178, "height":254,
       "skin":"skin", "skin_l":"skin_l", "skin_d":"skin_d",

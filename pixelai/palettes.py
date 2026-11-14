@@ -40,6 +40,18 @@ _RAW_PALETTES: dict[str, dict[str, str]] = {
         "water_d": "#326496", "water": "#4fa4c4", "water_l": "#8be0f0",
         "cream": "#fff5e4",
     },
+    "mistria_portrait": {
+        # Portrait-focused swatches calibrated from the supplied character
+        # portrait references: warm skin, plum ink, muted workwear and straw.
+        "ink": "#2b1b2b", "shadow": "#4a2d36",
+        "skin": "#f2c38f", "skin_l": "#ffe0aa", "skin_d": "#b96d5c",
+        "hair": "#6b3f35", "hair_l": "#925442", "hair_d": "#402538",
+        "shirt": "#d9e5d2", "shirt_d": "#afc3b4",
+        "garment": "#704b3b", "garment_d": "#4b302e",
+        "accent": "#d69b4b", "gold": "#d69b4b", "soil": "#9a613b",
+        "hat_color": "#d69b4b", "hat_light": "#fff0c9", "hat_dark": "#9a613b",
+        "cream": "#fff0c9",
+    },
 }
 
 
