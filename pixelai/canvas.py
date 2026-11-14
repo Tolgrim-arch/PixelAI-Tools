@@ -14,14 +14,28 @@ class Canvas:
         self.width = width
         self.height = height
         self.pixels: list[RGBA] = [fill] * (width * height)
+        self.clipped_pixels: int = 0
+        self.warnings: list[str] = []
 
     def copy(self) -> "Canvas":
         out = Canvas(self.width, self.height)
         out.pixels = self.pixels.copy()
+        out.clipped_pixels = self.clipped_pixels
+        out.warnings = self.warnings.copy()
         return out
 
     def in_bounds(self, x: int, y: int) -> bool:
         return 0 <= x < self.width and 0 <= y < self.height
+
+    def touches_border(self) -> bool:
+        """Return True if any non-transparent pixel sits on the outer 1px border."""
+        for x in range(self.width):
+            if self.get_pixel(x, 0)[3] > 0 or self.get_pixel(x, self.height - 1)[3] > 0:
+                return True
+        for y in range(self.height):
+            if self.get_pixel(0, y)[3] > 0 or self.get_pixel(self.width - 1, y)[3] > 0:
+                return True
+        return False
 
     def get_pixel(self, x: int, y: int) -> RGBA:
         if not self.in_bounds(x, y):
@@ -31,6 +45,8 @@ class Canvas:
     def set_pixel(self, x: int, y: int, color: RGBA) -> None:
         if self.in_bounds(x, y):
             self.pixels[y * self.width + x] = color
+        elif color[3] > 0:
+            self.clipped_pixels += 1
 
     def draw_line(self, x0: int, y0: int, x1: int, y1: int, color: RGBA) -> None:
         """Draw a 1px line using Bresenham's algorithm."""

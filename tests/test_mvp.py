@@ -157,6 +157,49 @@ class TestMVP(unittest.TestCase):
     def test_cli_guide(self) -> None:
         self.assertEqual(main(["guide"]), 0)
 
+    def test_iso_structure_sorting_and_selout(self) -> None:
+        spec = {
+            "width": 32,
+            "height": 32,
+            "palette": "cozy24",
+            "ops": [
+                {
+                    "op": "iso_structure",
+                    "origin_x": 16,
+                    "origin_y": 18,
+                    "items": [
+                        # Declared first: upper keep at gz=6
+                        {"type": "box", "gx": 0, "gy": 0, "gz": 6, "rx": 4, "h": 6, "top": "roof_l", "left": "roof", "right": "roof_d"},
+                        # Declared second: lower base at gz=0 (must be drawn BEFORE gz=6!)
+                        {"type": "box", "gx": 0, "gy": 0, "gz": 0, "rx": 8, "h": 6, "top": "stone_l", "left": "stone", "right": "stone_d"},
+                    ],
+                }
+            ],
+            "post": [
+                {"op": "outline", "color": "ink", "selout": True},
+            ],
+        }
+        canvas = run_spec(spec)
+        # Upper keep center at (16, 18 - 6 = 12) must remain 'roof_l' (#e87858 = 232, 120, 88), not overwritten by 'stone_l'
+        self.assertEqual(canvas.get_pixel(16, 12), (232, 120, 88, 255))
+
+    def test_border_warning_and_auto_pad(self) -> None:
+        spec = {
+            "width": 4,
+            "height": 4,
+            "ops": [{"op": "pixel", "x": 0, "y": 0, "color": "#ff0000"}],
+            "post": [{"op": "outline", "color": "#000000"}],
+        }
+        c_warn = run_spec(spec)
+        self.assertEqual(len(c_warn.warnings), 1)
+
+        spec["post"] = [{"op": "outline", "color": "#000000", "auto_pad": True}]
+        c_pad = run_spec(spec)
+        self.assertEqual((c_pad.width, c_pad.height), (6, 6))
+        self.assertEqual(len(c_pad.warnings), 0)
+        # Original pixel shifted to (1,1), outline at (1,0)
+        self.assertEqual(c_pad.get_pixel(1, 0), (0, 0, 0, 255))
+
 
 if __name__ == "__main__":
     unittest.main()

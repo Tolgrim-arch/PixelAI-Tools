@@ -57,9 +57,25 @@ AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 ## 2:1 Isometric Operations (`ops`)
 - `{"op": "iso_tile", "cx": 32, "cy": 32, "rx": 16, "ry": 8, "color": "grass", "border": "grass_d"}`
 - `{"op": "iso_box", "cx": 32, "cy": 32, "rx": 12, "ry": 6, "h": 10, "top": "stone_l", "left": "stone", "right": "stone_d", "edge": "ink"}`
-- `{"op": "iso_roof", "cx": 32, "cy": 32, "rx": 13, "ry": 6, "h": 8, "style": "pyramid|gable_left|gable_right", "left": "roof_l", "right": "roof_d", "gable": "wood", "ridge": "ink"}`
-- `{"op": "iso_wall_rect", "face": "left|right", "x": 24, "y": 36, "w": 4, "h": 6, "color": "ink"}`
+- `{"op": "iso_roof", "cx": 32, "cy": 32, "rx": 12, "ry": 6, "h": 8, "style": "pyramid|gable_left|gable_right", "left": "roof_l", "right": "roof_d", "gable": "wood", "ridge": "ink", "eave_shadow": true}`
+- `{"op": "iso_wall_rect", "face": "left|right", "x": 24, "y": 36, "w": 4, "h": 6, "color": "ink", "border": "stone_d", "arch": true}`
+- `{"op": "iso_structure", "origin_x": 32, "origin_y": 30, "items": [{"type": "box|roof", "gx": 0, "gy": 0, "gz": 0, "rx": 8, "h": 10, ...}]}` (Auto-sorts back-to-front by `gx+gy` and `gz`)
 """
+
+
+def _print_diagnostics(frames: list, names: list[str]) -> None:
+    seen: set[str] = set()
+    for f, name in zip(frames, names):
+        if f.clipped_pixels > 0:
+            msg = f"[WARN] ({name}): {f.clipped_pixels} pixel(s) drawn out of canvas bounds."
+            if msg not in seen:
+                print(msg, file=sys.stderr)
+                seen.add(msg)
+        for w in f.warnings:
+            msg = f"[WARN] ({name}): {w}"
+            if msg not in seen:
+                print(msg, file=sys.stderr)
+                seen.add(msg)
 
 
 def _cmd_render(args: argparse.Namespace) -> int:
@@ -69,6 +85,7 @@ def _cmd_render(args: argparse.Namespace) -> int:
         raw = Path(args.spec).read_text(encoding="utf-8-sig")
     spec = json.loads(raw)
     frames, names = run_frames(spec)
+    _print_diagnostics(frames, names)
 
     out_path = Path(args.output)
     is_gif = out_path.suffix.lower() == ".gif"

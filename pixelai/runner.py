@@ -155,8 +155,10 @@ def _execute_ops(
                 style=op.get("style", "pyramid"),
                 gable_color=gable,
                 ridge_color=ridge,
+                eave_shadow=bool(op.get("eave_shadow", True)),
             )
         elif kind == "iso_wall_rect":
+            border = parse_color(op["border"], palette) if "border" in op else None
             iso.draw_iso_wall_rect(
                 canvas,
                 op.get("face", "left"),
@@ -165,6 +167,18 @@ def _execute_ops(
                 int(op["w"]),
                 int(op["h"]),
                 parse_color(op["color"], palette),
+                border=border,
+                arch=bool(op.get("arch", False)),
+            )
+        elif kind == "iso_structure":
+            iso.draw_iso_structure(
+                canvas,
+                int(op.get("origin_x", canvas.width // 2)),
+                int(op.get("origin_y", canvas.height // 2)),
+                op["items"],
+                palette,
+                step_x=int(op.get("step_x", 2)),
+                step_y=int(op.get("step_y", 1)),
             )
         else:
             raise ValueError(f"Unknown op: {kind!r}")
@@ -176,7 +190,15 @@ def _apply_post(
     for post in post_ops:
         kind = post["op"]
         if kind == "outline":
-            canvas = filters.outline(canvas, parse_color(post["color"], palette))
+            canvas = filters.outline(
+                canvas,
+                parse_color(post["color"], palette),
+                selout=bool(post.get("selout", False)),
+                selout_amount=float(post.get("selout_amount", 0.55)),
+                auto_pad=bool(post.get("auto_pad", False)),
+            )
+        elif kind == "pad":
+            canvas = filters.pad(canvas, int(post.get("size", 1)))
         elif kind == "shade":
             canvas = filters.shade(canvas, float(post.get("amount", 0.25)))
         elif kind == "scale":
