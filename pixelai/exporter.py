@@ -92,3 +92,55 @@ def export_spritesheet(
             encoding="utf-8",
         )
     return out_path
+
+
+def export_godot_tres(
+    sheet_path: str | Path,
+    tres_path: str | Path,
+    frames: list[Canvas],
+    frame_names: list[str] | None = None,
+    columns: int | None = None,
+    fps: int = 8,
+) -> Path:
+    """Export a Godot 4 SpriteFrames .tres resource referencing the spritesheet PNG."""
+    if not frames:
+        raise ValueError("Cannot export Godot .tres with zero frames")
+    fw, fh = frames[0].width, frames[0].height
+    cols = columns if (columns and columns > 0) else len(frames)
+    sheet_name = Path(sheet_path).name
+
+    lines = [
+        f'[gd_resource type="SpriteFrames" load_steps={len(frames) + 2} format=3]',
+        "",
+        f'[ext_resource type="Texture2D" path="res://{sheet_name}" id="1_tex"]',
+        "",
+    ]
+    frame_refs = []
+    for idx in range(len(frames)):
+        col = idx % cols
+        row = idx // cols
+        x, y = col * fw, row * fh
+        sub_id = f"AtlasTexture_{idx}"
+        lines.extend([
+            f'[sub_resource type="AtlasTexture" id="{sub_id}"]',
+            'atlas = ExtResource("1_tex")',
+            f"region = Rect2({x}, {y}, {fw}, {fh})",
+            "",
+        ])
+        frame_refs.append(f'{{"duration": 1.0, "texture": SubResource("{sub_id}")}}')
+
+    _ = frame_names
+    lines.extend([
+        "[resource]",
+        "animations = [{",
+        f'"frames": [{", ".join(frame_refs)}],',
+        '"loop": true,',
+        '"name": &"default",',
+        f'"speed": {float(fps):.1f}',
+        "}]",
+        "",
+    ])
+    out = Path(tres_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8")
+    return out

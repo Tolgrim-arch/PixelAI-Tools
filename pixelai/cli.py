@@ -6,7 +6,13 @@ import sys
 from pathlib import Path
 
 from pixelai import __version__
-from pixelai.exporter import export_gif, export_png, export_spritesheet
+from pixelai.exporter import (
+    export_gif,
+    export_godot_tres,
+    export_png,
+    export_spritesheet,
+)
+from pixelai.inspect_tool import analyze_canvas, load_png_as_canvas, render_ascii
 from pixelai.palettes import list_palettes
 from pixelai.runner import run_frames
 
@@ -21,31 +27,9 @@ AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 - Default (Lineless Interior + External Outline): `pixelai render spec.json -o out.png`
 - Pure Lineless (0 outlines): `pixelai render spec.json -o out.png --lineless`
 - Animated GIF: `pixelai render spec.json -o anim.gif --fps 8`
-- Spritesheet + Metadata: `pixelai render spec.json -o sheet.png --sheet --columns 4 --meta sheet.json`
-
-## JSON Spec Structure
-```json
-{
-  "width": 32,
-  "height": 32,
-  "style": "ext_outline",
-  "palette": "cozy24",
-  "palette_ext": {"custom": "#ff8800"},
-  "defs": {
-    "sub_sprite": {"width": 8, "height": 8, "ops": [...]}
-  },
-  "ops": [...],
-  "frames": [
-    {"name": "idle_0", "ops": [...]},
-    {"name": "idle_1", "ops": [...]}
-  ],
-  "post": [
-    {"op": "shade", "amount": 0.2},
-    {"op": "outline", "color": "ink"},
-    {"op": "scale", "factor": 4}
-  ]
-}
-```
+- Spritesheet + Metadata + Godot 4 `.tres`:
+  `pixelai render spec.json -o sheet.png --sheet --columns 4 --meta sheet.json --godot sheet.tres`
+- Terminal Inspection (Metrics + ASCII): `pixelai inspect out.png --ascii`
 
 ## Drawing Operations (`ops`)
 - `{"op": "pixel", "x": 0, "y": 0, "color": "ink"}`
@@ -58,15 +42,17 @@ AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 - `{"op": "dither", "x": 0, "y": 0, "w": 8, "h": 8, "color_a": "grass", "color_b": "grass_d"}`
 - `{"op": "scatter", "x": 0, "y": 0, "w": 32, "h": 32, "color": "grass_l", "target_color": "grass", "pattern": "noise|brick|wood|grass", "density": 0.2, "seed": 42}`
 - `{"op": "stamp", "def": "sub_sprite", "x": 4, "y": 4, "flip_x": false, "flip_y": false, "remap": {"wood": "stone"}}`
-- `{"op": "tilemap", "tile_w": 16, "tile_h": 16, "map": {"G": "grass_tile"}, "rows": ["GGG", "GGG"]}`
+- `{"op": "tilemap", "mode": "ortho|iso", "tile_w": 16, "tile_h": 16, "map": {"G": "grass_tile"}, "rows": ["GGG", "GGG"]}`
+- `{"op": "autotile", "x": 0, "y": 0, "tile_size": 16, "inner": "water", "outer": "grass", "lip": "soil_d", "seed": 42}` (Generates 4x4 16-tile Wang bitmask atlas)
+- `{"op": "char_rig", "x": 0, "y": 0, "dir": "down|up|left|right", "pose": "idle|walk|work", "frame": 0, "hat": "wheat", "shirt": "roof", "pants": "water_d"}`
 - `{"op": "mirror_x"}` / `{"op": "mirror_y"}`
 
 ## 2:1 Isometric Operations (`ops`)
-- `{"op": "iso_tile", "cx": 32, "cy": 32, "rx": 16, "ry": 8, "color": "grass", "border": "grass_d"}`
-- `{"op": "iso_box", "cx": 32, "cy": 32, "rx": 12, "ry": 6, "h": 10, "top": "stone_l", "left": "stone", "right": "stone_d", "edge": "ink"}`
-- `{"op": "iso_roof", "cx": 32, "cy": 32, "rx": 12, "ry": 6, "h": 8, "style": "pyramid|gable_left|gable_right", "left": "roof_l", "right": "roof_d", "gable": "wood", "ridge": "ink", "eave_shadow": true}`
-- `{"op": "iso_wall_rect", "face": "left|right", "x": 24, "y": 36, "w": 4, "h": 6, "color": "ink", "border": "stone_d", "arch": true}`
-- `{"op": "iso_structure", "origin_x": 32, "origin_y": 30, "items": [{"type": "box|roof", "gx": 0, "gy": 0, "gz": 0, "rx": 8, "h": 10, ...}]}` (Auto-sorts back-to-front by `gx+gy` and `gz`)
+- `{"op": "iso_tile", "cx": 32, "cy": 32, "rx": 16, "ry": 8, "color": "grass"}`
+- `{"op": "iso_box", "cx": 32, "cy": 32, "rx": 12, "ry": 6, "h": 10, "top": "stone_l", "left": "stone", "right": "stone_d", "bevel": true, "ground_shadow": 2}`
+- `{"op": "iso_roof", "cx": 32, "cy": 32, "rx": 12, "ry": 6, "h": 8, "style": "pyramid|gable_left|gable_right", "left": "roof_l", "right": "roof_d", "gable": "wood", "eave_shadow": true, "bevel": true}`
+- `{"op": "iso_wall_rect", "face": "left|right", "x": 24, "y": 36, "w": 4, "h": 6, "color": "wood_d", "arch": true, "recessed": true}`
+- `{"op": "iso_structure", "origin_x": 32, "origin_y": 30, "bevel": true, "ground_shadow": 2, "items": [{"type": "box|roof", "gx": 0, "gy": 0, "gz": 0, "rx": 8, "h": 10, ...}]}`
 """
 
 
@@ -100,13 +86,13 @@ def _cmd_render(args: argparse.Namespace) -> int:
 
     out_path = Path(args.output)
     is_gif = out_path.suffix.lower() == ".gif"
+    fps = args.fps or int(spec.get("fps", 8))
+    cols = args.columns or spec.get("columns")
 
     if is_gif:
-        fps = args.fps or int(spec.get("fps", 8))
         out = export_gif(frames, out_path, fps=fps)
         print(f"Rendered GIF ({len(frames)} frames @ {fps}fps, {frames[0].width}x{frames[0].height}) -> {out}")
-    elif args.sheet or len(frames) > 1:
-        cols = args.columns or spec.get("columns")
+    elif args.sheet or len(frames) > 1 or args.godot:
         out = export_spritesheet(
             frames, out_path, frame_names=names, columns=cols, meta_path=args.meta
         )
@@ -114,6 +100,25 @@ def _cmd_render(args: argparse.Namespace) -> int:
     else:
         out = export_png(frames[0], out_path)
         print(f"Rendered {frames[0].width}x{frames[0].height} -> {out}")
+
+    if args.godot:
+        tres_out = export_godot_tres(
+            out_path, args.godot, frames, frame_names=names, columns=cols, fps=fps
+        )
+        print(f"Exported Godot 4 SpriteFrames -> {tres_out}")
+
+    if args.ascii:
+        print(render_ascii(frames[0]))
+
+    return 0
+
+
+def _cmd_inspect(args: argparse.Namespace) -> int:
+    canvas = load_png_as_canvas(args.image)
+    stats = analyze_canvas(canvas)
+    print(json.dumps(stats, indent=2))
+    if args.ascii:
+        print(render_ascii(canvas))
     return 0
 
 
@@ -158,7 +163,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--fps",
         type=int,
         default=None,
-        help="Frames per second when exporting a .gif (default: 8).",
+        help="Frames per second when exporting a .gif or Godot .tres (default: 8).",
     )
     render_p.add_argument(
         "--sheet",
@@ -177,11 +182,33 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional output path for spritesheet JSON metadata.",
     )
     render_p.add_argument(
+        "--godot",
+        default=None,
+        help="Optional output path for Godot 4 SpriteFrames (.tres) resource.",
+    )
+    render_p.add_argument(
         "--lineless",
         action="store_true",
         help="Render in Pure Lineless mode (no internal or external outlines).",
     )
+    render_p.add_argument(
+        "--ascii",
+        action="store_true",
+        help="Print ASCII luminance preview of the first frame to stdout.",
+    )
     render_p.set_defaults(func=_cmd_render)
+
+    inspect_p = sub.add_parser(
+        "inspect",
+        help="Inspect an existing PNG (bounding box, margins, color count, and optional ASCII preview).",
+    )
+    inspect_p.add_argument("image", help="Path to PNG file to inspect.")
+    inspect_p.add_argument(
+        "--ascii",
+        action="store_true",
+        help="Print ASCII luminance preview to stdout.",
+    )
+    inspect_p.set_defaults(func=_cmd_inspect)
 
     guide_p = sub.add_parser(
         "guide",

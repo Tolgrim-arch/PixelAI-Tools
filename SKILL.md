@@ -1,0 +1,25 @@
+---
+name: pixelai-tools
+description: Generate deterministic pixel art sprites, isometric buildings, 16-tile autotiles, 4-direction character rigs, spritesheets, GIFs, and Godot 4 SpriteFrames (.tres) from the CLI. Use whenever asked to create pixel art, game sprites, tilesets, or animations.
+---
+
+# pixelai-tools Skill
+
+## Quick Start for AI Agents
+1. Run `python -m pixelai.cli guide` to view the full JSON DSL and palette keys (`cozy24`, `endesga32`, `sweetie16`, `pico8`, `gameboy`).
+2. Render a sprite or animation in a single CLI call via stdin (`-`):
+   ```powershell
+   python -m pixelai.cli render - -o output.png
+   ```
+
+## Aesthetic Standard (Mandatory)
+- **Default (`style: "ext_outline"`):** **Lineless Interior + 1px External Outline**. Internal surfaces use pure color planes, specular bevels (`bevel: true`), eave/ground shadows, and recessed depth (`recessed: true`) with **zero internal dark outlines**, wrapped in a 1px external silhouette outline.
+- **Pure Lineless (`--lineless` or `"style": "lineless"`):** Zero internal or external outlines.
+- **Forbidden:** Never use dark internal outlines.
+
+## Key Capabilities
+- **Isometric 3D Architecture:** `iso_structure` (automatic back-to-front depth sorting by `gx + gy, gz`), `iso_box`, `iso_roof` (`pyramid`, `gable_left`, `gable_right`), `iso_wall_rect` (`arch: true`, `recessed: true`).
+- **Auto-Tilesets (16-tile Wang Bitmask):** `{"op": "autotile", "tile_size": 16, "inner": "water", "outer": "grass", "lip": "soil_d"}`
+- **4-Direction Character Rigs:** `{"op": "char_rig", "dir": "down|up|left|right", "pose": "idle|walk|work", "frame": 0..3}`
+- **Isometric & Ortho Tilemaps:** `{"op": "tilemap", "mode": "iso|ortho", "tile_w": 16, "tile_h": 16, "rows": [...]}`
+- **Exporters:** `.png`, `.gif` (`--fps`), Spritesheet + JSON (`--sheet --meta`), Godot 4 `.tres` (`--godot`), and terminal inspection (`pixelai inspect out.png --ascii`).

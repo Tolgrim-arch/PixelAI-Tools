@@ -4,7 +4,7 @@ from typing import Any
 from pixelai.canvas import Canvas
 from pixelai.color import RGBA, TRANSPARENT, parse_color
 from pixelai.palettes import resolve_palette
-from pixelai import filters, iso
+from pixelai import autotile, filters, iso, rig
 
 
 def _execute_ops(
@@ -95,11 +95,13 @@ def _execute_ops(
                 remap=remap,
             )
         elif kind == "tilemap":
-            tw = int(op["tile_w"])
-            th = int(op["tile_h"])
+            tw = int(op.get("tile_w", 16))
+            th = int(op.get("tile_h", 16))
             ox = int(op.get("x", 0))
             oy = int(op.get("y", 0))
+            mode = op.get("mode", "ortho").lower()
             mapping: dict[str, str] = op.get("map", {})
+            cells: list[tuple[int, int, str]] = []
             for ry_idx, row in enumerate(op["rows"]):
                 tokens = row.split() if " " in row else list(row)
                 for rx_idx, tok in enumerate(tokens):
@@ -108,7 +110,38 @@ def _execute_ops(
                     def_key = mapping.get(tok, tok)
                     if def_key not in defs:
                         raise ValueError(f"Tilemap token {tok!r} -> {def_key!r} not in defs")
+                    cells.append((rx_idx, ry_idx, def_key))
+            if mode == "iso":
+                step_x = int(op.get("step_x", tw // 2))
+                step_y = int(op.get("step_y", th // 4))
+                cells.sort(key=lambda c: c[0] + c[1])
+                for rx_idx, ry_idx, def_key in cells:
+                    px = ox + (rx_idx - ry_idx) * step_x
+                    py = oy + (rx_idx + ry_idx) * step_y
+                    canvas.blit(defs[def_key], px, py)
+            else:
+                for rx_idx, ry_idx, def_key in cells:
                     canvas.blit(defs[def_key], ox + rx_idx * tw, oy + ry_idx * th)
+        elif kind == "autotile":
+            lip = parse_color(op["lip"], palette) if "lip" in op else None
+            autotile.draw_autotile_atlas(
+                canvas,
+                int(op.get("x", 0)),
+                int(op.get("y", 0)),
+                int(op.get("tile_size", 16)),
+                parse_color(op["inner"], palette),
+                parse_color(op["outer"], palette),
+                lip_color=lip,
+                seed=int(op.get("seed", 42)),
+            )
+        elif kind == "char_rig":
+            rig.draw_char_rig(
+                canvas,
+                int(op.get("x", 0)),
+                int(op.get("y", 0)),
+                palette,
+                op,
+            )
         elif kind == "iso_tile":
             rx = int(op["rx"])
             ry = int(op.get("ry", max(1, rx // 2)))

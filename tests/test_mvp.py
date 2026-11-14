@@ -221,6 +221,43 @@ class TestMVP(unittest.TestCase):
         c_ext = run_spec(ext_spec)
         self.assertEqual(c_ext.get_pixel(16, 18), c_lineless.get_pixel(16, 18))
 
+    def test_autotile_char_rig_iso_tilemap_and_godot_inspect(self) -> None:
+        spec = {
+            "width": 64,
+            "height": 64,
+            "palette": "cozy24",
+            "defs": {
+                "g": {
+                    "width": 16,
+                    "height": 8,
+                    "ops": [{"op": "iso_tile", "cx": 8, "cy": 4, "rx": 7, "ry": 3, "color": "grass"}],
+                }
+            },
+            "ops": [
+                {"op": "autotile", "x": 0, "y": 0, "tile_size": 8, "inner": "water", "outer": "grass", "lip": "soil_d"},
+                {"op": "tilemap", "mode": "iso", "x": 32, "y": 40, "tile_w": 16, "tile_h": 16, "rows": ["gg", "gg"]},
+                {"op": "char_rig", "x": 32, "y": 16, "dir": "right", "pose": "work", "frame": 0, "hat": "wheat"},
+            ],
+        }
+        canvas = run_spec(spec)
+        # Autotile tile 0 (all outer) at (2,2) is grass/grass_hl (opaque)
+        self.assertEqual(canvas.get_pixel(2, 2)[3], 255)
+        # Char rig hat at (32+6, 16+2) is wheat
+        self.assertEqual(canvas.get_pixel(38, 18), (242, 191, 82, 255))
+
+        with tempfile.TemporaryDirectory() as tmp:
+            spec_p = Path(tmp) / "rig.json"
+            sheet_p = Path(tmp) / "rig.png"
+            tres_p = Path(tmp) / "rig.tres"
+            spec_p.write_text(json.dumps(spec), encoding="utf-8")
+            self.assertEqual(
+                main(["render", str(spec_p), "-o", str(sheet_p), "--godot", str(tres_p), "--ascii"]),
+                0,
+            )
+            self.assertTrue(tres_p.exists())
+            self.assertIn("SpriteFrames", tres_p.read_text(encoding="utf-8"))
+            self.assertEqual(main(["inspect", str(sheet_p), "--ascii"]), 0)
+
 
 if __name__ == "__main__":
     unittest.main()
