@@ -4,6 +4,8 @@ from typing import Any
 from pixelai.canvas import Canvas
 from pixelai.color import RGBA, brighten as _brighten, darken as _darken, parse_color
 
+from pixelai.portrait import draw_field_farmer
+
 
 def draw_portrait_rig(
     canvas: Canvas,
@@ -18,6 +20,10 @@ def draw_portrait_rig(
     facial design language, asymmetric hair, shoulders, clothing planes and
     explicit feature scale rather than a tiny walk-cycle body.
     """
+    if op.get("preset") == "field_farmer":
+        draw_field_farmer(canvas, x, y, palette, op)
+        return
+
     w = max(48, int(op.get("width", 64)))
     h = max(64, int(op.get("height", 80)))
     scale = min(w, h) / 64.0
