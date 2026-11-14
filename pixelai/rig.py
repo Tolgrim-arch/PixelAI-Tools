@@ -75,6 +75,8 @@ def draw_portrait_rig(
         canvas.draw_polygon(pts([(59, 24), (60, 18), (62, 17), (62, 25)]), skin_l, filled=True)
         canvas.draw_polygon(pts([(61, 25), (62, 21), (63, 21), (63, 27)]), skin_l, filled=True)
         canvas.draw_line(sx(57), sy(33), sx(60), sy(35), skin_d)
+        canvas.draw_line(sx(57), sy(22), sx(59), sy(23), skin_d)
+        canvas.draw_line(sx(59), sy(21), sx(61), sy(22), skin_d)
     elif gesture == "hip":
         canvas.draw_polygon(pts([(7, 51), (12, 48), (18, 53), (15, 59), (10, 58)]), skin, filled=True)
         canvas.draw_rect(sx(11), sy(55), max(2, round(5 * scale)), max(1, round(2 * scale)), skin_d, filled=True)
@@ -101,10 +103,11 @@ def draw_portrait_rig(
     canvas.draw_polygon(pts([(31, 3), (35, 1), (38, 5), (35, 10)]), hair_l, filled=True)
     canvas.draw_polygon(pts([(44, 12), (49, 15), (48, 21), (44, 18)]), hair_d, filled=True)
     if op.get("hat", False):
-        canvas.draw_polygon(pts([(22, 9), (25, 3), (34, 1), (41, 5), (42, 10)]), hat, filled=True)
-        canvas.draw_polygon(pts([(25, 3), (34, 1), (38, 4), (29, 6)]), hat_l, filled=True)
-        canvas.draw_polygon(pts([(16, 10), (24, 7), (42, 8), (49, 11), (47, 14), (23, 13)]), hat_d, filled=True)
-        canvas.draw_polygon(pts([(18, 9), (26, 7), (42, 8), (47, 10), (28, 11)]), hat_l, filled=True)
+        canvas.draw_polygon(pts([(22, 9), (24, 4), (29, 1), (36, 2), (41, 6), (42, 10)]), hat, filled=True)
+        canvas.draw_polygon(pts([(25, 4), (29, 1), (35, 2), (38, 5), (29, 6)]), hat_l, filled=True)
+        canvas.draw_polygon(pts([(16, 10), (23, 7), (33, 8), (42, 8), (49, 11), (47, 14), (34, 13), (23, 13)]), hat_d, filled=True)
+        canvas.draw_polygon(pts([(18, 9), (25, 7), (34, 8), (43, 9), (47, 10), (30, 11)]), hat_l, filled=True)
+        canvas.draw_rect(sx(35), sy(10), max(1, round(5 * scale)), max(1, round(1 * scale)), hat_d, filled=True)
 
     if op.get("beard", False):
         canvas.draw_polygon(pts([(25, 33), (29, 35), (36, 34), (38, 37), (34, 41), (28, 40), (25, 37)]), beard, filled=True)
@@ -124,6 +127,9 @@ def draw_portrait_rig(
     # Restrained garment folds: colored planes, never interior ink outlines.
     canvas.draw_polygon(pts([(19, 47), (23, 45), (26, 63), (22, 63)]), garment_d, filled=True)
     canvas.draw_polygon(pts([(45, 47), (41, 45), (38, 63), (42, 63)]), garment_d, filled=True)
+    canvas.draw_polygon(pts([(27, 44), (31, 47), (35, 44), (37, 63), (25, 63)]), garment, filled=True)
+    canvas.draw_rect(sx(29), sy(52), max(2, round(6 * scale)), max(1, round(4 * scale)), garment_d, filled=True)
+    canvas.draw_rect(sx(30), sy(52), max(1, round(4 * scale)), max(1, round(1 * scale)), accent, filled=True)
 
 
 def draw_char_rig(
