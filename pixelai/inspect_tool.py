@@ -63,9 +63,23 @@ def analyze_canvas(canvas: Canvas) -> dict[str, Any]:
             "opaque_pixels": 0,
             "unique_colors": 0,
             "islands": 0,
+            "isolated_single_pixels": 0,
             "bbox": None,
             "margins": {"top": canvas.height, "right": canvas.width, "bottom": canvas.height, "left": canvas.width},
         }
+
+    isolated_singles = 0
+    for y in range(canvas.height):
+        for x in range(canvas.width):
+            if canvas.get_pixel(x, y)[3] > 0:
+                has_neighbor = any(
+                    canvas.in_bounds(x + dx, y + dy) and canvas.get_pixel(x + dx, y + dy)[3] > 0
+                    for dy in (-1, 0, 1)
+                    for dx in (-1, 0, 1)
+                    if not (dx == 0 and dy == 0)
+                )
+                if not has_neighbor:
+                    isolated_singles += 1
 
     return {
         "width": canvas.width,
@@ -73,6 +87,7 @@ def analyze_canvas(canvas: Canvas) -> dict[str, Any]:
         "opaque_pixels": opaque,
         "unique_colors": len(colors),
         "islands": count_connected_components(canvas),
+        "isolated_single_pixels": isolated_singles,
         "bbox": {"x": min_x, "y": min_y, "w": max_x - min_x + 1, "h": max_y - min_y + 1},
         "margins": {
             "top": min_y,
