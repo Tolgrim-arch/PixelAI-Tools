@@ -81,16 +81,18 @@ def draw_nature_rig(
         else:
             cr = max(7, w // 3)
             cy_c = ty - cr // 2 + 2
-            local.draw_circle(cx + sway_dx, cy_c, cr, foliage, filled=True)
-            local.draw_circle(cx - cr // 2 + sway_dx, cy_c + 2, max(4, cr // 2), foliage, filled=True)
-            local.draw_circle(cx + cr // 2 + sway_dx, cy_c + 2, max(4, cr // 2), foliage, filled=True)
-            local.clip_to_opaque = True
-            local.draw_circle(cx + sway_dx, cy_c + cr // 2, cr, foliage_d, filled=True)
-            local.draw_circle(cx - 2 + sway_dx, cy_c - 3, max(3, cr // 2), foliage_l, filled=True)
-            local.clip_to_opaque = False
+            canopy = Canvas(w, h)
+            canopy.draw_circle(cx + sway_dx, cy_c, cr, foliage, filled=True)
+            canopy.draw_circle(cx - cr // 2 + sway_dx, cy_c + 2, max(4, cr // 2), foliage, filled=True)
+            canopy.draw_circle(cx + cr // 2 + sway_dx, cy_c + 2, max(4, cr // 2), foliage, filled=True)
+            canopy.clip_to_opaque = True
+            canopy.draw_circle(cx + sway_dx, cy_c + cr // 2, cr, foliage_d, filled=True)
+            canopy.draw_circle(cx - 2 + sway_dx, cy_c - 3, max(3, cr // 2), foliage_l, filled=True)
+            canopy.clip_to_opaque = False
             if variant == "fruit":
                 for fx, fy in ((cx - 4, cy_c - 1), (cx + 3, cy_c + 1), (cx, cy_c - 4)):
-                    local.draw_rect(fx + sway_dx, fy, 2, 2, accent, filled=True)
+                    canopy.draw_rect(fx + sway_dx, fy, 2, 2, accent, filled=True)
+            local.blit(canopy, 0, 0)
 
     elif kind == "bush":
         r = max(4, w // 4)
