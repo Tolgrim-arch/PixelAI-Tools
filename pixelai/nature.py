@@ -1,7 +1,7 @@
 """Parametric cozy foliage, trees, faceted rocks, flowers, and detailed 4-stage crops."""
 
 from typing import Any
-from pixelai import conifer
+from pixelai import broadleaf, conifer
 from pixelai.canvas import Canvas
 from pixelai.color import RGBA, brighten, darken, parse_color
 
@@ -50,8 +50,11 @@ def draw_nature_rig(
     ground_base = str(op.get("ground_base", "none")).lower()
     frame = int(op.get("frame", frame_idx)) % 4
 
-    if kind == "tree" and variant == "pine":
-        conifer.draw_pine(canvas, x, y, palette, op, frame)
+    if kind == "tree":
+        if variant == "pine":
+            conifer.draw_pine(canvas, x, y, palette, op, frame)
+        else:
+            broadleaf.draw_broadleaf(canvas, x, y, palette, op, frame)
         return
 
     w = int(op.get("w", 32 if kind == "tree" else 24))
