@@ -1,0 +1,23 @@
+{
+  "name": "samurai_portrait_mistria",
+  "width": 122,
+  "height": 161,
+  "palette": "mistria_portrait",
+  "ops": [
+    {
+      "op": "portrait_rig",
+      "preset": "samurai",
+      "style": "mistria",
+      "x": 1,
+      "y": 1,
+      "width": 120,
+      "height": 160,
+      "face_dir": "three_quarter_right",
+      "scar": true,
+      "hat": false
+    }
+  ],
+  "post": [
+    {"op": "outline", "color": "#000000"}
+  ]
+}

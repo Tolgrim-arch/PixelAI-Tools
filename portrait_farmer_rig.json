@@ -1,7 +1,7 @@
 {
   "name": "farmer_portrait_mistria_rig",
   "width": 146,
-  "height": 162,
+  "height": 161,
   "palette": "mistria_portrait",
   "ops": [
     {"op":"portrait_rig", "x":1, "y":1, "width":144, "height":160,
@@ -11,5 +11,5 @@
       "garment":"garment", "garment_d":"garment_d", "accent":"accent", "ink":"ink",
       "beard_color":"hair_d", "eye_color":"ink", "hat_color":"gold", "hat_light":"cream", "hat_dark":"soil", "hat":true, "beard":true, "gesture":"wave", "face_dir":"three_quarter_right"}
   ],
-  "post": [{"op":"pad", "size":1}, {"op":"outline", "color":"ink"}]
+  "post": [{"op":"outline", "color":"ink"}]
 }
