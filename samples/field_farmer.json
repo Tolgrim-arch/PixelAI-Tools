@@ -1,7 +1,0 @@
-{
-  "name": "field_farmer",
-  "width": 118,
-  "height": 146,
-  "ops": [{"op": "portrait_rig", "preset": "field_farmer", "x": 1, "y": 1}],
-  "post": [{"op": "outline", "color": "#392939"}]
-}

@@ -41,15 +41,24 @@ def _draw_potion(
         local.draw_circle(px(18.5), px(5.5), _sc(1.6, s), cork, filled=True)
         local.set_pixel(px(19), px(5), cork_d)
 
-        # Liquid clipped strictly inside flask silhouette
+        # Gravity-leveled liquid with bright meniscus clipped strictly inside flask bulb
         local.clip_to_opaque = True
-        liq_r = max(1, int(round(4.6 * s * max(0.2, min(1.0, fill_level)))))
-        local.draw_circle(px(9), px(15.5), liq_r, liquid, filled=True)
-        local.draw_rect(px(4), px(15), px(10), px(6), liq_d, filled=True)
-        local.draw_circle(px(8), px(14), max(1, liq_r // 2), liq_l, filled=True)
+        liq_r = _sc(4.6, s)
+        fill_h = max(2, int(round(8 * s * max(0.2, min(1.0, fill_level)))))
+        liq_top = px(20) - fill_h
+        # Confine liquid strictly to the bulb (center (9, 15)) via intersection
+        bulb = Canvas(size, size)
+        bulb.draw_circle(px(9), px(15), liq_r, liquid, filled=True)
+        bulb.clip_to_opaque = True
+        bulb.draw_rect(px(3), 0, px(13), liq_top, (0, 0, 0, 0), filled=True)
+        bulb.draw_rect(px(3), px(18), px(13), px(5), liq_d, filled=True)
+        bulb.draw_rect(px(4), liq_top, px(11), _sc(1, s), liq_l, filled=True)
+        bulb.clip_to_opaque = False
+        local.blit(bulb, 0, 0)
         if shine:
             sx_off = 1 if (frame % 4) in (1, 2) else 0
             local.draw_rect(px(6), px(12 + sx_off), max(1, _sc(1, s)), max(1, _sc(2, s)), (255, 255, 255, 255))
+            local.set_pixel(px(7), px(11 + sx_off), glass_l)
         local.clip_to_opaque = False
         return
 
@@ -139,9 +148,21 @@ def _draw_chest(
     local.draw_rect(px(4), px(11), px(16), px(9), wood, filled=True, bevel=True)
     local.draw_rect(px(4), px(17), px(16), px(3), wood_d, filled=True)
     if state == "open":
-        local.draw_rect(px(4), px(5), px(16), px(5), wood_l, filled=True, bevel=True)
-        local.draw_rect(px(5), px(10), px(14), px(3), (42, 28, 36, 255), filled=True)
-        local.draw_rect(px(7), px(10), px(10), px(2), trim_l, filled=True)
+        # Tilted open lid + recessed lid interior + trim
+        local.draw_polygon([
+            (px(4), px(10)), (px(5), px(5)), (px(19), px(5)), (px(20), px(10)),
+        ], wood_l, filled=True)
+        local.draw_rect(px(5), px(4), px(14), _sc(2, s), wood_d, filled=True)
+        local.draw_rect(px(5), px(6), px(14), px(4), (66, 42, 34, 255), filled=True)
+        local.draw_rect(px(6), px(4), _sc(2, s), px(6), trim, filled=True)
+        local.draw_rect(px(16), px(4), _sc(2, s), px(6), trim, filled=True)
+        # Box dark recessed rim & front gold rim
+        local.draw_rect(px(4), px(10), px(16), _sc(1, s), trim, filled=True)
+        local.draw_rect(px(5), px(10), px(14), px(2), (38, 24, 32, 255), filled=True)
+        # Overflowing treasure mound: coins + bright highlight + ruby jewel
+        local.draw_ellipse(px(12), px(11), px(5), px(2), trim, filled=True)
+        local.draw_ellipse(px(11), px(10), px(4), _sc(1.5, s), trim_l, filled=True)
+        local.draw_rect(px(13), px(9), _sc(2, s), _sc(2, s), (218, 68, 82, 255), filled=True)
         if shine and (frame % 2 == 0):
             local.set_pixel(px(9), px(9), (255, 255, 255, 255))
             local.set_pixel(px(14), px(8), (255, 255, 255, 255))
@@ -251,7 +272,7 @@ def draw_item_rig(
 ) -> None:
     """Render a parametric RPG item/loot icon with optional orientation and world shadow."""
     _ = total_frames
-    kind = str(op.get("kind", "potion")).lower()
+    kind = str(op.get("kind", op.get("item", "potion"))).lower()
     orientation = str(op.get("orientation", "vertical")).lower()
     size = max(16, int(op.get("size", 24)))
     shine = bool(op.get("shine", True))
@@ -272,12 +293,13 @@ def draw_item_rig(
         return parse_color(op.get(key, default_pal if default_pal in palette else fallback_hex), palette)
 
     if kind == "potion":
+        glass_key = "secondary_color" if "secondary_color" in op else ("glass_color" if "glass_color" in op else "secondary_color")
         _draw_potion(
             local,
             size,
             orientation,
             col("color", "roof", "#c24b38"),
-            col("secondary_color", "water_l", "#b4e3f2"),
+            col(glass_key, "water_l", "#b4e3f2"),
             col("cork_color", "wood", "#9c603c"),
             float(op.get("fill_level", 0.78)),
             shine,

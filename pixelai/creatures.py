@@ -149,16 +149,41 @@ def _draw_straw_nest(
     ry: int,
     palette: dict[str, RGBA],
 ) -> None:
-    """Draw a cozy woven straw nest beneath a resting creature."""
+    """Draw the back bowl of a cozy woven straw nest beneath a resting creature."""
     straw_d = parse_color("wheat_d", palette) if "wheat_d" in palette else (196, 146, 54, 255)
     straw = parse_color("wheat", palette) if "wheat" in palette else (242, 191, 82, 255)
     straw_l = parse_color("wheat_l", palette) if "wheat_l" in palette else (255, 224, 130, 255)
+    wood_d = parse_color("wood_d", palette) if "wood_d" in palette else (106, 70, 48, 255)
     canvas.draw_ellipse(cx, cy, rx, ry, straw_d, filled=True)
-    canvas.draw_ellipse(cx, cy - 1, max(2, rx - 1), max(1, ry - 1), straw, filled=True)
-    for ox in range(-rx + 2, rx - 1, 2):
+    canvas.draw_ellipse(cx, cy - 1, max(2, rx - 1), max(1, ry), straw, filled=True)
+    canvas.draw_ellipse(cx, cy - 1, max(2, rx - 2), max(1, ry - 1), wood_d, filled=True)
+    for ox in range(-rx + 1, rx, 2):
         canvas.set_pixel(cx + ox, cy - 1, straw_l)
-    canvas.set_pixel(cx - rx + 1, cy, straw)
-    canvas.set_pixel(cx + rx - 1, cy, straw)
+    canvas.set_pixel(cx - rx, cy, straw)
+    canvas.set_pixel(cx + rx, cy, straw)
+
+
+def _draw_straw_nest_front_rim(
+    canvas: Canvas,
+    cx: int,
+    cy: int,
+    rx: int,
+    palette: dict[str, RGBA],
+) -> None:
+    """Draw the woven front straw rim overlapping the lower belly so the bird sits inside the nest."""
+    straw_d = parse_color("wheat_d", palette) if "wheat_d" in palette else (196, 146, 54, 255)
+    straw = parse_color("wheat", palette) if "wheat" in palette else (242, 191, 82, 255)
+    straw_l = parse_color("wheat_l", palette) if "wheat_l" in palette else (255, 224, 130, 255)
+    for dx in range(-rx + 1, rx):
+        drop = 1 if abs(dx) < rx - 2 else 0
+        y = cy + drop
+        canvas.set_pixel(cx + dx, y, straw_l if (dx % 3 == 0) else straw)
+        canvas.set_pixel(cx + dx, y + 1, straw if (dx % 2 == 0) else straw_d)
+    # Corner straw wisps
+    canvas.set_pixel(cx - rx, cy, straw)
+    canvas.set_pixel(cx + rx, cy, straw)
+    canvas.set_pixel(cx - rx + 1, cy - 1, straw_l)
+    canvas.set_pixel(cx + rx - 1, cy - 1, straw_l)
 
 
 def _draw_chicken_side(
@@ -198,15 +223,15 @@ def _draw_chicken_side(
     if draw_shadow:
         local.mark_shadow = True
         if pose in ("nest", "sleep"):
-            local.draw_ellipse(11, 20, 5, 1, shadow, filled=True)
+            local.draw_ellipse(11, 21, 5, 1, shadow, filled=True)
         elif (pose == "happy" and (frame % 4) in (1, 2)) or pose in ("jump", "fall"):
             local.draw_ellipse(11, 21, 3, 1, shadow, filled=True)
         else:
-            local.draw_ellipse(11, 21, 5, 1, shadow, filled=True)
+            local.draw_ellipse(11, 21, 4, 1, shadow, filled=True)
         local.mark_shadow = False
 
     if nest_prop and pose in ("nest", "sleep"):
-        _draw_straw_nest(local, 11, 19, 7, 2, palette)
+        _draw_straw_nest(local, 10, 20, 8, 2, palette)
 
     # Pose kinematics
     body_dx, body_dy = 0, 0
@@ -268,9 +293,11 @@ def _draw_chicken_side(
         if f in (2, 4) and ground_prop != "none":
             local.mark_no_outline = True
             if ground_prop == "grass":
+                local.set_pixel(20, 20, grass)
                 local.set_pixel(21, 20, grass)
-                local.set_pixel(22, 19, grass_l)
                 local.set_pixel(20, 19, grass_l)
+                local.set_pixel(22, 18, grass_l)
+                local.set_pixel(22, 19, grass)
             else:
                 local.set_pixel(21, 20, beak)
                 local.set_pixel(22, 19, parse_color("wheat_l", palette))
@@ -328,11 +355,14 @@ def _draw_chicken_side(
     local.draw_line(bx + 3, by, head_x, head_y + 1, body_col)
     local.draw_circle(head_x, head_y, 3, body_col, filled=True)
 
-    # 3. Internal shading & wing (clipped strictly inside the opaque body silhouette!)
+    # 3. Internal shading & scalloped wing (clipped strictly inside the opaque body silhouette!)
     local.clip_to_opaque = True
     local.draw_ellipse(bx, by + 3, rx_body, 2, belly_col, filled=True)
+    # Soft scalloped wing crescent instead of a boxy dark oval
     local.draw_ellipse(bx - 1, by + wing_dy, 3, 2, belly_col, filled=True)
-    local.draw_rect(bx - 2, by - 1 + wing_dy, 3, 1, body_col)
+    local.draw_ellipse(bx - 1, by - 1 + wing_dy, 2, 1, body_col, filled=True)
+    local.set_pixel(bx - 3, by + 1 + wing_dy, deep_shade)
+    local.set_pixel(bx, by + 1 + wing_dy, deep_shade)
     if pose == "sick":
         # Pale green sickly face flush + deeper belly shade
         local.draw_ellipse(head_x, head_y - 1, 3, 2, grass_l, filled=True)
@@ -342,6 +372,9 @@ def _draw_chicken_side(
     elif pose == "happy":
         local.set_pixel(head_x, head_y + 1, comb_l)
     local.clip_to_opaque = False
+
+    if nest_prop and pose in ("nest", "sleep"):
+        _draw_straw_nest_front_rim(local, 10, 20, 8, palette)
 
     # 4. Legs (drawn AFTER belly shading so yellow legs are never overwritten by grey belly!)
     if not hide_legs:
@@ -538,7 +571,7 @@ def _draw_chicken_front_back(
         local.mark_shadow = False
 
     if nest_prop and pose in ("nest", "sleep"):
-        _draw_straw_nest(local, cx, 19, 7, 2, palette)
+        _draw_straw_nest(local, cx, 20, 8, 2, palette)
 
     # 2. Wings + Plump Body + Head FIRST (so belly shading clip never overwrites the yellow legs!)
     by = 15 + body_dy
@@ -564,6 +597,9 @@ def _draw_chicken_front_back(
         local.set_pixel(cx - 4, by - 1, cream)
         local.set_pixel(cx + 4, by - 1, cream)
     local.clip_to_opaque = False
+
+    if nest_prop and pose in ("nest", "sleep"):
+        _draw_straw_nest_front_rim(local, cx, 20, 8, palette)
 
     if direction == "up":
         # Back-of-head shadow under comb + prominent swaying fan tail on the back

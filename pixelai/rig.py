@@ -13,164 +13,12 @@ def draw_portrait_rig(
     palette: dict[str, RGBA],
     op: dict[str, Any],
 ) -> None:
-    """Draw a deterministic bust portrait with a cozy, clean-pixel silhouette.
-
-    This is intentionally separate from ``char_rig``: portraits need a larger
-    facial design language, asymmetric hair, shoulders, clothing planes and
-    explicit feature scale rather than a tiny walk-cycle body.
-    """
+    """Draw a deterministic cozy RPG bust portrait via `draw_mistria_portrait`."""
     if op.get("preset") == "field_farmer":
         draw_field_farmer(canvas, x, y, palette, op)
         return
-    if op.get("style", "mistria") == "mistria":
-        from pixelai.portrait_mistria import draw_mistria_portrait
-        draw_mistria_portrait(canvas, x, y, palette, op)
-        return
-
-    w = max(48, int(op.get("width", 64)))
-    h = max(64, int(op.get("height", 80)))
-    scale = min(w, h) / 64.0
-    def p(name: str, fallback: str) -> RGBA:
-        return parse_color(op.get(name, fallback), palette)
-    ink = p("ink", "#2b1b2b")
-    skin = p("skin", "#f2c38f")
-    skin_l = p("skin_l", "#ffe0aa")
-    skin_d = p("skin_d", "#b96d5c")
-    hair = p("hair", "#6b3f35")
-    hair_l = p("hair_l", "#925442")
-    hair_d = p("hair_d", "#402538")
-    shirt = p("shirt", "#d9e5d2")
-    garment = p("garment", "#704b3b")
-    garment_d = p("garment_d", "#4b302e")
-    accent = p("accent", "#d69b4b")
-    beard = p("beard_color", "#4b302e")
-    eye_color = p("eye_color", "#2b1b2b")
-    hat = p("hat_color", "#d69b4b")
-    hat_l = p("hat_light", "#f1c66b")
-    hat_d = p("hat_dark", "#9a613b")
-    bg = p("background", "#d6e6cf")
-    face_dir = str(op.get("face_dir", "front")).lower()
-
-    def sx(v: float) -> int:
-        return max(0, min(canvas.width - 1, x + round(v * scale)))
-    def sy(v: float) -> int:
-        return max(0, min(canvas.height - 1, y + round(v * scale)))
-    def pts(values: list[tuple[float, float]]) -> list[tuple[int, int]]:
-        return [(sx(px), sy(py)) for px, py in values]
-
-    if op.get("fill_background", False):
-        prev_no_outline = canvas.mark_no_outline
-        canvas.mark_no_outline = True
-        canvas.draw_rect(sx(0), sy(0), round(w), round(h), bg, filled=True)
-        canvas.mark_no_outline = prev_no_outline
-    # Shoulders first: broad, readable planes, with a small rim highlight.
-    canvas.draw_polygon(pts([(4, 64), (9, 47), (20, 39), (44, 39), (56, 47), (61, 64)]), shirt, filled=True)
-    canvas.draw_polygon(pts([(14, 64), (17, 45), (24, 39), (40, 39), (48, 45), (52, 64)]), garment, filled=True)
-    canvas.draw_polygon(pts([(17, 46), (24, 39), (28, 44), (24, 49)]), garment_d, filled=True)
-    canvas.draw_polygon(pts([(47, 46), (40, 39), (36, 44), (40, 49)]), garment_d, filled=True)
-    canvas.draw_rect(sx(29), sy(50), max(2, round(7 * scale)), max(2, round(5 * scale)), accent, filled=True, bevel=True)
-
-    # Cropped forearms give the bust a lived-in, characterful pose instead of
-    # ending as a flat triangular torso. Hands remain simple pixel clusters.
-    canvas.draw_polygon(pts([(5, 63), (7, 51), (13, 47), (18, 51), (15, 57), (13, 63)]), shirt, filled=True)
-    canvas.draw_polygon(pts([(59, 63), (57, 51), (51, 47), (46, 51), (49, 57), (51, 63)]), shirt, filled=True)
-    canvas.draw_polygon(pts([(11, 54), (14, 51), (18, 53), (16, 58), (12, 58)]), skin, filled=True)
-    canvas.draw_polygon(pts([(53, 54), (50, 51), (46, 53), (48, 58), (52, 58)]), skin, filled=True)
-    gesture = str(op.get("gesture", "idle")).lower()
-    if gesture == "wave":
-        # Raised forearm and open hand, inspired by the expressive asymmetry
-        # in the reference portraits. Skin stays in flat pixel planes.
-        canvas.draw_polygon(pts([(51, 52), (55, 45), (57, 33), (59, 23), (62, 24), (60, 37), (59, 48), (57, 56)]), skin, filled=True)
-        canvas.draw_polygon(pts([(57, 25), (56, 20), (57, 18), (59, 24)]), skin_l, filled=True)
-        canvas.draw_polygon(pts([(59, 24), (60, 18), (62, 17), (62, 25)]), skin_l, filled=True)
-        canvas.draw_polygon(pts([(61, 25), (62, 21), (63, 21), (63, 27)]), skin_l, filled=True)
-        canvas.draw_line(sx(57), sy(33), sx(60), sy(35), skin_d)
-        canvas.draw_line(sx(57), sy(22), sx(59), sy(23), skin_d)
-        canvas.draw_line(sx(59), sy(21), sx(61), sy(22), skin_d)
-    elif gesture == "hip":
-        canvas.draw_polygon(pts([(7, 51), (12, 48), (18, 53), (15, 59), (10, 58)]), skin, filled=True)
-        canvas.draw_rect(sx(11), sy(55), max(2, round(5 * scale)), max(1, round(2 * scale)), skin_d, filled=True)
-
-    # Neck and face with a deliberate jaw taper instead of an ellipse-only head.
-    canvas.draw_polygon(pts([(27, 35), (37, 35), (39, 44), (34, 48), (26, 44)]), skin, filled=True)
-    canvas.draw_polygon(pts([(18, 17), (25, 9), (39, 9), (47, 18), (45, 35), (37, 42), (27, 42), (19, 35)]), skin, filled=True)
-    canvas.draw_polygon(pts([(19, 30), (24, 37), (29, 41), (25, 39), (20, 34)]), skin_l, filled=True)
-    canvas.draw_polygon(pts([(40, 36), (45, 29), (44, 36), (38, 41)]), skin_d, filled=True)
-    # Ears and cheek planes keep the face from reading as a blank oval.
-    canvas.draw_polygon(pts([(17, 24), (20, 22), (21, 30), (18, 32)]), skin, filled=True)
-    canvas.draw_polygon(pts([(43, 23), (47, 25), (46, 31), (43, 30)]), skin, filled=True)
-    canvas.draw_rect(sx(18), sy(26), max(1, round(2 * scale)), max(1, round(2 * scale)), skin_d, filled=True)
-    canvas.draw_rect(sx(44), sy(26), max(1, round(2 * scale)), max(1, round(2 * scale)), skin_d, filled=True)
-
-    # Hair mass and side locks; leave the face plane unobstructed.
-    canvas.draw_polygon(pts([(16, 22), (14, 14), (20, 6), (32, 2), (45, 7), (50, 17), (45, 27), (42, 17), (36, 11), (27, 10), (21, 16), (20, 28)]), hair, filled=True)
-    canvas.draw_polygon(pts([(16, 14), (21, 6), (32, 2), (35, 6), (24, 10), (19, 19)]), hair_l, filled=True)
-    canvas.draw_polygon(pts([(38, 5), (45, 8), (50, 17), (45, 27), (42, 16)]), hair_d, filled=True)
-    canvas.draw_polygon(pts([(15, 19), (19, 24), (20, 39), (16, 34)]), hair_d, filled=True)
-    # Short, stepped locks break the large silhouette into the clustered
-    # strands visible in the reference portraits.
-    canvas.draw_polygon(pts([(19, 7), (23, 4), (25, 6), (22, 12)]), hair_l, filled=True)
-    canvas.draw_polygon(pts([(31, 3), (35, 1), (38, 5), (35, 10)]), hair_l, filled=True)
-    canvas.draw_polygon(pts([(44, 12), (49, 15), (48, 21), (44, 18)]), hair_d, filled=True)
-    if op.get("hat", False):
-        canvas.draw_polygon(pts([(22, 9), (24, 4), (29, 1), (36, 2), (41, 6), (42, 10)]), hat, filled=True)
-        canvas.draw_polygon(pts([(25, 4), (29, 1), (35, 2), (38, 5), (29, 6)]), hat_l, filled=True)
-        canvas.draw_polygon(pts([(16, 10), (23, 7), (33, 8), (42, 8), (49, 11), (47, 14), (34, 13), (23, 13)]), hat_d, filled=True)
-        canvas.draw_polygon(pts([(18, 9), (25, 7), (34, 8), (43, 9), (47, 10), (30, 11)]), hat_l, filled=True)
-        canvas.draw_rect(sx(35), sy(10), max(1, round(5 * scale)), max(1, round(1 * scale)), hat_d, filled=True)
-
-    if op.get("beard", False):
-        canvas.draw_polygon(pts([(25, 33), (29, 35), (36, 34), (38, 37), (34, 41), (28, 40), (25, 37)]), beard, filled=True)
-        canvas.draw_polygon(pts([(28, 34), (31, 35), (35, 34), (33, 37), (29, 37)]), skin_d, filled=True)
-
-    # Facial features use physical pixel clusters at portrait resolutions.
-    # Scaling every feature by the body factor produced coarse square eyes.
-    eye_y = sy(22)
-    if w >= 128:
-        eye_specs = [(25, 13), (39, 13)]
-        if face_dir in ("right", "three_quarter_right", "3q_right"):
-            eye_specs = [(27, 10), (40, 14)]
-        elif face_dir in ("left", "three_quarter_left", "3q_left"):
-            eye_specs = [(24, 14), (37, 10)]
-        for logical_x, eye_w in eye_specs:
-            ex = sx(logical_x)
-            half = eye_w // 2
-            canvas.draw_rect(ex - half, eye_y - 2, eye_w, 7, skin_l, filled=True)
-            canvas.draw_rect(ex - half, eye_y - 3, eye_w, 2, hair_d, filled=True)
-            iris_x = ex + (1 if face_dir in ("right", "three_quarter_right", "3q_right") else -1 if face_dir in ("left", "three_quarter_left", "3q_left") else 0)
-            canvas.draw_rect(iris_x - 1, eye_y - 2, 5, 7, eye_color, filled=True)
-            canvas.set_pixel(iris_x, eye_y - 1, (255, 246, 220, 255))
-            canvas.set_pixel(ex + half - 1, eye_y + 4, skin_d)
-        canvas.draw_rect(sx(23), sy(18), 17, 3, hair_d, filled=True)
-        canvas.draw_rect(sx(36), sy(18), 17, 3, hair_d, filled=True)
-        nose_shift = 2 if face_dir in ("right", "three_quarter_right", "3q_right") else -2 if face_dir in ("left", "three_quarter_left", "3q_left") else 0
-        nx, ny = sx(32) + nose_shift, sy(27)
-        canvas.draw_line(nx, ny - 2, nx - 1, ny + 4, skin_d)
-        canvas.draw_line(nx - 1, ny + 4, nx + 4, ny + 4, skin_d)
-        canvas.set_pixel(nx + 2, ny + 3, skin_l)
-        my = sy(34)
-        mouth_shift = 1 if nose_shift > 0 else -1 if nose_shift < 0 else 0
-        canvas.draw_line(sx(30) + mouth_shift, my, sx(36) + mouth_shift, my, skin_d)
-        canvas.set_pixel(sx(33) + mouth_shift, my + 1, skin_l)
-    else:
-        for eye_x in (24, 38):
-            canvas.draw_rect(sx(eye_x - 2), eye_y, max(3, round(6 * scale)), max(3, round(4 * scale)), skin_l, filled=True)
-            canvas.draw_rect(sx(eye_x), eye_y, max(2, round(2.5 * scale)), max(3, round(3 * scale)), eye_color, filled=True)
-            canvas.set_pixel(sx(eye_x), eye_y, skin_l)
-        canvas.draw_line(sx(23), sy(19), sx(29), sy(18), hair_d)
-        canvas.draw_line(sx(36), sy(18), sx(42), sy(19), hair_d)
-        canvas.draw_rect(sx(31), sy(27), max(1, round(5 * scale)), max(1, round(2 * scale)), skin_d, filled=True)
-        canvas.draw_line(sx(30), sy(34), sx(36), sy(34), skin_d)
-    # Shirt collar and neck seam provide the layered construction visible in
-    # the source portraits without introducing forbidden dark interior ink.
-    canvas.draw_polygon(pts([(24, 40), (30, 46), (27, 49), (21, 42)]), shirt, filled=True)
-    canvas.draw_polygon(pts([(36, 46), (42, 40), (45, 42), (39, 49)]), shirt, filled=True)
-    # Restrained garment folds: colored planes, never interior ink outlines.
-    canvas.draw_polygon(pts([(19, 47), (23, 45), (26, 63), (22, 63)]), garment_d, filled=True)
-    canvas.draw_polygon(pts([(45, 47), (41, 45), (38, 63), (42, 63)]), garment_d, filled=True)
-    canvas.draw_polygon(pts([(27, 44), (31, 47), (35, 44), (37, 63), (25, 63)]), garment, filled=True)
-    canvas.draw_rect(sx(29), sy(52), max(2, round(6 * scale)), max(1, round(4 * scale)), garment_d, filled=True)
-    canvas.draw_rect(sx(30), sy(52), max(1, round(4 * scale)), max(1, round(1 * scale)), accent, filled=True)
+    from pixelai.portrait_mistria import draw_mistria_portrait
+    draw_mistria_portrait(canvas, x, y, palette, op)
 
 
 def draw_char_rig(
@@ -180,40 +28,65 @@ def draw_char_rig(
     palette: dict[str, RGBA],
     op: dict[str, Any],
 ) -> None:
-    """Draw a native-resolution character rig (size=16..128) facing down, up, left, or right."""
+    """Draw a native-resolution cozy RPG character rig (size=16..128) in top-down, side, or iso view."""
     size = max(16, int(op.get("size", 16)))
     s = size / 16.0
-    direction = op.get("dir", "down").lower()
+    raw_dir = op.get("dir", "down").lower()
     pose = op.get("pose", "idle").lower()
     frame = int(op.get("frame", 0)) % 4
     perspective = str(op.get("perspective", "topdown")).lower()
     draw_shadow = bool(op.get("shadow", True))
 
-    if direction in ("se", "sw", "ne", "nw"):
-        perspective = "iso"
-    if perspective == "iso":
-        iso_map = {"se": "right", "sw": "left", "ne": "up", "nw": "up"}
-        direction = iso_map.get(direction, direction)
+    is_iso = perspective == "iso" or raw_dir in ("se", "sw", "ne", "nw")
+    iso_dir = raw_dir
+    if raw_dir in ("se", "sw", "ne", "nw"):
+        direction = {"se": "right", "sw": "left", "ne": "up", "nw": "up"}[raw_dir]
+    else:
+        direction = raw_dir
+        if is_iso:
+            iso_dir = {"down": "se", "right": "se", "left": "sw", "up": "ne"}.get(raw_dir, "se")
 
     def sc(val: float) -> int:
         return max(1, int(round(val * s)))
 
-    def pt(px: float, py: float) -> tuple[int, int]:
-        return (x + int(round(px * s)), by + int(round(py * s)))
+    def px_i(val: float) -> int:
+        return x + int(round(val * s))
 
-    skin = parse_color(op.get("skin", "cream" if "cream" in palette else "#f5c6a5"), palette)
-    skin_d = _darken(skin, 0.86)
+    def py_i(val: float) -> int:
+        return by + int(round(val * s))
+
+    def pt(px_v: float, py_v: float) -> tuple[int, int]:
+        return (px_i(px_v), py_i(py_v))
+
+    default_skin = "skin" if "skin" in palette else "#f5c6a5"
+    skin = parse_color(op.get("skin", default_skin), palette)
+    # Warm-shifted peach shadow instead of muddy gray darken
+    skin_d = (max(0, skin[0] - 36), max(0, skin[1] - 50), max(0, skin[2] - 54), skin[3])
+    skin_blush = (min(255, skin[0]), max(0, skin[1] - 56), max(0, skin[2] - 42), skin[3])
+
     hair = parse_color(op.get("hair", "wood_d" if "wood_d" in palette else "#6e422c"), palette)
+    hair_l = _brighten(hair, 1.24)
+    hair_d = _darken(hair, 0.72)
+
     eye = parse_color(op.get("eye", "ink" if "ink" in palette else "#21181b"), palette)
+    eye_glint = (255, 248, 240, 255)
     shirt = parse_color(op.get("shirt", "roof" if "roof" in palette else "#c24b38"), palette)
+    shirt_l = _brighten(shirt, 1.15)
+    shirt_d = _darken(shirt, 0.78)
+    collar_col = parse_color("cream" if "cream" in palette else "#f4e8d1", palette)
+
     pants = parse_color(op.get("pants", "water_d" if "water_d" in palette else "#326496"), palette)
-    shoes = parse_color(op.get("shoes", "soil_d" if "soil_d" in palette else "#5c3c28"), palette)
+    pants_d = _darken(pants, 0.76)
+    pants_l = _brighten(pants, 1.16)
+
+    shoes = parse_color(op.get("shoes", "soil_d" if "soil_d" in palette else "#4e3322"), palette)
+    shoes_l = _brighten(shoes, 1.2)
+    belt_col = parse_color("wood_d" if "wood_d" in palette else "#5c3c24", palette)
+    buckle_col = parse_color("wheat" if "wheat" in palette else "#f4b41b", palette)
+
     hat = parse_color(op["hat"], palette) if "hat" in op else None
-    hat_d = _darken(hat, 0.82) if hat else None
-    hat_l = _brighten(hat, 1.12) if hat else None
-    shirt_d = _darken(shirt, 0.80)
-    pants_d = _darken(pants, 0.80)
-    pants_l = _brighten(pants, 1.15)
+    hat_d = _darken(hat, 0.80) if hat else None
+    hat_l = _brighten(hat, 1.16) if hat else None
     tool_col = parse_color(op.get("tool", "stone_l" if "stone_l" in palette else "#b5bfd1"), palette)
     handle_col = parse_color(op.get("handle", "wood" if "wood" in palette else "#9c603c"), palette)
     shadow_col = parse_color(op.get("shadow_color", "shadow" if "shadow" in palette else "#33293a"), palette)
@@ -222,137 +95,238 @@ def draw_char_rig(
         prev_sh, prev_no = canvas.mark_shadow, canvas.mark_no_outline
         canvas.mark_shadow = True
         canvas.mark_no_outline = True
-        sh_rx = sc(3) if pose in ("jump", "fall") else sc(4.5)
-        sh_ry = max(1, sc(1.2))
-        canvas.draw_ellipse(x + int(round(8 * s)), y + int(round(14.5 * s)), sh_rx, sh_ry, shadow_col, filled=True)
+        sh_rx = sc(2.6) if pose in ("jump", "fall") else sc(3.8)
+        sh_ry = max(1, sc(1.1 if is_iso else 1.0))
+        canvas.draw_ellipse(px_i(8), y + int(round(14.5 * s)), sh_rx, sh_ry, shadow_col, filled=True)
         canvas.mark_shadow, canvas.mark_no_outline = prev_sh, prev_no
 
     bob = 0
     if pose in ("walk", "run") and frame in (1, 3):
         bob = -max(1, int(round((0.8 if pose == "run" else 0.5) * s)))
     elif pose == "idle" and frame == 2:
-        bob = max(1, int(round(0.3 * s)))
+        bob = max(1, int(round(0.35 * s)))
     elif pose == "jump":
-        bob = -max(1, int(round(1.5 * s)))
+        bob = -max(1, int(round(1.6 * s)))
     elif pose == "fall":
-        bob = -max(1, int(round(0.6 * s)))
+        bob = -max(1, int(round(0.7 * s)))
     elif pose in ("work", "attack") and frame == 2:
         bob = max(1, int(round(0.5 * s)))
     by = y + bob
 
-    # If facing UP and working/attacking, draw tool behind body first
     if pose in ("work", "attack") and direction == "up":
         _draw_tool_front_back(canvas, x, by, s, frame, handle_col, tool_col, is_up=True)
 
-    # Legs & Boots
-    l_len, r_len = sc(2.2), sc(2.2)
+    # 1. Legs & Boots
+    l_len, r_len = sc(2.0), sc(2.0)
     if pose in ("walk", "run"):
         short_len = sc(0.9 if pose == "run" else 1.2)
         if frame == 1:
-            l_len, r_len = short_len, sc(2.2)
+            l_len, r_len = short_len, sc(2.0)
         elif frame == 3:
-            l_len, r_len = sc(2.2), short_len
+            l_len, r_len = sc(2.0), short_len
     elif pose == "jump":
-        l_len, r_len = sc(1.3), sc(1.7)
+        l_len, r_len = sc(1.2), sc(1.6)
     elif pose == "fall":
-        l_len, r_len = sc(1.8), sc(1.4)
+        l_len, r_len = sc(1.7), sc(1.3)
 
-    leg_y = by + int(round(11.5 * s))
-    iso_step = sc(0.6) if perspective == "iso" else 0
-    if direction in ("down", "up"):
-        lx, rx_pos = x + int(round(5 * s)), x + int(round(9 * s))
-        lw = sc(2)
+    leg_y = by + int(round(11.3 * s))
+    if is_iso:
+        # True 3/4 isometric staggered feet (front foot forward/down, back foot back/up)
+        flip_h = -1 if iso_dir in ("sw", "nw") else 1
+        stride = (1 if frame == 1 else (-1 if frame == 3 else 0)) * (1.5 if pose == "run" else 1.0)
+        bx_f = 8.0 + flip_h * (1.2 + stride * 0.8)
+        bx_b = 8.0 - flip_h * (1.3 + stride * 0.8)
+        by_f = leg_y + sc(0.4)
+        by_b = leg_y - sc(0.5)
+        lw = sc(1.9)
+        canvas.draw_rect(px_i(bx_b - 0.9), by_b, lw, l_len, pants_d)
+        canvas.draw_rect(px_i(bx_b - 0.9), by_b + l_len, lw, sc(1.1), shoes)
+        canvas.draw_rect(px_i(bx_f - 0.9), by_f, lw, r_len, pants)
+        canvas.draw_rect(px_i(bx_f - 0.9), by_f + r_len, lw, sc(1.1), shoes_l if s >= 1.5 else shoes)
+    elif direction in ("down", "up"):
+        lx, rx_pos = px_i(5.2), px_i(9.0)
+        lw = sc(1.9)
         canvas.draw_rect(lx, leg_y, lw, l_len, pants_d)
-        canvas.draw_rect(lx, leg_y + l_len, lw, sc(1), shoes)
-        canvas.draw_rect(rx_pos, leg_y - iso_step, lw, r_len, pants)
-        canvas.draw_rect(rx_pos, leg_y - iso_step + r_len, lw, sc(1), shoes)
+        canvas.draw_rect(lx, leg_y + l_len, lw, sc(1.1), shoes_l if size >= 32 else shoes)
+        canvas.draw_rect(rx_pos, leg_y, lw, r_len, pants)
+        canvas.draw_rect(rx_pos, leg_y + r_len, lw, sc(1.1), shoes_l if size >= 32 else shoes)
     else:
-        stride_scale = 1.6 if pose == "run" else 1.0
+        stride_scale = 1.7 if pose == "run" else 1.1
         stride = sc(stride_scale) if (pose in ("walk", "run") and frame == 1) else (-sc(stride_scale) if (pose in ("walk", "run") and frame == 3) else 0)
         if pose in ("jump", "fall"):
             stride = sc(1.2)
-        cx_leg = x + int(round(7 * s))
-        lw = sc(2)
-        canvas.draw_rect(cx_leg - stride, leg_y, lw, sc(2), pants_d)
-        canvas.draw_rect(cx_leg - stride, leg_y + sc(2), lw, sc(1), shoes)
-        canvas.draw_rect(cx_leg + stride, leg_y - iso_step, lw, sc(2), pants)
-        canvas.draw_rect(cx_leg + stride, leg_y - iso_step + sc(2), lw, sc(1), shoes)
+        cx_leg = px_i(7.0)
+        lw = sc(1.9)
+        canvas.draw_rect(cx_leg - stride, leg_y, lw, sc(2.0), pants_d)
+        canvas.draw_rect(cx_leg - stride, leg_y + sc(2.0), lw, sc(1.1), shoes)
+        canvas.draw_rect(cx_leg + stride, leg_y, lw, sc(2.0), pants)
+        canvas.draw_rect(cx_leg + stride, leg_y + sc(2.0), lw, sc(1.1), shoes_l if size >= 32 else shoes)
 
-    # Torso & Overalls
-    torso_y = by + int(round(7.8 * s))
-    torso_h = sc(4)
-    if direction in ("down", "up"):
-        tx = x + int(round(5 * s))
-        tw = sc(6)
+    # 2. Cozy Layered Torso (Collar + Shirt + Overalls/Belt)
+    torso_y = py_i(7.7)
+    torso_h = sc(3.8)
+    if is_iso or direction in ("down", "up"):
+        tx = px_i(4.8)
+        tw = sc(6.4)
         canvas.draw_rect(tx, torso_y, tw, torso_h, shirt)
-        canvas.draw_rect(x + int(round(5.5 * s)), torso_y + sc(1), sc(5), torso_h - sc(1), pants)
-        if size >= 32 and direction == "down":
-            # Straps, buttons, and pocket for high-res rigs
-            canvas.draw_rect(x + int(round(5.5 * s)), torso_y, sc(1), sc(1.5), pants_l)
-            canvas.draw_rect(x + int(round(9.5 * s)), torso_y, sc(1), sc(1.5), pants_l)
-            canvas.draw_rect(x + int(round(6.5 * s)), torso_y + sc(1.8), sc(3), sc(1.5), pants_d)
-    else:
-        tx = x + int(round(6 * s))
-        tw = sc(4)
-        canvas.draw_rect(tx, torso_y, tw, torso_h, shirt)
-        canvas.draw_rect(tx, torso_y + sc(1), tw, torso_h - sc(1), pants)
-
-    # Head & Face
-    head_y = by + int(round(4.5 * s))
-    head_x = x + int(round(5 * s))
-    head_w = sc(6)
-    head_h = sc(3.5)
-    if size >= 32:
-        canvas.draw_circle(x + int(round(8 * s)), by + int(round(6.2 * s)), sc(3.2), skin if direction != "up" else hair, filled=True)
-        if direction != "up":
-            canvas.draw_rect(head_x, by + int(round(7.2 * s)), head_w, sc(0.8), skin_d)
-    else:
-        canvas.draw_rect(head_x, head_y, head_w, head_h, hair if direction == "up" else skin)
-
-    if direction == "down":
-        ey = by + int(round(5.8 * s))
-        ew, eh = sc(0.8), max(1, int(round(1.2 * s)))
-        canvas.draw_rect(x + int(round(6.2 * s)), ey, ew, eh, eye)
-        canvas.draw_rect(x + int(round(9.0 * s)), ey, ew, eh, eye)
+        canvas.draw_rect(tx, torso_y, tw, sc(0.9), shirt_l)
+        canvas.draw_rect(px_i(5.3), torso_y + sc(1.3), sc(5.4), torso_h - sc(1.3), pants)
+        # Belt + brass buckle or overalls straps
+        canvas.draw_rect(px_i(5.2), torso_y + sc(1.3), sc(5.6), max(1, sc(0.6)), belt_col)
         if size >= 32:
-            canvas.set_pixel(x + int(round(6.2 * s)), ey, (255, 245, 228, 255))
-            canvas.set_pixel(x + int(round(9.0 * s)), ey, (255, 245, 228, 255))
-    elif direction == "left":
-        canvas.draw_rect(x + int(round(9 * s)), head_y, sc(2), head_h, hair)
-        canvas.draw_rect(x + int(round(6 * s)), by + int(round(5.8 * s)), sc(0.8), sc(1.2), eye)
-    elif direction == "right":
-        canvas.draw_rect(x + int(round(5 * s)), head_y, sc(2), head_h, hair)
-        canvas.draw_rect(x + int(round(9.2 * s)), by + int(round(5.8 * s)), sc(0.8), sc(1.2), eye)
+            canvas.draw_rect(px_i(5.6), torso_y + sc(0.1), sc(1.0), sc(1.4), pants_l)
+            canvas.draw_rect(px_i(9.4), torso_y + sc(0.1), sc(1.0), sc(1.4), pants_l)
+        if direction != "up" and not (is_iso and iso_dir in ("ne", "nw")):
+            canvas.draw_rect(px_i(7.1), torso_y, sc(1.8), sc(0.9), collar_col)
+            canvas.draw_rect(px_i(7.3), torso_y + sc(1.3), sc(1.4), max(1, sc(0.6)), buckle_col)
+    else:
+        tx = px_i(5.6)
+        tw = sc(4.8)
+        canvas.draw_rect(tx, torso_y, tw, torso_h, shirt)
+        canvas.draw_rect(tx, torso_y, tw, sc(0.9), shirt_l)
+        canvas.draw_rect(tx, torso_y + sc(1.3), tw, torso_h - sc(1.3), pants)
+        canvas.draw_rect(tx, torso_y + sc(1.3), tw, max(1, sc(0.6)), belt_col)
 
-    # Hat or Hair Crown
+    # 3. Safe positive arm kinematics (arms swing at torso/hip level, never onto cheeks)
+    swing_scale = 1.1 if pose == "run" else 0.7
+    arm_swing = sc(swing_scale) if (pose in ("walk", "run") and frame == 1) else (-sc(swing_scale) if (pose in ("walk", "run") and frame == 3) else 0)
+    l_drop = sc(0.8) if arm_swing > 0 else 0
+    r_drop = sc(0.8) if arm_swing < 0 else 0
+
+    # 4. Rounded Chibi Head & Expressive Eyes (NO horizontal gray face bar!)
+    head_cx = px_i(8.0)
+    head_cy = py_i(5.3)
+    head_rx = sc(3.8)
+    head_ry = sc(2.8)
+    is_back = direction == "up" or (is_iso and iso_dir in ("ne", "nw"))
+
+    # Back hair volume underneath head for fullness
+    canvas.draw_ellipse(head_cx, py_i(4.0), sc(4.2), sc(2.8), hair_d, filled=True)
+
+    # Ears
+    if not is_iso and direction in ("down", "up"):
+        canvas.draw_rect(px_i(3.6), py_i(5.2), max(1, sc(0.9)), max(1, sc(1.4)), skin_d if direction == "up" else skin)
+        canvas.draw_rect(px_i(11.6), py_i(5.2), max(1, sc(0.9)), max(1, sc(1.4)), skin_d if direction == "up" else skin)
+
+    # Main head silhouette (clean smooth cheeks and chin, no chin mustache bar)
+    canvas.draw_ellipse(head_cx, head_cy, head_rx, head_ry, hair if is_back else skin, filled=True)
+
+    # Eyes & Blush
+    eye_y = py_i(5.3)
+    eh = max(1, sc(1.3))
+    ew = max(1, sc(0.9))
+    if not is_back:
+        if is_iso:
+            shift = 1.0 if iso_dir == "se" else -1.0
+            e1_x = px_i(6.3 + shift)
+            e2_x = px_i(9.1 + shift)
+            canvas.draw_rect(e1_x, eye_y, ew, eh, eye)
+            canvas.draw_rect(e2_x, eye_y, ew, eh, eye)
+            if size >= 32:
+                canvas.set_pixel(e1_x, eye_y, eye_glint)
+                canvas.set_pixel(e2_x, eye_y, eye_glint)
+                canvas.set_pixel(e1_x - 1 if shift < 0 else e2_x + ew, eye_y + eh, skin_blush)
+        elif direction == "down":
+            e1_x, e2_x = px_i(5.9), px_i(9.3)
+            canvas.draw_rect(e1_x, eye_y, ew, eh, eye)
+            canvas.draw_rect(e2_x, eye_y, ew, eh, eye)
+            if size >= 32:
+                canvas.set_pixel(e1_x, eye_y, eye_glint)
+                canvas.set_pixel(e2_x, eye_y, eye_glint)
+                canvas.draw_rect(e1_x - sc(0.7), eye_y + eh, max(1, sc(0.8)), max(1, sc(0.5)), skin_blush)
+                canvas.draw_rect(e2_x + ew, eye_y + eh, max(1, sc(0.8)), max(1, sc(0.5)), skin_blush)
+        elif direction == "left":
+            ex_l = px_i(5.5)
+            canvas.draw_rect(ex_l, eye_y, ew, eh, eye)
+            if size >= 32:
+                canvas.set_pixel(ex_l, eye_y, eye_glint)
+                canvas.set_pixel(ex_l + ew, eye_y + eh, skin_blush)
+        elif direction == "right":
+            ex_r = px_i(9.6)
+            canvas.draw_rect(ex_r, eye_y, ew, eh, eye)
+            if size >= 32:
+                canvas.set_pixel(ex_r, eye_y, eye_glint)
+                canvas.set_pixel(ex_r - max(1, sc(0.6)), eye_y + eh, skin_blush)
+
+    # 5. Layered Bangs, Side Locks, or Cozy Hat (never obscure eyes!)
+    if not is_back:
+        # Swept bangs stay strictly above eye level (y <= 4.0*s)
+        bang_ry = max(1, sc(1.1)) if size < 32 else sc(1.4)
+        canvas.draw_ellipse(head_cx, py_i(2.6), sc(4.0), bang_ry, hair, filled=True)
+        canvas.draw_ellipse(head_cx - sc(0.5), py_i(2.1), sc(2.6), max(1, sc(0.7)), hair_l, filled=True)
+        if not is_iso and direction == "left":
+            # Back-of-head profile hair tucked cleanly behind temple & ear
+            if hat:
+                canvas.draw_rect(px_i(10.7), py_i(4.0), max(1, sc(1.2)), sc(1.8), hair)
+            else:
+                canvas.draw_ellipse(px_i(10.6), py_i(4.8), max(1, sc(1.5)), sc(2.2), hair, filled=True)
+            if size >= 24:
+                canvas.set_pixel(px_i(9.2), py_i(5.2), skin_d)
+        elif not is_iso and direction == "right":
+            # Back-of-head profile hair tucked cleanly behind temple & ear
+            if hat:
+                canvas.draw_rect(px_i(4.1), py_i(4.0), max(1, sc(1.2)), sc(1.8), hair)
+            else:
+                canvas.draw_ellipse(px_i(5.4), py_i(4.8), max(1, sc(1.5)), sc(2.2), hair, filled=True)
+            if size >= 24:
+                canvas.set_pixel(px_i(6.8), py_i(5.2), skin_d)
+        elif size >= 32:
+            # Parted front/3Q bangs & outer temple locks framing cheeks cleanly
+            canvas.draw_rect(px_i(4.0), py_i(3.2), sc(1.1), sc(2.8), hair_d)
+            canvas.draw_rect(px_i(10.9), py_i(3.2), sc(1.1), sc(2.8), hair_d)
+            canvas.draw_polygon([pt(4.5, 2.7), pt(7.5, 2.7), pt(6.1, 4.1), pt(4.4, 3.9)], hair, filled=True)
+            canvas.draw_polygon([pt(8.5, 2.7), pt(11.5, 2.7), pt(11.6, 3.9), pt(9.9, 4.1)], hair, filled=True)
+    else:
+        # Full back hair with top specular band
+        canvas.draw_ellipse(head_cx, py_i(4.5), sc(4.2), sc(3.1), hair, filled=True)
+        canvas.draw_ellipse(head_cx, py_i(3.0), sc(2.8), sc(1.0), hair_l, filled=True)
+
     if hat:
         if size >= 32:
-            canvas.draw_polygon([pt(4.5, 4.2), pt(11.5, 4.2), pt(10.2, 1.8), pt(5.8, 1.8)], hat, filled=True)
+            canvas.draw_polygon([pt(4.5, 3.6), pt(11.5, 3.6), pt(10.2, 1.3), pt(5.8, 1.3)], hat, filled=True)
             if hat_l:
-                canvas.draw_rect(x + int(round(5.8 * s)), by + int(round(1.8 * s)), sc(4.4), sc(0.6), hat_l)
-            canvas.draw_rect(x + int(round(4.8 * s)), by + int(round(3.6 * s)), sc(6.4), sc(0.6), shirt)
-            canvas.draw_polygon([pt(2.5, 4.3), pt(13.5, 4.3), pt(12.5, 5.1), pt(3.5, 5.1)], hat_d or hat, filled=True)
+                canvas.draw_rect(px_i(5.9), py_i(1.5), sc(4.2), max(1, sc(0.6)), hat_l)
+            canvas.draw_rect(px_i(4.8), py_i(3.0), sc(6.4), max(1, sc(0.6)), shirt)
+            canvas.draw_polygon([pt(2.6, 3.6), pt(13.4, 3.6), pt(12.2, 4.5), pt(3.8, 4.5)], hat_d or hat, filled=True)
         else:
-            canvas.draw_rect(x + int(round(5 * s)), by + int(round(2 * s)), sc(6), sc(2), hat)
-            canvas.draw_rect(x + int(round(3 * s)), by + int(round(4 * s)), sc(10), sc(1), hat_d or hat)
-    else:
-        canvas.draw_rect(x + int(round(5 * s)), by + int(round(2 * s)), sc(6), sc(2.5), hair)
+            canvas.draw_rect(px_i(5), py_i(1.6), sc(6), sc(2), hat)
+            canvas.draw_rect(px_i(3), py_i(3.3), sc(10), sc(1), hat_d or hat)
 
-    # Arms & Direction-Coherent Tool Animation
+    # 6. Arms & Hands / Tools (clamped below head level)
     if pose in ("work", "attack"):
         if direction == "down":
             _draw_tool_front_back(canvas, x, by, s, frame, handle_col, tool_col, is_up=False)
         elif direction in ("left", "right"):
-            _draw_tool_side(canvas, x, by, s, frame, shirt_d, skin_d, handle_col, tool_col, is_left=(direction == "left"))
+            _draw_tool_side(canvas, x, by, s, frame, shirt_d, skin, handle_col, tool_col, is_left=(direction == "left"))
     else:
-        swing_scale = 1.6 if pose == "run" else 1.0
-        arm_swing = sc(swing_scale) if (pose in ("walk", "run") and frame == 1) else (-sc(swing_scale) if (pose in ("walk", "run") and frame == 3) else 0)
-        arm_lift = -sc(1.5) if pose in ("jump", "fall") else 0
-        if direction in ("down", "up"):
-            canvas.draw_rect(x + int(round(3.8 * s)), torso_y + arm_swing + arm_lift, sc(1.2), sc(3), shirt_d)
-            canvas.draw_rect(x + int(round(11.0 * s)), torso_y - arm_swing + arm_lift, sc(1.2), sc(3), shirt_d)
+        hand_h = max(1, sc(1.0))
+        sleeve_w = max(1, sc(1.2))
+        sleeve_h = max(1, sc(2.1))
+        if is_iso:
+            flip_h = -1 if iso_dir in ("sw", "nw") else 1
+            lx_a = px_i(3.6 + flip_h * 0.3)
+            rx_a = px_i(11.2 + flip_h * 0.3)
+            canvas.draw_rect(lx_a, torso_y + l_drop, sleeve_w, sleeve_h, shirt_d)
+            canvas.draw_rect(lx_a, torso_y + l_drop + sleeve_h, sleeve_w, hand_h, skin)
+            canvas.draw_rect(rx_a, torso_y + r_drop + sc(0.3), sleeve_w, sleeve_h, shirt)
+            canvas.draw_rect(rx_a, torso_y + r_drop + sc(0.3) + sleeve_h, sleeve_w, hand_h, skin)
+        elif direction in ("down", "up"):
+            lx_a, rx_a = px_i(3.5), px_i(11.3)
+            canvas.draw_rect(lx_a, torso_y + l_drop, sleeve_w, sleeve_h, shirt_d)
+            canvas.draw_rect(lx_a, torso_y + l_drop + sleeve_h, sleeve_w, hand_h, skin)
+            canvas.draw_rect(rx_a, torso_y + r_drop, sleeve_w, sleeve_h, shirt_d)
+            canvas.draw_rect(rx_a, torso_y + r_drop + sleeve_h, sleeve_w, hand_h, skin)
         else:
-            canvas.draw_rect(x + int(round(7 * s)) + arm_swing, torso_y + arm_lift, sc(2), sc(3), shirt_d)
+            if pose in ("jump", "fall"):
+                ax = px_i(6.2) if direction == "right" else px_i(8.4)
+            else:
+                shoulder = 8.2 if direction == "left" else 6.4
+                ax = px_i(shoulder) + arm_swing
+            aw = max(1, sc(1.4))
+            ay = torso_y + sc(0.2)
+            canvas.draw_rect(ax, ay, aw, max(1, sc(1.2)), shirt)
+            canvas.draw_rect(ax, ay + max(1, sc(1.2)), aw, max(1, sc(0.9)), shirt_d)
+            canvas.draw_rect(ax, ay + sleeve_h, aw, hand_h, skin)
 
 
 def _draw_tool_front_back(
