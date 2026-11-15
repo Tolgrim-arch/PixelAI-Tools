@@ -506,6 +506,40 @@ class TestMVP(unittest.TestCase):
         self.assertGreater(c_barn.get_pixel(4, 4)[0], 143)
         self.assertLess(c_barn.get_pixel(12, 4)[0], 143)
 
+    def test_v10_rig_customization_flags_and_perspectives(self) -> None:
+        # 1. Chicken shadow=False removes ground shadow at y=21
+        c_sh = run_spec({"width": 24, "height": 24, "palette": "cozy24", "ops": [{"op": "animal_rig", "species": "chicken", "dir": "right", "pose": "idle", "shadow": True}]})
+        c_nosh = run_spec({"width": 24, "height": 24, "palette": "cozy24", "ops": [{"op": "animal_rig", "species": "chicken", "dir": "right", "pose": "idle", "shadow": False}]})
+        self.assertNotEqual(c_sh.get_pixel(11, 21), TRANSPARENT)
+        self.assertEqual(c_nosh.get_pixel(11, 21), TRANSPARENT)
+
+        # 2. Chicken emotes=False omits ZZZ emote in sleep pose
+        c_em = run_spec({"width": 24, "height": 24, "palette": "cozy24", "ops": [{"op": "animal_rig", "species": "chicken", "dir": "right", "pose": "sleep", "emotes": True}]})
+        c_noem = run_spec({"width": 24, "height": 24, "palette": "cozy24", "ops": [{"op": "animal_rig", "species": "chicken", "dir": "right", "pose": "sleep", "emotes": False}]})
+        self.assertNotEqual(c_em.get_pixel(18, 4), TRANSPARENT)
+        self.assertEqual(c_noem.get_pixel(18, 4), TRANSPARENT)
+
+        # 3. Chicken peck ground_prop="none" vs "grass"
+        c_none = run_spec({"width": 24, "height": 24, "palette": "cozy24", "ops": [{"op": "animal_rig", "species": "chicken", "dir": "right", "pose": "peck", "frame": 2, "ground_prop": "none"}]})
+        c_grass = run_spec({"width": 24, "height": 24, "palette": "cozy24", "ops": [{"op": "animal_rig", "species": "chicken", "dir": "right", "pose": "peck", "frame": 2, "ground_prop": "grass"}]})
+        self.assertEqual(c_none.get_pixel(21, 20), TRANSPARENT)
+        self.assertNotEqual(c_grass.get_pixel(21, 20), TRANSPARENT)
+
+        # 4. Chicken nest_prop=True draws straw nest underneath sleep
+        c_nest = run_spec({"width": 24, "height": 24, "palette": "cozy24", "ops": [{"op": "animal_rig", "species": "chicken", "dir": "right", "pose": "sleep", "nest_prop": True}]})
+        self.assertNotEqual(c_nest.get_pixel(5, 19), TRANSPARENT)
+
+        # 5. Animal idle & run animate cleanly across frames
+        c_r0 = run_spec({"width": 24, "height": 24, "palette": "cozy24", "ops": [{"op": "animal_rig", "species": "chicken", "dir": "right", "pose": "run", "frame": 0}]})
+        c_r1 = run_spec({"width": 24, "height": 24, "palette": "cozy24", "ops": [{"op": "animal_rig", "species": "chicken", "dir": "right", "pose": "run", "frame": 1}]})
+        self.assertNotEqual(c_r0.pixels, c_r1.pixels)
+
+        # 6. char_rig perspectives (platformer & iso) and shadow=False
+        c_plat = run_spec({"width": 32, "height": 32, "palette": "cozy24", "ops": [{"op": "char_rig", "size": 32, "perspective": "platformer", "dir": "right", "pose": "jump", "frame": 1, "shadow": False}]})
+        c_iso = run_spec({"width": 32, "height": 32, "palette": "cozy24", "ops": [{"op": "char_rig", "size": 32, "perspective": "iso", "dir": "se", "pose": "run", "frame": 1, "shadow": True}]})
+        self.assertEqual(len(c_plat.warnings), 0)
+        self.assertEqual(len(c_iso.warnings), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

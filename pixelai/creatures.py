@@ -119,6 +119,48 @@ def _resolve_breed_colors(
     )
 
 
+def _should_draw_shadow(op: dict[str, Any] | None) -> bool:
+    return bool((op or {}).get("shadow", True))
+
+
+def _should_draw_emotes(op: dict[str, Any] | None) -> bool:
+    return bool((op or {}).get("emotes", True))
+
+
+def _resolve_ground_prop(op: dict[str, Any] | None, default_kind: str) -> str:
+    raw = (op or {}).get("ground_prop", "auto")
+    if raw is False:
+        return "none"
+    if raw is True:
+        return default_kind
+    val = str(raw).lower()
+    if val in ("none", "false", "0"):
+        return "none"
+    if val == "auto":
+        return default_kind
+    return val
+
+
+def _draw_straw_nest(
+    canvas: Canvas,
+    cx: int,
+    cy: int,
+    rx: int,
+    ry: int,
+    palette: dict[str, RGBA],
+) -> None:
+    """Draw a cozy woven straw nest beneath a resting creature."""
+    straw_d = parse_color("wheat_d", palette) if "wheat_d" in palette else (196, 146, 54, 255)
+    straw = parse_color("wheat", palette) if "wheat" in palette else (242, 191, 82, 255)
+    straw_l = parse_color("wheat_l", palette) if "wheat_l" in palette else (255, 224, 130, 255)
+    canvas.draw_ellipse(cx, cy, rx, ry, straw_d, filled=True)
+    canvas.draw_ellipse(cx, cy - 1, max(2, rx - 1), max(1, ry - 1), straw, filled=True)
+    for ox in range(-rx + 2, rx - 1, 2):
+        canvas.set_pixel(cx + ox, cy - 1, straw_l)
+    canvas.set_pixel(cx - rx + 1, cy, straw)
+    canvas.set_pixel(cx + rx - 1, cy, straw)
+
+
 def _draw_chicken_side(
     canvas: Canvas,
     ox: int,
@@ -147,16 +189,24 @@ def _draw_chicken_side(
 
     body_col = cream
     belly_col = shade
+    draw_shadow = _should_draw_shadow(op)
+    draw_emotes_flag = _should_draw_emotes(op)
+    ground_prop = _resolve_ground_prop(op, "seeds")
+    nest_prop = bool((op or {}).get("nest_prop", False))
 
     # 1. Ground shadow (never outlined)
-    local.mark_shadow = True
-    if pose in ("nest", "sleep"):
-        local.draw_ellipse(11, 20, 5, 1, shadow, filled=True)
-    elif pose == "happy" and (frame % 4) in (1, 2):
-        local.draw_ellipse(11, 21, 3, 1, shadow, filled=True)
-    else:
-        local.draw_ellipse(11, 21, 5, 1, shadow, filled=True)
-    local.mark_shadow = False
+    if draw_shadow:
+        local.mark_shadow = True
+        if pose in ("nest", "sleep"):
+            local.draw_ellipse(11, 20, 5, 1, shadow, filled=True)
+        elif (pose == "happy" and (frame % 4) in (1, 2)) or pose in ("jump", "fall"):
+            local.draw_ellipse(11, 21, 3, 1, shadow, filled=True)
+        else:
+            local.draw_ellipse(11, 21, 5, 1, shadow, filled=True)
+        local.mark_shadow = False
+
+    if nest_prop and pose in ("nest", "sleep"):
+        _draw_straw_nest(local, 11, 19, 7, 2, palette)
 
     # Pose kinematics
     body_dx, body_dy = 0, 0
@@ -165,7 +215,16 @@ def _draw_chicken_side(
     wing_dy = 0
     hide_legs = pose in ("nest", "sleep")
 
-    if pose == "walk":
+    if pose == "idle":
+        f = frame % 4
+        if f in (1, 2):
+            body_dy = 1 if f == 2 else 0
+            head_y = 11 if f == 2 else 10
+            wing_dy = 1 if f == 2 else 0
+        elif f == 3:
+            tail_dy = -1
+
+    elif pose == "walk":
         f = frame % 4
         if f == 1:
             body_dy = -1
@@ -173,6 +232,27 @@ def _draw_chicken_side(
         elif f == 3:
             body_dy = -1
             head_x, head_y = 15, 9
+
+    elif pose == "run":
+        f = frame % 4
+        body_dx = 1
+        body_dy = -1 if f in (1, 3) else 0
+        tail_dx = -1 if f in (1, 3) else 0
+        head_x = 16
+        head_y = 10 + body_dy
+        wing_dy = -1 if f in (1, 2) else 0
+
+    elif pose == "jump":
+        body_dy = -3
+        tail_dy = -2
+        head_x, head_y = 15, 7
+        wing_dy = -2
+
+    elif pose == "fall":
+        body_dy = -1
+        tail_dy = -2
+        head_x, head_y = 15, 10
+        wing_dy = -2
 
     elif pose == "peck":
         f = frame % max(1, total_frames)
@@ -185,10 +265,15 @@ def _draw_chicken_side(
             (0, -1, 16, 11, 0),  # 5: recover upright
         ]
         body_dy, tail_dy, head_x, head_y, wing_dy = peck_table[f % len(peck_table)]
-        if f in (2, 4):
+        if f in (2, 4) and ground_prop != "none":
             local.mark_no_outline = True
-            local.set_pixel(21, 20, beak)
-            local.set_pixel(22, 19, parse_color("wheat_l", palette))
+            if ground_prop == "grass":
+                local.set_pixel(21, 20, grass)
+                local.set_pixel(22, 19, grass_l)
+                local.set_pixel(20, 19, grass_l)
+            else:
+                local.set_pixel(21, 20, beak)
+                local.set_pixel(22, 19, parse_color("wheat_l", palette))
             local.mark_no_outline = False
 
     elif pose in ("nest", "sleep"):
@@ -260,29 +345,30 @@ def _draw_chicken_side(
 
     # 4. Legs (drawn AFTER belly shading so yellow legs are never overwritten by grey belly!)
     if not hide_legs:
-        if pose == "walk":
+        if pose in ("walk", "run"):
             f = frame % 4
+            stride_dx = 1 if pose == "run" else 0
             if f == 0:
-                local.draw_rect(9, 18, 1, 3, beak_d)
-                local.set_pixel(10, 20, beak_d)
-                local.draw_rect(13, 18, 1, 3, beak)
-                local.set_pixel(14, 20, beak)
+                local.draw_rect(9 - stride_dx, 18, 1, 3, beak_d)
+                local.set_pixel(10 - stride_dx, 20, beak_d)
+                local.draw_rect(13 + stride_dx, 18, 1, 3, beak)
+                local.set_pixel(14 + stride_dx, 20, beak)
             elif f == 1:
-                local.draw_rect(8, 18, 1, 3, beak_d)
-                local.set_pixel(9, 20, beak_d)
-                local.draw_rect(14, 17, 1, 3, beak)
-                local.set_pixel(15, 19, beak)
+                local.draw_rect(8 - stride_dx, 18, 1, 3, beak_d)
+                local.set_pixel(9 - stride_dx, 20, beak_d)
+                local.draw_rect(14 + stride_dx, 17, 1, 3, beak)
+                local.set_pixel(15 + stride_dx, 19, beak)
             elif f == 2:
                 local.draw_rect(10, 18, 1, 3, beak_d)
                 local.set_pixel(11, 20, beak_d)
                 local.draw_rect(12, 18, 1, 3, beak)
                 local.set_pixel(13, 20, beak)
             else:
-                local.draw_rect(10, 17, 1, 3, beak_d)
-                local.set_pixel(11, 19, beak_d)
-                local.draw_rect(14, 18, 1, 3, beak)
-                local.set_pixel(15, 20, beak)
-        elif pose == "happy":
+                local.draw_rect(10 + stride_dx, 17, 1, 3, beak_d)
+                local.set_pixel(11 + stride_dx, 19, beak_d)
+                local.draw_rect(14 - stride_dx, 18, 1, 3, beak)
+                local.set_pixel(15 - stride_dx, 20, beak)
+        elif pose in ("happy", "jump", "fall"):
             hop = body_dy
             local.draw_rect(9, 18 + hop, 1, 3, beak_d)
             local.set_pixel(10, 20 + hop, beak_d)
@@ -358,15 +444,16 @@ def _draw_chicken_side(
     canvas.blit(local, ox, oy, flip_x=is_left)
 
     # 7. Emotes drawn after blit so text/icons (e.g. ZZZ) are never horizontally backwards
-    ex = ox + (2 if is_left else 18)
-    if pose == "sleep":
-        draw_emote(canvas, ex, oy + 4, "zzz", frame=frame, palette=palette, outline=False)
-    elif pose == "happy":
-        draw_emote(canvas, ex, oy + 2, "heart", frame=frame, palette=palette, outline=False)
-    elif pose == "angry":
-        draw_emote(canvas, ex, oy + 2, "angry", frame=frame, palette=palette, outline=False)
-    elif pose == "sick":
-        draw_emote(canvas, ex, oy + 3, "sick", frame=frame, palette=palette, outline=False)
+    if draw_emotes_flag:
+        ex = ox + (2 if is_left else 18)
+        if pose == "sleep":
+            draw_emote(canvas, ex, oy + 4, "zzz", frame=frame, palette=palette, outline=False)
+        elif pose == "happy":
+            draw_emote(canvas, ex, oy + 2, "heart", frame=frame, palette=palette, outline=False)
+        elif pose == "angry":
+            draw_emote(canvas, ex, oy + 2, "angry", frame=frame, palette=palette, outline=False)
+        elif pose == "sick":
+            draw_emote(canvas, ex, oy + 3, "sick", frame=frame, palette=palette, outline=False)
 
 
 def _draw_chicken_front_back(
@@ -395,11 +482,35 @@ def _draw_chicken_front_back(
     head_dy = 0
     wings_up = False
     shadow_rx = 5
+    draw_shadow = _should_draw_shadow(op)
+    draw_emotes_flag = _should_draw_emotes(op)
+    nest_prop = bool((op or {}).get("nest_prop", False))
+    ground_prop = _resolve_ground_prop(op, "seeds")
 
-    if pose == "walk":
+    if pose == "idle":
+        if f == 2:
+            body_dy = 1
+            head_dy = 1
+        elif f == 3:
+            head_dy = -1
+    elif pose in ("walk", "run"):
         if f in (1, 3):
             body_dy = -1
             head_dy = -1
+        if pose == "run" and f in (1, 3):
+            wings_up = True
+    elif pose in ("nest", "sleep"):
+        body_dy = 3 if f in (0, 3) else 4
+        head_dy = 3 if f != 2 else 4
+    elif pose == "peck":
+        f6 = frame % 6
+        head_dy = (0, 1, 3, 2, 3, 1)[f6]
+        body_dy = 1 if f6 in (2, 4) else 0
+    elif pose in ("jump", "fall"):
+        body_dy = -3 if pose == "jump" else -1
+        head_dy = body_dy
+        wings_up = True
+        shadow_rx = 3
     elif pose == "surprised":
         if f == 0:
             body_dy = 1
@@ -421,9 +532,13 @@ def _draw_chicken_front_back(
             shadow_rx = 4
 
     # 1. Ground shadow (never outlined)
-    local.mark_shadow = True
-    local.draw_ellipse(cx, 21, shadow_rx, 1, shadow, filled=True)
-    local.mark_shadow = False
+    if draw_shadow:
+        local.mark_shadow = True
+        local.draw_ellipse(cx, 21, shadow_rx, 1, shadow, filled=True)
+        local.mark_shadow = False
+
+    if nest_prop and pose in ("nest", "sleep"):
+        _draw_straw_nest(local, cx, 19, 7, 2, palette)
 
     # 2. Wings + Plump Body + Head FIRST (so belly shading clip never overwrites the yellow legs!)
     by = 15 + body_dy
@@ -462,15 +577,17 @@ def _draw_chicken_front_back(
         local.set_pixel(tx + 2, by - 3, cream)
 
     # 3. Symmetrical Legs (drawn AFTER belly shading so yellow legs stay 100% visible!)
-    if pose == "surprised" and f in (1, 2):
+    if pose in ("nest", "sleep"):
+        pass
+    elif pose in ("surprised", "jump", "fall") and (pose != "surprised" or f in (1, 2)):
         ly = 18 + body_dy
         local.draw_rect(cx - 3, ly, 1, 3, beak)
         local.set_pixel(cx - 4, ly + 2, beak)
         local.draw_rect(cx + 3, ly, 1, 3, beak)
         local.set_pixel(cx + 4, ly + 2, beak)
     else:
-        l_lift = -1 if (pose == "walk" and f == 1) else 0
-        r_lift = -1 if (pose == "walk" and f == 3) else 0
+        l_lift = -1 if (pose in ("walk", "run") and f == 1) else 0
+        r_lift = -1 if (pose in ("walk", "run") and f == 3) else 0
         l_col = beak if l_lift < 0 else beak_d
         r_col = beak if r_lift < 0 else beak_d
         local.draw_rect(cx - 2, 18 + l_lift, 1, 3 + l_lift, l_col)
@@ -484,7 +601,12 @@ def _draw_chicken_front_back(
 
     # 5. Front Face (100% symmetrical around cx=12)
     if direction == "down":
-        if pose == "surprised" and f in (1, 2):
+        if pose == "sleep":
+            local.draw_rect(cx - 2, hy - 1, 2, 1, eye)
+            local.draw_rect(cx + 1, hy - 1, 2, 1, eye)
+            local.draw_rect(cx - 1, hy, 3, 1, beak)
+            local.set_pixel(cx, hy + 1, beak_d)
+        elif pose == "surprised" and f in (1, 2):
             local.draw_rect(cx - 2, hy - 1, 1, 2, eye)
             local.draw_rect(cx + 2, hy - 1, 1, 2, eye)
             local.draw_rect(cx - 1, hy, 3, 1, beak)
@@ -496,9 +618,21 @@ def _draw_chicken_front_back(
             local.draw_rect(cx - 1, hy, 3, 1, beak)
             local.set_pixel(cx, hy + 1, beak_d)
             local.set_pixel(cx, hy + 2, comb)
+        if pose == "peck" and (frame % 6) in (2, 4) and ground_prop != "none":
+            local.mark_no_outline = True
+            if ground_prop == "grass":
+                local.set_pixel(cx, 22, parse_color("grass", palette))
+                local.set_pixel(cx - 1, 21, parse_color("grass_l", palette))
+            else:
+                local.set_pixel(cx, 22, beak)
+                local.set_pixel(cx + 1, 22, parse_color("wheat_l", palette))
+            local.mark_no_outline = False
 
-    if pose == "surprised" and f in (1, 2, 3):
-        draw_emote(local, 19, 3, "exclamation", frame=f, palette=palette, outline=False)
+    if draw_emotes_flag:
+        if pose == "surprised" and f in (1, 2, 3):
+            draw_emote(local, 19, 3, "exclamation", frame=f, palette=palette, outline=False)
+        elif pose == "sleep":
+            draw_emote(local, 18, 3, "zzz", frame=f, palette=palette, outline=False)
 
     canvas.blit(local, ox, oy)
 
@@ -561,24 +695,32 @@ def _draw_cow_front_back(
     f = frame % 4
     is_up = direction == "up"
 
+    draw_shadow = _should_draw_shadow(op)
+    draw_emotes_flag = _should_draw_emotes(op)
+
     jump_y = 0
-    if pose in ("surprised", "jump"):
-        jump_y = (0, -2, -1, 0)[f]
+    if pose in ("surprised", "jump", "fall"):
+        jump_y = -2 if pose == "jump" else (-1 if pose == "fall" else (0, -2, -1, 0)[f])
     elif pose == "walk":
         jump_y = (0, -1, 0, -1)[f]
+    elif pose == "run":
+        jump_y = (-1, -2, 0, -1)[f]
+    elif pose == "idle":
+        jump_y = 1 if f == 2 else 0
 
     # Ground shadow (no outline)
-    local.mark_no_outline = True
-    sh_rx = 6 if jump_y < -1 else 8
-    local.draw_ellipse(16, 28, sh_rx, 2, c["shadow"])
-    local.mark_no_outline = False
+    if draw_shadow:
+        local.mark_no_outline = True
+        sh_rx = 6 if jump_y < -1 else 8
+        local.draw_ellipse(16, 28, sh_rx, 2, c["shadow"])
+        local.mark_no_outline = False
 
     by = jump_y
 
-    # Legs (4-frame walk cycle: alternating left/right leg stride, always visible below body)
-    l_off = -1 if (pose == "walk" and f == 1) else (1 if (pose == "walk" and f == 3) else 0)
-    r_off = -1 if (pose == "walk" and f == 3) else (1 if (pose == "walk" and f == 1) else 0)
-    if pose in ("surprised", "jump") and jump_y < 0:
+    # Legs (4-frame walk/run cycle: alternating left/right leg stride, always visible below body)
+    l_off = -1 if (pose in ("walk", "run") and f == 1) else (1 if (pose in ("walk", "run") and f == 3) else 0)
+    r_off = -1 if (pose in ("walk", "run") and f == 3) else (1 if (pose in ("walk", "run") and f == 1) else 0)
+    if pose in ("surprised", "jump", "fall") and jump_y < 0:
         l_off = r_off = -1
 
     # Plump body silhouette first, then clip internal shading/spots
@@ -645,7 +787,7 @@ def _draw_cow_front_back(
             local.draw_rect(15, by + 15, 2, 1, c["snout_d"])
 
     canvas.blit(local, x, y)
-    if not is_up and pose in ("surprised", "jump") and f in (1, 2):
+    if draw_emotes_flag and not is_up and pose in ("surprised", "jump") and f in (1, 2):
         # Safe top margin y >= 2 so emote never touches canvas border y=0
         draw_emote(canvas, x + 22, y + 3, "exclamation", f, palette, outline=False)
 
@@ -667,12 +809,20 @@ def _draw_cow_side(
     f = frame % max(1, total_frames)
     f4 = frame % 4
     is_lying = pose in ("lie", "nest", "sleep")
+    draw_shadow = _should_draw_shadow(op)
+    draw_emotes_flag = _should_draw_emotes(op)
+    ground_prop = _resolve_ground_prop(op, "grass")
+    nest_prop = bool(op.get("nest_prop", False))
 
     # Ground shadow (no outline)
-    local.mark_no_outline = True
-    sh_rx = 10 if is_lying else 9
-    local.draw_ellipse(16, 27, sh_rx, 2, c["shadow"])
-    local.mark_no_outline = False
+    if draw_shadow:
+        local.mark_no_outline = True
+        sh_rx = 10 if is_lying else (7 if pose in ("jump", "fall") else 9)
+        local.draw_ellipse(16, 27, sh_rx, 2, c["shadow"])
+        local.mark_no_outline = False
+
+    if nest_prop and is_lying:
+        _draw_straw_nest(local, 15, 25, 11, 3, palette)
 
     if is_lying:
         # 4 distinct frames: f0 rest, f1 inhale, f2 inhale + ear/tail twitch, f3 exhale + snout twitch
@@ -716,16 +866,25 @@ def _draw_cow_side(
             local.set_pixel(hx, hy + 1, c["eye_hi"])
 
         canvas.blit(local, x, y, flip_x=is_left)
-        if pose == "sleep":
+        if draw_emotes_flag and pose == "sleep":
             ex = x + (3 if is_left else 24)
             draw_emote(canvas, ex, y + 4, "zzz", f4, palette, outline=False)
         return
 
-    # Standing / walking / grazing / emote poses
+    # Standing / walking / running / grazing / emote poses
     bob_y = 0
     body_dx = 0
-    if pose == "walk":
+    if pose == "idle":
+        bob_y = 1 if f4 == 2 else 0
+    elif pose == "walk":
         bob_y = (0, -1, 0, -1)[f4]
+    elif pose == "run":
+        bob_y = (-1, -2, 0, -1)[f4]
+        body_dx = 1 if f4 in (1, 2) else 0
+    elif pose == "jump":
+        bob_y = -3
+    elif pose == "fall":
+        bob_y = -1
     elif pose == "happy":
         bob_y = (0, -2, -3, -1)[f4]
     elif pose == "sick":
@@ -742,8 +901,8 @@ def _draw_cow_side(
     # 6-frame fluid graze vs emote head offsets
     munch_w = 0
     munch_dy = 0
-    ear_dy = 0
-    tail_dy = (-1, 0, 1, 0)[f4] if pose in ("walk", "happy") else 0
+    ear_dy = 1 if (pose == "idle" and f4 == 2) else 0
+    tail_dy = (-1, 0, 1, 0)[f4] if pose in ("idle", "walk", "run", "happy") else 0
     if pose in ("graze", "peck"):
         f6 = f % 6
         # 6 distinct frames: 0 lower, 1 reach grass, 2 tug/bite, 3 lift+chew, 4 chew lower, 5 raise
@@ -774,11 +933,14 @@ def _draw_cow_side(
     hy = 11 + bob_y + head_dy
 
     # 1. Back legs (slightly darker, drawn behind udder/body)
-    fl_off = -2 if (pose == "walk" and f4 == 1) else (1 if (pose == "walk" and f4 == 3) else 0)
-    fr_off = -2 if (pose == "walk" and f4 == 3) else (1 if (pose == "walk" and f4 == 1) else 0)
-    bl_off = -2 if (pose == "walk" and f4 == 3) else 0
-    br_off = -2 if (pose == "walk" and f4 == 1) else 0
-    if pose == "angry":
+    fl_off = -2 if (pose in ("walk", "run") and f4 == 1) else (1 if (pose in ("walk", "run") and f4 == 3) else 0)
+    fr_off = -2 if (pose in ("walk", "run") and f4 == 3) else (1 if (pose in ("walk", "run") and f4 == 1) else 0)
+    bl_off = -2 if (pose in ("walk", "run") and f4 == 3) else 0
+    br_off = -2 if (pose in ("walk", "run") and f4 == 1) else 0
+    if pose == "run":
+        fl_off -= 1 if f4 in (1, 2) else 0
+        br_off -= 1 if f4 in (1, 2) else 0
+    elif pose == "angry":
         fr_off = -2 if f4 == 1 else 0
         fl_off = -1 if f4 == 3 else 0
 
@@ -827,15 +989,23 @@ def _draw_cow_side(
     local.draw_rect(hx + 2, hy + 2 + munch_dy, 4 + munch_w, 3, c["snout"])
     local.set_pixel(hx + 4 + munch_w, hy + 3 + munch_dy, c["snout_d"])
 
-    # Grazing grass blades & chew detail (outline=False so grass stays delicate)
-    if pose in ("graze", "peck") and (f % 6) in (1, 2, 3, 4):
+    # Grazing grass blades / seeds & chew detail (outline=False so prop stays delicate)
+    if pose in ("graze", "peck") and (f % 6) in (1, 2, 3, 4) and ground_prop != "none":
         local.mark_no_outline = True
-        grass_c = parse_color("grass", palette)
-        grass_l = parse_color("grass_l", palette)
-        local.set_pixel(hx + 5 + munch_w, hy + 5, grass_l)
-        if (f % 6) in (1, 2):
-            local.set_pixel(hx + 6 + munch_w, hy + 6, grass_c)
-            local.set_pixel(hx + 4 + munch_w, hy + 6, grass_l)
+        if ground_prop == "seeds":
+            seed_c = parse_color("wheat", palette)
+            seed_l = parse_color("wheat_l", palette)
+            local.set_pixel(hx + 5 + munch_w, hy + 5, seed_l)
+            if (f % 6) in (1, 2):
+                local.set_pixel(hx + 6 + munch_w, hy + 6, seed_c)
+                local.set_pixel(hx + 4 + munch_w, hy + 6, seed_l)
+        else:
+            grass_c = parse_color("grass", palette)
+            grass_l = parse_color("grass_l", palette)
+            local.set_pixel(hx + 5 + munch_w, hy + 5, grass_l)
+            if (f % 6) in (1, 2):
+                local.set_pixel(hx + 6 + munch_w, hy + 6, grass_c)
+                local.set_pixel(hx + 4 + munch_w, hy + 6, grass_l)
         local.mark_no_outline = False
 
     # 6. Expressive Eyes & Secondary FX
@@ -871,16 +1041,17 @@ def _draw_cow_side(
     canvas.blit(local, x, y, flip_x=is_left)
 
     # 7. Emotes drawn after blit so icons are never backwards
-    ex = x + (3 if is_left else 23)
-    ey = max(y + 2, y + hy - 7)
-    if pose == "happy":
-        draw_emote(canvas, ex, ey, "heart", f4, palette, outline=False)
-    elif pose == "angry":
-        draw_emote(canvas, ex, ey, "angry", f4, palette, outline=False)
-    elif pose == "sad":
-        draw_emote(canvas, ex, ey, "sweat", f4, palette, outline=False)
-    elif pose == "sick":
-        draw_emote(canvas, ex, ey, "sick", f4, palette, outline=False)
+    if draw_emotes_flag:
+        ex = x + (3 if is_left else 23)
+        ey = max(y + 2, y + hy - 7)
+        if pose == "happy":
+            draw_emote(canvas, ex, ey, "heart", f4, palette, outline=False)
+        elif pose == "angry":
+            draw_emote(canvas, ex, ey, "angry", f4, palette, outline=False)
+        elif pose == "sad":
+            draw_emote(canvas, ex, ey, "sweat", f4, palette, outline=False)
+        elif pose == "sick":
+            draw_emote(canvas, ex, ey, "sick", f4, palette, outline=False)
 
 
 def draw_animal_rig(
@@ -898,9 +1069,15 @@ def draw_animal_rig(
     pose = op.get("pose", "walk").lower()
     frame = int(op.get("frame", frame_idx))
     tot = int(op.get("total_frames", max(1, total_frames)))
+    perspective = str(op.get("perspective", "topdown")).lower()
+
+    # Map isometric diagonal directions (se, sw, ne, nw) cleanly
+    if direction in ("se", "sw", "ne", "nw") or perspective == "iso":
+        iso_map = {"se": "right", "sw": "left", "ne": "up", "nw": "up"}
+        direction = iso_map.get(direction, direction)
 
     if species == "cow":
-        if pose in ("surprised", "jump") or direction in ("down", "up"):
+        if pose == "surprised" or (pose == "jump" and perspective != "platformer") or direction in ("down", "up"):
             eff_dir = "up" if direction == "up" else "down"
             _draw_cow_front_back(canvas, x, y, palette, eff_dir, pose, frame, op=op)
         else:
@@ -917,7 +1094,7 @@ def draw_animal_rig(
             )
         return
 
-    if pose in ("surprised", "jump") or direction in ("down", "up"):
+    if pose == "surprised" or (pose == "jump" and perspective != "platformer") or direction in ("down", "up"):
         eff_dir = "up" if direction == "up" else "down"
         _draw_chicken_front_back(canvas, x, y, palette, eff_dir, pose, frame, op=op)
     else:

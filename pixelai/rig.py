@@ -186,6 +186,14 @@ def draw_char_rig(
     direction = op.get("dir", "down").lower()
     pose = op.get("pose", "idle").lower()
     frame = int(op.get("frame", 0)) % 4
+    perspective = str(op.get("perspective", "topdown")).lower()
+    draw_shadow = bool(op.get("shadow", True))
+
+    if direction in ("se", "sw", "ne", "nw"):
+        perspective = "iso"
+    if perspective == "iso":
+        iso_map = {"se": "right", "sw": "left", "ne": "up", "nw": "up"}
+        direction = iso_map.get(direction, direction)
 
     def sc(val: float) -> int:
         return max(1, int(round(val * s)))
@@ -208,40 +216,67 @@ def draw_char_rig(
     pants_l = _brighten(pants, 1.15)
     tool_col = parse_color(op.get("tool", "stone_l" if "stone_l" in palette else "#b5bfd1"), palette)
     handle_col = parse_color(op.get("handle", "wood" if "wood" in palette else "#9c603c"), palette)
+    shadow_col = parse_color(op.get("shadow_color", "shadow" if "shadow" in palette else "#33293a"), palette)
 
-    bob = -max(1, int(round(0.5 * s))) if (pose == "walk" and frame in (1, 3)) else 0
-    if pose == "work" and frame == 2:
+    if draw_shadow:
+        prev_sh, prev_no = canvas.mark_shadow, canvas.mark_no_outline
+        canvas.mark_shadow = True
+        canvas.mark_no_outline = True
+        sh_rx = sc(3) if pose in ("jump", "fall") else sc(4.5)
+        sh_ry = max(1, sc(1.2))
+        canvas.draw_ellipse(x + int(round(8 * s)), y + int(round(14.5 * s)), sh_rx, sh_ry, shadow_col, filled=True)
+        canvas.mark_shadow, canvas.mark_no_outline = prev_sh, prev_no
+
+    bob = 0
+    if pose in ("walk", "run") and frame in (1, 3):
+        bob = -max(1, int(round((0.8 if pose == "run" else 0.5) * s)))
+    elif pose == "idle" and frame == 2:
+        bob = max(1, int(round(0.3 * s)))
+    elif pose == "jump":
+        bob = -max(1, int(round(1.5 * s)))
+    elif pose == "fall":
+        bob = -max(1, int(round(0.6 * s)))
+    elif pose in ("work", "attack") and frame == 2:
         bob = max(1, int(round(0.5 * s)))
     by = y + bob
 
-    # If facing UP and working, draw tool behind body first
-    if pose == "work" and direction == "up":
+    # If facing UP and working/attacking, draw tool behind body first
+    if pose in ("work", "attack") and direction == "up":
         _draw_tool_front_back(canvas, x, by, s, frame, handle_col, tool_col, is_up=True)
 
     # Legs & Boots
     l_len, r_len = sc(2.2), sc(2.2)
-    if pose == "walk":
+    if pose in ("walk", "run"):
+        short_len = sc(0.9 if pose == "run" else 1.2)
         if frame == 1:
-            l_len, r_len = sc(1.2), sc(2.2)
+            l_len, r_len = short_len, sc(2.2)
         elif frame == 3:
-            l_len, r_len = sc(2.2), sc(1.2)
+            l_len, r_len = sc(2.2), short_len
+    elif pose == "jump":
+        l_len, r_len = sc(1.3), sc(1.7)
+    elif pose == "fall":
+        l_len, r_len = sc(1.8), sc(1.4)
 
     leg_y = by + int(round(11.5 * s))
+    iso_step = sc(0.6) if perspective == "iso" else 0
     if direction in ("down", "up"):
         lx, rx_pos = x + int(round(5 * s)), x + int(round(9 * s))
         lw = sc(2)
         canvas.draw_rect(lx, leg_y, lw, l_len, pants_d)
         canvas.draw_rect(lx, leg_y + l_len, lw, sc(1), shoes)
-        canvas.draw_rect(rx_pos, leg_y, lw, r_len, pants)
-        canvas.draw_rect(rx_pos, leg_y + r_len, lw, sc(1), shoes)
+        canvas.draw_rect(rx_pos, leg_y - iso_step, lw, r_len, pants)
+        canvas.draw_rect(rx_pos, leg_y - iso_step + r_len, lw, sc(1), shoes)
     else:
-        stride = sc(1) if (pose == "walk" and frame == 1) else (-sc(1) if (pose == "walk" and frame == 3) else 0)
+        stride_scale = 1.6 if pose == "run" else 1.0
+        stride = sc(stride_scale) if (pose in ("walk", "run") and frame == 1) else (-sc(stride_scale) if (pose in ("walk", "run") and frame == 3) else 0)
+        if pose in ("jump", "fall"):
+            stride = sc(1.2)
         cx_leg = x + int(round(7 * s))
         lw = sc(2)
         canvas.draw_rect(cx_leg - stride, leg_y, lw, sc(2), pants_d)
         canvas.draw_rect(cx_leg - stride, leg_y + sc(2), lw, sc(1), shoes)
-        canvas.draw_rect(cx_leg + stride, leg_y, lw, sc(2), pants)
-        canvas.draw_rect(cx_leg + stride, leg_y + sc(2), lw, sc(1), shoes)
+        canvas.draw_rect(cx_leg + stride, leg_y - iso_step, lw, sc(2), pants)
+        canvas.draw_rect(cx_leg + stride, leg_y - iso_step + sc(2), lw, sc(1), shoes)
 
     # Torso & Overalls
     torso_y = by + int(round(7.8 * s))
@@ -304,18 +339,20 @@ def draw_char_rig(
         canvas.draw_rect(x + int(round(5 * s)), by + int(round(2 * s)), sc(6), sc(2.5), hair)
 
     # Arms & Direction-Coherent Tool Animation
-    if pose == "work":
+    if pose in ("work", "attack"):
         if direction == "down":
             _draw_tool_front_back(canvas, x, by, s, frame, handle_col, tool_col, is_up=False)
         elif direction in ("left", "right"):
             _draw_tool_side(canvas, x, by, s, frame, shirt_d, skin_d, handle_col, tool_col, is_left=(direction == "left"))
     else:
-        arm_swing = sc(1) if (pose == "walk" and frame == 1) else (-sc(1) if (pose == "walk" and frame == 3) else 0)
+        swing_scale = 1.6 if pose == "run" else 1.0
+        arm_swing = sc(swing_scale) if (pose in ("walk", "run") and frame == 1) else (-sc(swing_scale) if (pose in ("walk", "run") and frame == 3) else 0)
+        arm_lift = -sc(1.5) if pose in ("jump", "fall") else 0
         if direction in ("down", "up"):
-            canvas.draw_rect(x + int(round(3.8 * s)), torso_y + arm_swing, sc(1.2), sc(3), shirt_d)
-            canvas.draw_rect(x + int(round(11.0 * s)), torso_y - arm_swing, sc(1.2), sc(3), shirt_d)
+            canvas.draw_rect(x + int(round(3.8 * s)), torso_y + arm_swing + arm_lift, sc(1.2), sc(3), shirt_d)
+            canvas.draw_rect(x + int(round(11.0 * s)), torso_y - arm_swing + arm_lift, sc(1.2), sc(3), shirt_d)
         else:
-            canvas.draw_rect(x + int(round(7 * s)) + arm_swing, torso_y, sc(2), sc(3), shirt_d)
+            canvas.draw_rect(x + int(round(7 * s)) + arm_swing, torso_y + arm_lift, sc(2), sc(3), shirt_d)
 
 
 def _draw_tool_front_back(
