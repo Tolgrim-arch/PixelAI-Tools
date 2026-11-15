@@ -1,7 +1,7 @@
 """Parametric cozy foliage, trees, faceted rocks, flowers, and detailed 4-stage crops."""
 
 from typing import Any
-from pixelai import broadleaf, conifer
+from pixelai import broadleaf, conifer, undergrowth
 from pixelai.canvas import Canvas
 from pixelai.color import RGBA, brighten, darken, parse_color
 
@@ -51,10 +51,11 @@ def draw_nature_rig(
     frame = int(op.get("frame", frame_idx)) % 4
 
     if kind == "tree":
-        if variant == "pine":
-            conifer.draw_pine(canvas, x, y, palette, op, frame)
-        else:
-            broadleaf.draw_broadleaf(canvas, x, y, palette, op, frame)
+        drawer = conifer.draw_pine if variant == "pine" else broadleaf.draw_broadleaf
+        drawer(canvas, x, y, palette, op, frame)
+        return
+    if kind in ("bush", "grass"):
+        (undergrowth.draw_bush if kind == "bush" else undergrowth.draw_grass)(canvas, x, y, palette, op, frame)
         return
 
     w = int(op.get("w", 32 if kind == "tree" else 24))
@@ -88,88 +89,7 @@ def draw_nature_rig(
         local.mark_shadow = False
         local.mark_no_outline = False
 
-    if kind == "tree":
-        # Flared root trunk with vertical bark grain and canopy cast shadow
-        tw = max(4, w // 6)
-        th = max(10, h // 3)
-        ty = h - 4 - th
-        foot_y = h - 4
-        local.draw_polygon([
-            (cx - tw // 2 - 2, foot_y),
-            (cx - tw // 2, foot_y - 3),
-            (cx - tw // 2, ty),
-            (cx + tw // 2, ty),
-            (cx + tw // 2, foot_y - 3),
-            (cx + tw // 2 + 2, foot_y),
-        ], trunk, filled=True)
-        local.draw_rect(cx - tw // 2, ty, 1, max(3, th - 2), trunk_l, filled=True)
-        local.draw_polygon([
-            (cx + 1, ty),
-            (cx + tw // 2, ty),
-            (cx + tw // 2 + 1, foot_y),
-            (cx + 1, foot_y),
-        ], trunk_d, filled=True)
-        # Canopy underside cast shadow on top of trunk
-        local.draw_rect(cx - tw // 2, ty, tw, 3, darken(trunk_d, 0.72), filled=True)
-
-        canopy = Canvas(w, h)
-        # Wide, bushy scalloped leafy crown (never a pointy spade!)
-        cy_c = max(10, ty - h // 5)
-        cr = max(6, w // 3)
-        # Underside shadow lobes spanning wide base
-        for dx, dy, lr in ((-cr * 2 // 3, 2, cr // 2 + 1), (cr * 2 // 3, 2, cr // 2 + 1), (0, 3, cr // 2 + 2)):
-            canopy.draw_circle(cx + dx + sway_dx, cy_c + dy, lr, foliage_d, filled=True)
-        # Main mid-green canopy cloud lobes arranged horizontally wide
-        lobes = (
-            (-cr * 2 // 3, -1, cr // 2 + 1),
-            (cr * 2 // 3, -1, cr // 2 + 1),
-            (-cr // 3, -cr // 3 - 1, cr // 2 + 1),
-            (cr // 3, -cr // 3 - 1, cr // 2 + 1),
-            (0, -cr // 2 + 1, cr // 2 + 1),
-            (0, 0, cr // 2 + 2),
-        )
-        for dx, dy, lr in lobes:
-            canopy.draw_circle(cx + dx + sway_dx, cy_c + dy, lr, foliage, filled=True)
-        # Clustered top-left sunlit leaf puffs + scattered 2px foliage texture
-        for dx, dy, rx_c, ry_c in (
-            (-cr // 3 - 1, -cr // 2 + 1, max(3, cr // 3 + 1), max(2, cr // 4)),
-            (cr // 5, -cr // 2 + 1, max(2, cr // 3), max(2, cr // 4)),
-            (-cr // 2 + 1, -1, max(2, cr // 4 + 1), 2),
-        ):
-            _draw_leaf_cluster(
-                canopy,
-                cx + dx + sway_dx,
-                cy_c + dy,
-                rx_c,
-                ry_c,
-                foliage_l,
-                brighten(foliage_l, 1.12),
-                foliage,
-            )
-        # Crisp 2x1 leaf transition clusters
-        for lx_o, ly_o in ((-5, -1), (2, -4), (-1, 2), (4, 0), (-7, 2)):
-            canopy.draw_rect(cx + lx_o + sway_dx, cy_c + ly_o, 2, 1, foliage_d if ly_o > 0 else foliage_l, filled=True)
-
-        if variant == "fruit":
-            fruit_l = brighten(accent, 1.35)
-            fruit_d = darken(accent, 0.72)
-            for fx, fy in ((cx - 5, cy_c), (cx + 4, cy_c + 1), (cx - 1, cy_c - 4), (cx + 2, cy_c - 2)):
-                ax, ay = fx + sway_dx, fy
-                canopy.draw_rect(ax, ay, 3, 3, accent, filled=True)
-                canopy.set_pixel(ax + 2, ay + 2, fruit_d)
-                canopy.set_pixel(ax, ay, fruit_l)
-                canopy.set_pixel(ax + 1, ay - 1, foliage_d)
-
-        local.blit(canopy, 0, 0)
-
-    elif kind == "bush":
-        r = max(4, w // 4)
-        by = h - 7
-        _draw_leaf_cluster(local, cx - r // 2 + sway_dx, by + 1, max(3, r - 1), max(2, r - 2), foliage, foliage_l, foliage_d)
-        _draw_leaf_cluster(local, cx + r // 2 + sway_dx, by + 1, max(3, r - 1), max(2, r - 2), foliage_d, foliage, foliage_d)
-        _draw_leaf_cluster(local, cx + sway_dx, by - 1, r, max(3, r - 1), foliage, foliage_l, foliage_d)
-
-    elif kind == "rock":
+    if kind == "rock":
         # Chiseled faceted polygonal boulder (not an oval inside an oval!)
         r = max(5, w // 4)
         ry = h - 4

@@ -2,7 +2,7 @@
 
 from pixelai.canvas import Canvas
 from pixelai.palettes import resolve_palette
-from pixelai import broadleaf, conifer
+from pixelai import broadleaf, conifer, undergrowth
 
 
 def main() -> None:
@@ -21,6 +21,14 @@ def main() -> None:
     conifer.draw_pine(a, 0, 0, palette, {"seed": 3})
     conifer.draw_pine(b, 0, 0, palette, {"seed": 3})
     assert a.pixels == b.pixels, "pine must be deterministic per seed"
+    for name, fn, op in (
+        ("bush", undergrowth.draw_bush, {}),
+        ("patch", undergrowth.draw_grass, {"variant": "patch"}),
+        ("tuft", undergrowth.draw_grass, {"variant": "tuft"}),
+    ):
+        c = Canvas(64, 52)
+        fn(c, 0, 0, palette, op)
+        assert sum(1 for p in c.pixels if p[3] > 0) > 30, f"{name} empty"
     print("pine checks OK")
 
 
