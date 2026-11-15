@@ -8,7 +8,7 @@ from pixelai.color import RGBA, TRANSPARENT, parse_color
 from pixelai.exporter import extract_spec_from_png
 from pixelai.inspect_tool import load_png_as_canvas
 from pixelai.palettes import resolve_palette
-from pixelai import autotile, building, creatures, filters, iso, rig
+from pixelai import autotile, building, creatures, filters, iso, items, nature, rig, ui
 
 
 def _execute_ops(
@@ -266,6 +266,34 @@ def _execute_ops(
                 frame_idx=frame_idx,
                 total_frames=total_frames,
             )
+        elif kind == "item_rig":
+            items.draw_item_rig(
+                canvas,
+                int(op.get("x", 0)),
+                int(op.get("y", 0)),
+                palette,
+                op,
+                frame_idx=frame_idx,
+                total_frames=total_frames,
+            )
+        elif kind == "nature_rig":
+            nature.draw_nature_rig(
+                canvas,
+                int(op.get("x", 0)),
+                int(op.get("y", 0)),
+                palette,
+                op,
+                frame_idx=frame_idx,
+                total_frames=total_frames,
+            )
+        elif kind == "ui_rig":
+            ui.draw_ui_rig(
+                canvas,
+                int(op.get("x", 0)),
+                int(op.get("y", 0)),
+                palette,
+                op,
+            )
         elif kind == "iso_tile":
             rx = int(op["rx"])
             ry = int(op.get("ry", max(1, rx // 2)))
@@ -367,7 +395,9 @@ def _resolve_post_ops(
             "outline_color",
             "ink" if "ink" in palette else ("0" if "0" in palette else "#21181b"),
         )
-        outline_op = {"op": "outline", "color": default_col}
+        outline_op: dict[str, Any] = {"op": "outline", "color": default_col}
+        if spec.get("auto_pad"):
+            outline_op["auto_pad"] = True
         # Insert before 'scale' so the outline stays 1px in art resolution
         out: list[dict[str, Any]] = []
         inserted = False
@@ -573,9 +603,13 @@ def run_frames(spec: dict[str, Any]) -> tuple[list[Canvas], list[str]]:
     if not raw_frames and (
         "frame_count" in spec
         or any(op.get("op") in ("particles", "animal_rig", "emote") for op in base_ops)
+        or any(op.get("op") == "nature_rig" and op.get("sway") for op in base_ops)
     ):
         default_fc = 6 if any(op.get("pose") == "peck" for op in base_ops) else (
-            4 if any(op.get("op") in ("particles", "animal_rig", "emote") for op in base_ops) else 1
+            4 if (
+                any(op.get("op") in ("particles", "animal_rig", "emote") for op in base_ops)
+                or any(op.get("op") == "nature_rig" and op.get("sway") for op in base_ops)
+            ) else 1
         )
         fc = int(spec.get("frame_count", default_fc))
         if fc > 1:

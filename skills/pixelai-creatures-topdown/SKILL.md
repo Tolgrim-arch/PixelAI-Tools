@@ -10,15 +10,15 @@ description: Generate top-down 3/4 cozy farm animals and creatures (chickens, he
 - **Render CLI:** `python -m pixelai render - -o out.png` (or `.gif --fps 8`, or `--sheet --columns 4 --godot out.tres`).
 - **Full Pack Shortcut:** `python -m pixelai pack <chicken|cow> -o pack_dir/ --variant <variant>`
 
-## Interactive Clarification Checklist (Ask Before Multi-Asset Export)
-When the user requests a top-down animal (e.g., *"quiero una gallina que picotee el suelo estilo Stardew Valley"*), establish sensible defaults (`4 directions`, `idle + walk`, `shadow: true`) and **concisely ask the user to confirm these exact details**:
-1. **Directions:** All 4 directions (`down`, `up`, `left`, `right`) or only side/front?
-2. **Core + Extra Poses:** Do you want `idle` + `walk` as baseline, plus `run`, actions (`peck` / `graze` / `nest` / `lie` / `sleep`), or emotional reactions (`surprised`, `happy`, `sad`, `angry`, `sick`)?
-3. **Ground Shadow (`"shadow"`):** Include the soft ground shadow ellipse (`true`) or omit it (`false`) if your game engine draws dynamic shadows?
-4. **Floating Emotes (`"emotes"`):** Include pixel emotes (`zzz`, `heart`, `angry`, `sweat`, `sick`, `exclamation`) (`true`) or keep the sprite pure (`false`)?
-5. **Ground Interaction (`"ground_prop"` for `peck` / `graze`):** Should the sprite draw physical `"seeds"` or `"grass"` blades on the ground, or `"none"` (imaginary grass/ground because your tilemap already has grass)?
-6. **Sleep / Nest Surface (`"nest_prop"` for `nest` / `sleep`):** Draw a woven straw nest beneath the creature (`true`) or omit it (`false`, imaginary nest because the map already has a nest)?
-7. **Breed / Color Variant:** Chicken (`white|brown|golden|dark`), Cow (`holstein|brown|cream|dark`), or custom hex/palette colors (`body`, `shade`, `deep_shade`)?
+## Mandatory Non-Technical Discovery Protocol (Pause & Ask First)
+When the user asks for a top-down animal (e.g., *"quiero una gallina que picotee el suelo estilo Stardew Valley"*), **STOP before generating** and ask these short questions **in plain game language (zero technical terms like JSON, flags, or rigs)**:
+1. **Direcciones:** ¿La quieres mirando hacia las 4 direcciones (frente, espalda, izquierda y derecha) o solo de lado?
+2. **Animaciones:** Además de estar quieta (`idle`) y caminar (`walk`), ¿quieres que corra, haga acciones (picotear, pastar, dormir en el nido) o muestre reacciones (feliz, sorprendida, enojada, triste, enferma)?
+3. **Sombra debajo:** ¿Le incluimos su sombra en el suelo o tu juego ya dibuja sombras aparte?
+4. **Globitos de emoción:** ¿Quieres globitos arriba (como `ZZZ` al dormir, corazón o signo de sorpresa) o prefieres el animal limpio sin iconos flotantes?
+5. **Suelo imaginario o dibujado (al picotear/pastar):** ¿Quieres que dibuje granos/pastito en el suelo frente al pico, o que picotee sobre el suelo imaginario porque tu mapa ya tiene pasto?
+6. **Nido dibujado o imaginario (al dormir/anidar):** ¿Quieres que incluya un nido de paja debajo o que duerma sin nido porque el mapa ya lo tiene?
+7. **Color / Raza:** Gallina (`white|brown|golden|dark`), vaca (`holstein|brown|cream|dark`) u otro color?
 
 ## `animal_rig` Reference (Top-Down)
 - **Species:** `"chicken"` (native `24x24` grid), `"cow"` (native `32x32` grid).

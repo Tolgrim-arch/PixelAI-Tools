@@ -9,14 +9,14 @@ description: Generate top-down 3/4 humanoid character sprites and 4-direction an
 - **Default (`"style": "ext_outline"`):** Lineless Interior + 1px External Outline (no internal dark lines). Optional `--lineless`.
 - **Render CLI:** `python -m pixelai render - -o char.png` (or `.gif --fps 8`, or `--sheet --columns 4 --meta sheet.json --godot char.tres`).
 
-## Interactive Clarification Checklist
-Before generating full sheets, confirm concisely with the user:
-1. **Resolution (`size`):** `16` (retro/Stardew tiny), `32` (detailed cozy RPG), `64`, or `128`?
-2. **Directions (`dir`):** All 4 directions (`down`, `up`, `left`, `right`)?
-3. **Animation Set (`pose`):** `idle` + `walk` baseline, or also `run` and `work` (tool swing)?
-4. **Ground Shadow (`shadow`):** Include soft ground shadow (`true`) or omit (`false`) if engine handles shadows?
-5. **Customization & Tool:** Colors (`skin`, `hair`, `shirt`, `pants`, `shoes`, `hat`), and tool/weapon colors (`tool`, `handle`) for `work`?
-6. **Floating Emotes (`emote`):** Need separate/attached emotes (`heart`, `angry`, `sweat`, `zzz`, `exclamation`, `sick`) with `"outline": false`?
+## Mandatory Non-Technical Discovery Protocol (Pause & Ask First)
+Before generating full character sheets, **STOP and ask concisely in plain game language (zero technical jargon)**:
+1. **Tamaño y detalle:** ¿Personaje chiquito estilo retro clásico (16x16), tamaño estándar cozy tipo Stardew (32x32), o grande con mucho detalle (64x64)?
+2. **Direcciones:** ¿Las 4 direcciones (frente, espalda, izquierda, derecha) o solo una vista?
+3. **Animaciones:** ¿Quieto + caminando, o también corriendo y usando herramienta/arma?
+4. **Sombra en el piso:** ¿Incluimos sombra suave bajo los pies o la dejamos sin sombra para el motor del juego?
+5. **Apariencia y equipo:** ¿Color de pelo, ropa, piel, sombrero o herramienta?
+6. **Globitos de emoción:** ¿Necesitas iconos flotantes aparte (corazón, enojo, sueño `ZZZ`, sorpresa)?
 
 ## `char_rig` Reference (Top-Down)
 - `"op": "char_rig"`, `"perspective": "topdown"`

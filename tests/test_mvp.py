@@ -540,6 +540,47 @@ class TestMVP(unittest.TestCase):
         self.assertEqual(len(c_plat.warnings), 0)
         self.assertEqual(len(c_iso.warnings), 0)
 
+    def test_v11_items_nature_ui_and_auto_pad(self) -> None:
+        from pixelai.canvas import Canvas
+        from pixelai.inspect_tool import analyze_canvas
+
+        # 1. item_rig potion vertical vs diagonal + shadow toggle
+        c_vert = run_spec({"width": 24, "height": 24, "palette": "cozy24", "style": "ext_outline", "ops": [{"op": "item_rig", "kind": "potion", "orientation": "vertical", "shadow": False}]})
+        c_diag = run_spec({"width": 24, "height": 24, "palette": "cozy24", "style": "ext_outline", "ops": [{"op": "item_rig", "kind": "potion", "orientation": "diagonal", "shadow": False}]})
+        c_loot = run_spec({"width": 24, "height": 24, "palette": "cozy24", "style": "ext_outline", "ops": [{"op": "item_rig", "kind": "potion", "orientation": "diagonal", "shadow": True}]})
+        self.assertNotEqual(c_vert.pixels, c_diag.pixels)
+        self.assertNotEqual(c_diag.pixels, c_loot.pixels)
+        self.assertEqual(len(c_diag.warnings), 0)
+
+        # 2. nature_rig tree, rock, 4 crop stages, ground_base toggle, sway animation
+        c_s0 = run_spec({"width": 24, "height": 24, "palette": "cozy24", "style": "ext_outline", "ops": [{"op": "nature_rig", "kind": "crop", "variant": "wheat", "stage": 0, "ground_base": "none"}]})
+        c_s3 = run_spec({"width": 24, "height": 24, "palette": "cozy24", "style": "ext_outline", "ops": [{"op": "nature_rig", "kind": "crop", "variant": "wheat", "stage": 3, "ground_base": "soil"}]})
+        self.assertNotEqual(c_s0.pixels, c_s3.pixels)
+        sway_frames, _ = run_frames({"width": 32, "height": 40, "palette": "cozy24", "style": "ext_outline", "ops": [{"op": "nature_rig", "kind": "tree", "variant": "fruit", "sway": True}]})
+        self.assertEqual(len(sway_frames), 4)
+        self.assertNotEqual(sway_frames[0].pixels, sway_frames[1].pixels)
+
+        # 3. ui_rig panel, bar, button states, heart states
+        c_ui = run_spec({
+            "width": 64,
+            "height": 64,
+            "palette": "cozy24",
+            "style": "ext_outline",
+            "ops": [
+                {"op": "ui_rig", "x": 4, "y": 4, "w": 56, "h": 20, "kind": "panel", "theme": "wood"},
+                {"op": "ui_rig", "x": 4, "y": 28, "w": 40, "h": 10, "kind": "bar", "theme": "stone", "fill": 0.5},
+                {"op": "ui_rig", "x": 4, "y": 42, "w": 16, "h": 16, "kind": "heart", "state": "half"},
+            ],
+        })
+        self.assertEqual(len(c_ui.warnings), 0)
+
+        # 4. Top-level auto_pad expands canvas instead of clipping outline + isolated_single_pixels metric
+        c_pad = run_spec({"width": 8, "height": 8, "palette": "cozy24", "style": "ext_outline", "auto_pad": True, "ops": [{"op": "rect", "x": 0, "y": 0, "w": 8, "h": 8, "color": "cream"}]})
+        self.assertEqual((c_pad.width, c_pad.height), (10, 10))
+        c_iso_px = Canvas(8, 8)
+        c_iso_px.set_pixel(3, 3, (255, 0, 0, 255))
+        self.assertEqual(analyze_canvas(c_iso_px)["isolated_single_pixels"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -9,12 +9,11 @@ description: Generate 16-tile Wang bitmask autotilesets, seamless terrain textur
 - **Tilesets Usually Use Pure Lineless (`--lineless` or `"style": "lineless"`):** Ground tiles and autotile atlases tile seamlessly without external 1px black borders! Use `"style": "ext_outline"` only for standalone isolated props/islands.
 - **Render CLI:** `python -m pixelai render - -o tileset.png --lineless`
 
-## Interactive Clarification Checklist
-Confirm concisely with the user:
-1. **Projection:** Orthogonal/top-down (`tile_size: 16|32`) or 2:1 Isometric (`mode: "iso"`, `iso_tile`)?
-2. **Asset Type:** 4x4 16-tile Wang bitmask autotile atlas (`autotile`), individual seamless tiles (`defs` + `scatter`), or full composed map (`tilemap`)?
-3. **Biomes / Materials:** `inner` (e.g., `water`, `soil`, `cobble`), `outer` (e.g., `grass`, `wheat`), and border `lip` (e.g., `soil_d`, `stone_d`)?
-4. **Texture Detail:** Subtle `scatter` pattern (`grass`, `cobble`, `brick`, `wood`, `noise`) + deterministic `seed`?
+## Mandatory Non-Technical Discovery Protocol (Pause & Ask First)
+Before generating terrain tiles, **STOP and ask concisely in plain game language (never mention "Wang bitmask" to non-technical users)**:
+1. **Vista del juego:** ¿Vista desde arriba (top-down clásico) o en ángulo isométrico tipo rombo?
+2. **Qué necesitas:** ¿Un set completo de bordes para unir agua/tierra con pasto automáticamente, un par de suelos repetibles, o un mapa de ejemplo ya armado?
+3. **Terrenos y bordes:** ¿Qué materiales se conectan (ej. agua con pasto, camino de tierra sobre pasto, adoquín con musgo) y de qué tamaño son los cuadros del mapa (ej. 16x16 o 32x32)?
 
 ## `autotile` & `tilemap` Reference
 - **4x4 Wang Bitmask Atlas (16 tiles = `4*tile_size x 4*tile_size`):**
