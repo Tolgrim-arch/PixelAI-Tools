@@ -3,7 +3,6 @@
 from typing import Any
 from pixelai.canvas import Canvas
 from pixelai.color import RGBA, brighten as _brighten, darken as _darken, parse_color
-
 from pixelai.portrait import draw_field_farmer
 
 
@@ -22,6 +21,10 @@ def draw_portrait_rig(
     """
     if op.get("preset") == "field_farmer":
         draw_field_farmer(canvas, x, y, palette, op)
+        return
+    if op.get("style", "mistria") == "mistria":
+        from pixelai.portrait_mistria import draw_mistria_portrait
+        draw_mistria_portrait(canvas, x, y, palette, op)
         return
 
     w = max(48, int(op.get("width", 64)))
@@ -46,6 +49,7 @@ def draw_portrait_rig(
     hat_l = p("hat_light", "#f1c66b")
     hat_d = p("hat_dark", "#9a613b")
     bg = p("background", "#d6e6cf")
+    face_dir = str(op.get("face_dir", "front")).lower()
 
     def sx(v: float) -> int:
         return max(0, min(canvas.width - 1, x + round(v * scale)))
@@ -123,22 +127,31 @@ def draw_portrait_rig(
     # Scaling every feature by the body factor produced coarse square eyes.
     eye_y = sy(22)
     if w >= 128:
-        for logical_x in (25, 39):
+        eye_specs = [(25, 13), (39, 13)]
+        if face_dir in ("right", "three_quarter_right", "3q_right"):
+            eye_specs = [(27, 10), (40, 14)]
+        elif face_dir in ("left", "three_quarter_left", "3q_left"):
+            eye_specs = [(24, 14), (37, 10)]
+        for logical_x, eye_w in eye_specs:
             ex = sx(logical_x)
-            canvas.draw_rect(ex - 6, eye_y - 2, 13, 7, skin_l, filled=True)
-            canvas.draw_rect(ex - 6, eye_y - 3, 13, 2, hair_d, filled=True)
-            canvas.draw_rect(ex - 1, eye_y - 2, 5, 7, eye_color, filled=True)
-            canvas.set_pixel(ex, eye_y - 1, (255, 246, 220, 255))
-            canvas.set_pixel(ex + 4, eye_y + 4, skin_d)
+            half = eye_w // 2
+            canvas.draw_rect(ex - half, eye_y - 2, eye_w, 7, skin_l, filled=True)
+            canvas.draw_rect(ex - half, eye_y - 3, eye_w, 2, hair_d, filled=True)
+            iris_x = ex + (1 if face_dir in ("right", "three_quarter_right", "3q_right") else -1 if face_dir in ("left", "three_quarter_left", "3q_left") else 0)
+            canvas.draw_rect(iris_x - 1, eye_y - 2, 5, 7, eye_color, filled=True)
+            canvas.set_pixel(iris_x, eye_y - 1, (255, 246, 220, 255))
+            canvas.set_pixel(ex + half - 1, eye_y + 4, skin_d)
         canvas.draw_rect(sx(23), sy(18), 17, 3, hair_d, filled=True)
         canvas.draw_rect(sx(36), sy(18), 17, 3, hair_d, filled=True)
-        nx, ny = sx(32), sy(27)
+        nose_shift = 2 if face_dir in ("right", "three_quarter_right", "3q_right") else -2 if face_dir in ("left", "three_quarter_left", "3q_left") else 0
+        nx, ny = sx(32) + nose_shift, sy(27)
         canvas.draw_line(nx, ny - 2, nx - 1, ny + 4, skin_d)
         canvas.draw_line(nx - 1, ny + 4, nx + 4, ny + 4, skin_d)
         canvas.set_pixel(nx + 2, ny + 3, skin_l)
         my = sy(34)
-        canvas.draw_line(sx(30), my, sx(36), my, skin_d)
-        canvas.set_pixel(sx(33), my + 1, skin_l)
+        mouth_shift = 1 if nose_shift > 0 else -1 if nose_shift < 0 else 0
+        canvas.draw_line(sx(30) + mouth_shift, my, sx(36) + mouth_shift, my, skin_d)
+        canvas.set_pixel(sx(33) + mouth_shift, my + 1, skin_l)
     else:
         for eye_x in (24, 38):
             canvas.draw_rect(sx(eye_x - 2), eye_y, max(3, round(6 * scale)), max(3, round(4 * scale)), skin_l, filled=True)
