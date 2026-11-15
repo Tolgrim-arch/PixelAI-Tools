@@ -32,14 +32,15 @@ def _draw_potion(
     if orientation == "diagonal":
         # 45-degree tilted RPG potion (neck top-right, bulb bottom-left)
         local.draw_circle(px(9), px(15), _sc(5.5, s), glass, filled=True)
-        # Neck & rim tilted up-right
-        for t in range(4):
-            cx_n = px(13 + t)
-            cy_n = px(11 - t)
-            local.draw_circle(cx_n, cy_n, _sc(2.0, s), glass, filled=True)
-        local.draw_circle(px(17), px(7), _sc(2.4, s), glass_l, filled=True)
-        local.draw_circle(px(18.5), px(5.5), _sc(1.6, s), cork, filled=True)
-        local.set_pixel(px(19), px(5), cork_d)
+        # Short neck, perpendicular flared glass lip, and flat-top cork
+        local.draw_circle(px(13), px(11), _sc(1.4, s), glass, filled=True)
+        local.draw_circle(px(14), px(10), _sc(1.4, s), glass, filled=True)
+        # Flared perpendicular lip (diagonal collar)
+        local.draw_line(px(12.8), px(7.8), px(16.2), px(11.2), glass_l)
+        local.draw_line(px(13.4), px(7.4), px(16.6), px(10.6), glass_l)
+        # Short flat-topped cork
+        local.draw_line(px(15.0), px(7.2), px(16.8), px(9.0), cork)
+        local.draw_line(px(15.8), px(6.4), px(17.6), px(8.2), cork_d)
 
         # Gravity-leveled liquid with bright meniscus clipped strictly inside flask bulb
         local.clip_to_opaque = True
