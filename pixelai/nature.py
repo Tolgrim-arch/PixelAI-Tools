@@ -1,18 +1,33 @@
-"""Parametric foliage, trees, rocks, flowers, and multi-stage crops."""
+"""Parametric cozy foliage, trees, faceted rocks, flowers, and detailed 4-stage crops."""
 
 from typing import Any
 from pixelai.canvas import Canvas
 from pixelai.color import RGBA, brighten, darken, parse_color
 
 
-def _draw_ground_patch(local: Canvas, cx: int, cy: int, rx: int, ry: int, kind: str, palette: dict[str, RGBA]) -> None:
+def _draw_ground_patch(
+    local: Canvas, cx: int, cy: int, rx: int, ry: int, kind: str, palette: dict[str, RGBA]
+) -> None:
     if kind == "none":
         return
     base = parse_color("soil" if kind == "soil" else "grass", palette) if (kind in palette or "grass" in palette) else (92, 168, 76, 255)
     local.mark_no_outline = True
-    local.draw_ellipse(cx, cy, rx, ry, darken(base, 0.85), filled=True)
-    local.draw_ellipse(cx, cy - 1, max(2, rx - 1), max(1, ry - 1), base, filled=True)
+    local.draw_ellipse(cx, cy, rx, ry, darken(base, 0.78), filled=True)
+    local.draw_ellipse(cx, cy - 1, max(2, rx - 1), max(1, ry), base, filled=True)
+    if kind == "soil":
+        clod_l = brighten(base, 1.15)
+        for ox in range(-rx + 2, rx - 1, 3):
+            local.set_pixel(cx + ox, cy - 1, clod_l)
     local.mark_no_outline = False
+
+
+def _draw_leaf_cluster(
+    canvas: Canvas, cx: int, cy: int, rx: int, ry: int, base: RGBA, hi: RGBA, sh: RGBA
+) -> None:
+    """Draw a textured scalloped leaf cluster with shadow rim and highlight tufts."""
+    canvas.draw_ellipse(cx, cy + 1, rx, ry, sh, filled=True)
+    canvas.draw_ellipse(cx, cy, rx, max(1, ry - 1), base, filled=True)
+    canvas.draw_ellipse(cx - 1, cy - 1, max(1, rx - 1), max(1, ry - 1), hi, filled=True)
 
 
 def draw_nature_rig(
@@ -24,7 +39,7 @@ def draw_nature_rig(
     frame_idx: int = 0,
     total_frames: int = 1,
 ) -> None:
-    """Render parametric nature assets: trees, bushes, rocks, flowers, and 4-stage crops."""
+    """Render parametric nature assets: organic clustered trees, faceted rocks, and 4-stage crops."""
     _ = total_frames
     kind = str(op.get("kind", "tree")).lower()
     variant = str(op.get("variant", "oak")).lower()
@@ -43,109 +58,220 @@ def draw_nature_rig(
     def p(key: str, default_pal: str, fb: str) -> RGBA:
         return parse_color(op.get(key, default_pal if default_pal in palette else fb), palette)
 
-    foliage = p("color", "grass", "#5ca84c")
-    foliage_l = brighten(foliage, 1.18)
-    foliage_d = darken(foliage, 0.74)
-    trunk = p("trunk_color", "wood", "#8f5c3c")
-    trunk_d = darken(trunk, 0.76)
-    stone = p("color", "stone", "#828c9e")
-    stone_l = brighten(stone, 1.2)
-    stone_d = darken(stone, 0.72)
+    foliage = p("color", "grass", "#589c4c")
+    foliage_l = brighten(foliage, 1.24)
+    foliage_d = darken(foliage, 0.68)
+    trunk = p("trunk_color", "wood", "#9c603c")
+    trunk_l = brighten(trunk, 1.18)
+    trunk_d = darken(trunk, 0.70)
+    stone = p("color", "stone", "#8694a8")
+    stone_l = brighten(stone, 1.24)
+    stone_d = darken(stone, 0.68)
     accent = p("accent_color", "roof" if kind == "tree" else "wheat", "#e6b84c")
     shadow_col = p("shadow_color", "shadow", "#33293a")
 
-    _draw_ground_patch(local, cx, h - 4, max(4, w // 3), 2, ground_base, palette)
+    _draw_ground_patch(local, cx, h - 3, max(4, w // 3), 2, ground_base, palette)
 
     if draw_shadow:
         local.mark_shadow = True
         local.mark_no_outline = True
-        local.draw_ellipse(cx, h - 3, max(4, w // 3 - 1), 2, shadow_col, filled=True)
+        sh_rx = max(4, w // 3 - 2)
+        local.draw_ellipse(cx, h - 3, sh_rx, 2, shadow_col, filled=True)
         local.mark_shadow = False
         local.mark_no_outline = False
 
     if kind == "tree":
-        # Trunk
+        # Flared root trunk with vertical bark grain and canopy cast shadow
         tw = max(4, w // 6)
-        th = max(8, h // 3)
+        th = max(10, h // 3)
         ty = h - 4 - th
-        local.draw_rect(cx - tw // 2, ty, tw, th, trunk, filled=True)
-        local.draw_rect(cx, ty, max(1, tw // 2), th, trunk_d, filled=True)
+        foot_y = h - 4
+        local.draw_polygon([
+            (cx - tw // 2 - 2, foot_y),
+            (cx - tw // 2, foot_y - 3),
+            (cx - tw // 2, ty),
+            (cx + tw // 2, ty),
+            (cx + tw // 2, foot_y - 3),
+            (cx + tw // 2 + 2, foot_y),
+        ], trunk, filled=True)
+        local.draw_rect(cx - tw // 2, ty, 1, max(3, th - 2), trunk_l, filled=True)
+        local.draw_polygon([
+            (cx + 1, ty),
+            (cx + tw // 2, ty),
+            (cx + tw // 2 + 1, foot_y),
+            (cx + 1, foot_y),
+        ], trunk_d, filled=True)
+        # Canopy underside cast shadow on top of trunk
+        local.draw_rect(cx - tw // 2, ty, tw, 3, darken(trunk_d, 0.72), filled=True)
+
+        canopy = Canvas(w, h)
         if variant == "pine":
             for layer in range(3):
-                ly = ty - layer * max(5, h // 7)
-                rw = max(5, (w // 2 - 3) - layer * 2)
+                ly = ty + 3 - layer * max(5, h // 6)
+                rw = max(5, (w // 2 - 2) - layer * 2)
                 off = sway_dx if layer > 0 else 0
-                pts = [(cx + off, ly - 8), (cx + rw + off, ly + 2), (cx - rw + off, ly + 2)]
-                local.draw_polygon(pts, foliage_d if layer == 0 else foliage, filled=True)
-                local.draw_polygon([(cx + off, ly - 8), (cx + off, ly + 1), (cx - rw + 2 + off, ly + 1)], foliage_l, filled=True)
+                canopy.draw_polygon([
+                    (cx + off, ly - 9),
+                    (cx + rw + off, ly + 2),
+                    (cx + rw // 2 + off, ly + 1),
+                    (cx + off, ly + 3),
+                    (cx - rw // 2 + off, ly + 1),
+                    (cx - rw + off, ly + 2),
+                ], foliage_d if layer == 0 else foliage, filled=True)
+                canopy.draw_polygon([
+                    (cx + off, ly - 9),
+                    (cx + off, ly + 2),
+                    (cx - rw + 2 + off, ly + 1),
+                ], foliage_l if layer > 0 else foliage, filled=True)
         else:
-            cr = max(7, w // 3)
-            cy_c = ty - cr // 2 + 2
-            canopy = Canvas(w, h)
-            canopy.draw_circle(cx + sway_dx, cy_c, cr, foliage, filled=True)
-            canopy.draw_circle(cx - cr // 2 + sway_dx, cy_c + 2, max(4, cr // 2), foliage, filled=True)
-            canopy.draw_circle(cx + cr // 2 + sway_dx, cy_c + 2, max(4, cr // 2), foliage, filled=True)
-            canopy.clip_to_opaque = True
-            canopy.draw_circle(cx + sway_dx, cy_c + cr // 2, cr, foliage_d, filled=True)
-            canopy.draw_circle(cx - 2 + sway_dx, cy_c - 3, max(3, cr // 2), foliage_l, filled=True)
-            canopy.clip_to_opaque = False
+            # Wide, bushy scalloped leafy crown (never a pointy spade!)
+            cy_c = max(10, ty - h // 5)
+            cr = max(6, w // 3)
+            # Underside shadow lobes spanning wide base
+            for dx, dy, lr in ((-cr * 2 // 3, 2, cr // 2 + 1), (cr * 2 // 3, 2, cr // 2 + 1), (0, 3, cr // 2 + 2)):
+                canopy.draw_circle(cx + dx + sway_dx, cy_c + dy, lr, foliage_d, filled=True)
+            # Main mid-green canopy cloud lobes arranged horizontally wide
+            lobes = (
+                (-cr * 2 // 3, -1, cr // 2 + 1),
+                (cr * 2 // 3, -1, cr // 2 + 1),
+                (-cr // 3, -cr // 3 - 1, cr // 2 + 1),
+                (cr // 3, -cr // 3 - 1, cr // 2 + 1),
+                (0, -cr // 2 + 1, cr // 2 + 1),
+                (0, 0, cr // 2 + 2),
+            )
+            for dx, dy, lr in lobes:
+                canopy.draw_circle(cx + dx + sway_dx, cy_c + dy, lr, foliage, filled=True)
+            # Clustered top-left sunlit leaf puffs + scattered 2px foliage texture
+            for dx, dy, rx_c, ry_c in (
+                (-cr // 3 - 1, -cr // 2 + 1, max(3, cr // 3 + 1), max(2, cr // 4)),
+                (cr // 5, -cr // 2 + 1, max(2, cr // 3), max(2, cr // 4)),
+                (-cr // 2 + 1, -1, max(2, cr // 4 + 1), 2),
+            ):
+                _draw_leaf_cluster(
+                    canopy,
+                    cx + dx + sway_dx,
+                    cy_c + dy,
+                    rx_c,
+                    ry_c,
+                    foliage_l,
+                    brighten(foliage_l, 1.12),
+                    foliage,
+                )
+            # Crisp 2x1 leaf transition clusters
+            for lx_o, ly_o in ((-5, -1), (2, -4), (-1, 2), (4, 0), (-7, 2)):
+                canopy.draw_rect(cx + lx_o + sway_dx, cy_c + ly_o, 2, 1, foliage_d if ly_o > 0 else foliage_l, filled=True)
+
             if variant == "fruit":
-                for fx, fy in ((cx - 4, cy_c - 1), (cx + 3, cy_c + 1), (cx, cy_c - 4)):
-                    canopy.draw_rect(fx + sway_dx, fy, 2, 2, accent, filled=True)
-            local.blit(canopy, 0, 0)
+                fruit_l = brighten(accent, 1.35)
+                fruit_d = darken(accent, 0.72)
+                for fx, fy in ((cx - 5, cy_c), (cx + 4, cy_c + 1), (cx - 1, cy_c - 4), (cx + 2, cy_c - 2)):
+                    ax, ay = fx + sway_dx, fy
+                    canopy.draw_rect(ax, ay, 3, 3, accent, filled=True)
+                    canopy.set_pixel(ax + 2, ay + 2, fruit_d)
+                    canopy.set_pixel(ax, ay, fruit_l)
+                    canopy.set_pixel(ax + 1, ay - 1, foliage_d)
+
+        local.blit(canopy, 0, 0)
 
     elif kind == "bush":
         r = max(4, w // 4)
         by = h - 7
-        local.draw_circle(cx + sway_dx, by - 1, r, foliage, filled=True)
-        local.draw_circle(cx - r // 2 + sway_dx, by + 1, max(3, r - 2), foliage, filled=True)
-        local.draw_circle(cx + r // 2 + sway_dx, by + 1, max(3, r - 2), foliage, filled=True)
-        local.clip_to_opaque = True
-        local.draw_rect(0, by + 1, w, h - by, foliage_d, filled=True)
-        local.draw_circle(cx - 2 + sway_dx, by - 2, max(2, r // 2), foliage_l, filled=True)
-        local.clip_to_opaque = False
+        _draw_leaf_cluster(local, cx - r // 2 + sway_dx, by + 1, max(3, r - 1), max(2, r - 2), foliage, foliage_l, foliage_d)
+        _draw_leaf_cluster(local, cx + r // 2 + sway_dx, by + 1, max(3, r - 1), max(2, r - 2), foliage_d, foliage, foliage_d)
+        _draw_leaf_cluster(local, cx + sway_dx, by - 1, r, max(3, r - 1), foliage, foliage_l, foliage_d)
 
     elif kind == "rock":
-        r = max(4, w // 4)
-        ry = h - 7
-        local.draw_ellipse(cx, ry, r + 2, r, stone, filled=True)
-        local.clip_to_opaque = True
-        local.draw_ellipse(cx + 1, ry + 3, r + 2, r - 1, stone_d, filled=True)
-        local.draw_ellipse(cx - 2, ry - 2, max(2, r // 2), max(2, r // 2), stone_l, filled=True)
+        # Chiseled faceted polygonal boulder (not an oval inside an oval!)
+        r = max(5, w // 4)
+        ry = h - 4
+        local.draw_polygon([
+            (cx - r - 2, ry),
+            (cx - r - 1, ry - r + 2),
+            (cx - r // 2, ry - r - 1),
+            (cx + r // 2, ry - r),
+            (cx + r + 1, ry - r + 3),
+            (cx + r + 2, ry),
+        ], stone_d, filled=True)
+        local.draw_polygon([
+            (cx - r - 1, ry - 1),
+            (cx - r, ry - r + 2),
+            (cx - r // 2, ry - r - 1),
+            (cx + r // 2 - 1, ry - r),
+            (cx + r, ry - r + 3),
+            (cx + r - 1, ry - 1),
+        ], stone, filled=True)
+        local.draw_polygon([
+            (cx - r + 1, ry - r + 2),
+            (cx - r // 2, ry - r - 1),
+            (cx + 1, ry - r),
+            (cx, ry - r // 2),
+            (cx - r + 2, ry - r // 3),
+        ], stone_l, filled=True)
+        # Crack bevel
+        local.draw_line(cx + 1, ry - r // 2, cx + r - 2, ry - 2, darken(stone_d, 0.78))
         if variant == "mossy":
-            local.draw_ellipse(cx - 1, ry - r + 2, max(2, r // 2), 2, foliage, filled=True)
+            _draw_leaf_cluster(local, cx - 1, ry - r, max(3, r // 2), 2, foliage, foliage_l, foliage_d)
         elif variant == "ore":
-            local.draw_rect(cx - 2, ry - 2, 2, 2, accent, filled=True)
-            local.draw_rect(cx + 2, ry, 2, 2, accent, filled=True)
-        local.clip_to_opaque = False
+            ore_l = brighten(accent, 1.35)
+            ore_d = darken(accent, 0.72)
+            for ox, oy in ((cx - 3, ry - r // 2 - 2), (cx + 2, ry - 4), (cx - 1, ry - 3)):
+                local.draw_rect(ox, oy, 3, 2, accent, filled=True)
+                local.set_pixel(ox, oy, ore_l)
+                local.set_pixel(ox + 2, oy + 1, ore_d)
 
     elif kind == "flower":
-        by = h - 5
-        local.draw_rect(cx + sway_dx, by - 5, 1, 5, foliage_d, filled=True)
-        local.draw_rect(cx - 2, by - 2, 2, 1, foliage, filled=True)
-        local.draw_rect(cx + 1, by - 3, 2, 1, foliage, filled=True)
-        local.draw_circle(cx + sway_dx, by - 6, 2, accent, filled=True)
-        local.set_pixel(cx + sway_dx, by - 6, brighten(accent, 1.25))
+        by = h - 4
+        local.draw_rect(cx + sway_dx, by - 6, 1, 6, foliage_d, filled=True)
+        local.draw_polygon([(cx - 1, by - 2), (cx - 4, by - 4), (cx - 2, by - 4)], foliage_l, filled=True)
+        local.draw_polygon([(cx + 1, by - 3), (cx + 4, by - 5), (cx + 2, by - 5)], foliage, filled=True)
+        petal_l = brighten(accent, 1.25)
+        for px_o, py_o in ((-2, -7), (2, -7), (0, -9), (0, -5), (-1, -8), (1, -8), (-1, -6), (1, -6)):
+            local.set_pixel(cx + sway_dx + px_o, by + py_o, petal_l if py_o < -7 else accent)
+        local.set_pixel(cx + sway_dx, by - 7, parse_color("wheat_l", palette) if "wheat_l" in palette else (255, 240, 150, 255))
 
     elif kind == "crop":
-        by = h - 5
+        by = h - 4
         crop_col = parse_color("wheat" if variant == "wheat" else ("roof" if variant == "carrot" else "water_l"), palette)
+        crop_l = brighten(crop_col, 1.25)
+        crop_d = darken(crop_col, 0.74)
+        soil_d = parse_color("soil_d", palette) if "soil_d" in palette else (92, 60, 40, 255)
         if stage == 0:
-            for sx_off in (-3, 0, 3):
-                local.set_pixel(cx + sx_off, by - 1, crop_col)
-                local.set_pixel(cx + sx_off + 1, by, darken(crop_col, 0.78))
+            for sx_off in (-4, 0, 4):
+                local.set_pixel(cx + sx_off, by, soil_d)
+                local.draw_rect(cx + sx_off, by - 2, 2, 2, crop_col, filled=True)
+                local.set_pixel(cx + sx_off, by - 2, crop_l)
         elif stage == 1:
-            for sx_off in (-2, 2):
-                local.draw_rect(cx + sx_off, by - 3, 1, 3, foliage, filled=True)
-                local.set_pixel(cx + sx_off + 1, by - 3, foliage_l)
+            for sx_off in (-3, 3):
+                local.draw_rect(cx + sx_off, by - 5, 1, 5, foliage_d, filled=True)
+                local.draw_rect(cx + sx_off - 2, by - 6, 2, 2, foliage_l, filled=True)
+                local.draw_rect(cx + sx_off + 1, by - 6, 2, 2, foliage, filled=True)
         elif stage == 2:
-            for sx_off in (-3, 0, 3):
-                local.draw_rect(cx + sx_off + sway_dx, by - 6, 1, 6, foliage, filled=True)
-                local.draw_rect(cx + sx_off - 1 + sway_dx, by - 5, 3, 2, foliage_l, filled=True)
+            for sx_off in (-4, 0, 4):
+                st_h = 8 if sx_off == 0 else 6
+                local.draw_rect(cx + sx_off + sway_dx, by - st_h, 1, st_h, foliage_d, filled=True)
+                local.draw_polygon([
+                    (cx + sx_off + sway_dx, by - st_h + 2),
+                    (cx + sx_off - 3 + sway_dx, by - st_h),
+                    (cx + sx_off - 1 + sway_dx, by - st_h - 1),
+                ], foliage_l, filled=True)
+                local.draw_polygon([
+                    (cx + sx_off + sway_dx, by - st_h + 2),
+                    (cx + sx_off + 3 + sway_dx, by - st_h),
+                    (cx + sx_off + 1 + sway_dx, by - st_h - 1),
+                ], foliage, filled=True)
         else:
-            for sx_off in (-3, 0, 3):
-                local.draw_rect(cx + sx_off + sway_dx, by - 8, 1, 8, foliage_d, filled=True)
-                local.draw_rect(cx + sx_off - 1 + sway_dx, by - 9, 3, 4, crop_col, filled=True)
-                local.set_pixel(cx + sx_off + sway_dx, by - 9, brighten(crop_col, 1.22))
+            for sx_off in (-4, 0, 4):
+                tall = 13 if sx_off == 0 else 11
+                lean = sway_dx + (-1 if sx_off < 0 else (1 if sx_off > 0 else 0))
+                local.draw_line(cx + sx_off, by, cx + sx_off + lean, by - tall + 5, foliage_d)
+                # Arching basal green leaves
+                local.draw_rect(cx + sx_off - 1, by - 3, 2, 1, foliage, filled=True)
+                # Lush golden grain ear or ripe crop cluster
+                hx = cx + sx_off + lean
+                hy = by - tall
+                local.draw_rect(hx - 1, hy + 1, 3, 5, crop_col, filled=True)
+                local.draw_rect(hx - 1, hy + 1, 1, 4, crop_l, filled=True)
+                local.draw_rect(hx + 1, hy + 3, 1, 3, crop_d, filled=True)
+                local.set_pixel(hx, hy, crop_l)
 
     canvas.blit(local, x, y)

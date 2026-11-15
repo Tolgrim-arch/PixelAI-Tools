@@ -11,6 +11,13 @@ from pixelai.palettes import resolve_palette
 from pixelai import autotile, building, creatures, filters, iso, items, nature, rig, ui
 
 
+_GENERATOR_OPS = frozenset({
+    "animal_rig", "char_rig", "nature_rig", "item_rig",
+    "building", "portrait_rig", "ui_rig", "autotile",
+    "tilemap", "iso_structure",
+})
+
+
 def _execute_ops(
     canvas: Canvas,
     ops: list[dict[str, Any]],
@@ -28,8 +35,11 @@ def _execute_ops(
             canvas.current_z = None
 
         is_shadow_op = (
-            bool(op.get("shadow", False))
-            or (kind in ("ellipse", "rect") and str(op.get("color", "")) == "shadow" and op.get("outline") is not True)
+            kind not in _GENERATOR_OPS
+            and (
+                bool(op.get("shadow", False))
+                or (kind in ("ellipse", "rect") and str(op.get("color", "")) == "shadow" and op.get("outline") is not True)
+            )
         )
         canvas.mark_shadow = is_shadow_op
         if "outline" in op:
@@ -391,10 +401,15 @@ def _resolve_post_ops(
         return [p for p in raw_post if p.get("op") != "outline"]
 
     if style == "ext_outline" and not any(p.get("op") == "outline" for p in raw_post):
-        default_col = spec.get(
-            "outline_color",
-            "ink" if "ink" in palette else ("0" if "0" in palette else "#21181b"),
-        )
+        fallback_col: Any = "#21181b"
+        if "ink" in palette:
+            fallback_col = "ink"
+        elif "0" in palette:
+            c0 = palette["0"]
+            lum = c0[0] * 0.299 + c0[1] * 0.587 + c0[2] * 0.114
+            if lum < 65:
+                fallback_col = "0"
+        default_col = spec.get("outline_color", fallback_col)
         outline_op: dict[str, Any] = {"op": "outline", "color": default_col}
         if spec.get("auto_pad"):
             outline_op["auto_pad"] = True

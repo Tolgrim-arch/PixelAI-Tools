@@ -75,6 +75,8 @@ def draw_iso_wall_rect(
         y = 0 if y is None else y
 
     recess_col = darken(color, 0.68)
+    sill_col = darken(color, 0.56)
+    glint_col = (244, 250, 255, 255)
     for dx in range(w):
         sy = y + (dx * slope) // 2
         top_offset = 1 if (arch and w >= 3 and (dx == 0 or dx == w - 1)) else 0
@@ -87,6 +89,17 @@ def draw_iso_wall_rect(
                 side_dx = 0 if face == "left" else w - 1
                 if dx == side_dx:
                     canvas.draw_line(x + dx, y0, x + dx, y1, recess_col)
+                if role == "window":
+                    canvas.set_pixel(x + dx, y1, sill_col)
+    if role == "window" and w >= 3 and h >= 3:
+        if w >= 4 and h >= 4:
+            mid_dx = w // 2
+            msy = y + (mid_dx * slope) // 2
+            canvas.draw_line(x + mid_dx, msy + 1, x + mid_dx, msy + h - 2, sill_col)
+        gy0 = y + (1 * slope) // 2 + 1
+        canvas.set_pixel(x + 1, gy0, glint_col)
+        if w >= 4 and h >= 4:
+            canvas.set_pixel(x + 2, y + (2 * slope) // 2 + 1, glint_col)
 
 
 def _apply_eave_shadow(canvas: Canvas, cx: int, cy: int, rx: int, ry: int) -> None:
@@ -156,6 +169,20 @@ def draw_iso_roof(
         canvas.draw_polygon(
             [(cx + rx, cy), (cx, cy + ry), (cx, apex_y)], right_color
         )
+        # Subtle staggered shingle courses along both roof slopes
+        l_sh = darken(left_color, 0.88)
+        r_sh = darken(right_color, 0.88)
+        for row in range(3, max(4, h + ry - 1), 3):
+            frac = min(1.0, row / max(1, h + ry))
+            lx_span = max(1, int(rx * frac) - 1)
+            for sx in range(cx - lx_span, cx - 1, 4):
+                sy_l = apex_y + row - int(round(ry * (cx - sx) / max(1, rx)))
+                if sy_l > apex_y + 1:
+                    canvas.draw_line(sx, sy_l, min(cx - 1, sx + 1), sy_l + 1, l_sh)
+            for sx in range(cx + 2, cx + lx_span, 4):
+                sy_r = apex_y + row - int(round(ry * (sx - cx) / max(1, rx)))
+                if sy_r > apex_y + 1:
+                    canvas.draw_line(sx, sy_r, min(cx + rx - 1, sx + 1), max(apex_y + 2, sy_r - 1), r_sh)
         if bevel:
             canvas.draw_line(cx, apex_y, cx, cy + ry, brighten(left_color, 1.12))
 
@@ -436,9 +463,12 @@ def draw_iso_structure(
         elif kind == "roof":
             # Always snap roof base onto the top face of the box at (gx, gy) so it never floats!
             if (gx, gy) in box_tops:
-                bcx, bcy, _, _, _ = box_tops[(gx, gy)]
+                bcx, bcy, brx, _, _ = box_tops[(gx, gy)]
                 cx = bcx
                 cy = bcy
+                if rx <= brx:
+                    rx = rx + int(it.get("overhang", 1))
+                    ry = max(1, rx // 2)
             gable = parse_color(it["gable"], palette) if "gable" in it else None
             draw_iso_roof(
                 canvas,

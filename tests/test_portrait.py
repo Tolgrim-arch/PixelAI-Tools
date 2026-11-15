@@ -31,10 +31,10 @@ class FieldFarmerTest(unittest.TestCase):
         default = self.render()
         bare = self.render(hat=False)
         neutral = self.render(expression="neutral")
-        self.assertNotEqual(default.get_pixel(58, 10), bare.get_pixel(58, 10))
-        self.assertEqual(default.get_pixel(58, 10), neutral.get_pixel(58, 10))
-        self.assertNotEqual(default.get_pixel(65, 74), neutral.get_pixel(65, 74))
-        self.assertEqual(default.get_pixel(65, 74), bare.get_pixel(65, 74))
+        self.assertNotEqual(default.get_pixel(41, 13), bare.get_pixel(41, 13))
+        self.assertEqual(default.get_pixel(41, 13), neutral.get_pixel(41, 13))
+        self.assertNotEqual(default.get_pixel(55, 65), neutral.get_pixel(55, 65))
+        self.assertEqual(default.get_pixel(55, 65), bare.get_pixel(55, 65))
 
 
 class MistriaPortraitTest(unittest.TestCase):
@@ -45,16 +45,35 @@ class MistriaPortraitTest(unittest.TestCase):
 
     def test_samurai_and_farmer_specs_are_single_connected_sprites(self):
         expected = [
-            ("samurai_portrait.json", 122, 161),
-            ("portrait_farmer_rig.json", 146, 161),
+            (
+                "samurai",
+                122,
+                161,
+                {
+                    "width": 122,
+                    "height": 161,
+                    "palette": "mistria_portrait",
+                    "ops": [{"op": "portrait_rig", "preset": "samurai", "scar": True, "hat_mode": "back"}],
+                },
+            ),
+            (
+                "farmer",
+                146,
+                161,
+                {
+                    "width": 146,
+                    "height": 161,
+                    "palette": "mistria_portrait",
+                    "ops": [{"op": "portrait_rig", "preset": "farmer", "hat": True, "beard": True, "gesture": "wave"}],
+                },
+            ),
         ]
-        for filename, w, h in expected:
-            spec = json.loads((ROOT / filename).read_text(encoding="utf-8"))
+        for label, w, h, spec in expected:
             canvas = run_spec(spec)
             stats = analyze_canvas(canvas)
-            self.assertEqual((canvas.width, canvas.height), (w, h), filename)
-            self.assertEqual(stats["islands"], 1, filename)
-            self.assertGreaterEqual(stats["unique_colors"], 18, filename)
+            self.assertEqual((canvas.width, canvas.height), (w, h), label)
+            self.assertEqual(stats["islands"], 1, label)
+            self.assertGreaterEqual(stats["unique_colors"], 18, label)
 
     def test_samurai_face_dir_hat_and_scar_options(self):
         right = self.render_mistria(preset="samurai", face_dir="three_quarter_right", hat=False, scar=True)
@@ -64,15 +83,15 @@ class MistriaPortraitTest(unittest.TestCase):
 
         self.assertEqual(analyze_canvas(right)["islands"], 1)
         self.assertEqual(analyze_canvas(left)["islands"], 1)
-        self.assertNotEqual(right.get_pixel(71, 40), no_scar.get_pixel(71, 40))
-        self.assertNotEqual(right.get_pixel(25, 24), worn_hat.get_pixel(25, 24))
-        self.assertNotEqual(right.get_pixel(11, 99), left.get_pixel(11, 99))
+        self.assertNotEqual(right.get_pixel(46, 62), no_scar.get_pixel(46, 62))
+        self.assertNotEqual(right.get_pixel(59, 14), worn_hat.get_pixel(59, 14))
+        self.assertNotEqual(right.get_pixel(57, 21), left.get_pixel(57, 21))
 
     def test_farmer_presets_and_wave_gesture(self):
         waving = self.render_mistria(preset="farmer", hat=True, beard=True, gesture="wave")
         idle = self.render_mistria(preset="farmer", hat=False, beard=False, gesture="idle")
         self.assertEqual(analyze_canvas(waving)["islands"], 1)
         self.assertEqual(analyze_canvas(idle)["islands"], 1)
-        self.assertNotEqual(waving.get_pixel(110, 56), idle.get_pixel(110, 56))
-        self.assertNotEqual(waving.get_pixel(59, 10), idle.get_pixel(59, 10))
+        self.assertNotEqual(waving.get_pixel(102, 70), idle.get_pixel(102, 70))
+        self.assertNotEqual(waving.get_pixel(44, 18), idle.get_pixel(44, 18))
 
