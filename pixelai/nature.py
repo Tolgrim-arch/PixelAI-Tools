@@ -1,6 +1,7 @@
 """Parametric cozy foliage, trees, faceted rocks, flowers, and detailed 4-stage crops."""
 
 from typing import Any
+from pixelai import conifer
 from pixelai.canvas import Canvas
 from pixelai.color import RGBA, brighten, darken, parse_color
 
@@ -48,6 +49,10 @@ def draw_nature_rig(
     draw_shadow = bool(op.get("shadow", True))
     ground_base = str(op.get("ground_base", "none")).lower()
     frame = int(op.get("frame", frame_idx)) % 4
+
+    if kind == "tree" and variant == "pine":
+        conifer.draw_pine(canvas, x, y, palette, op, frame)
+        return
 
     w = int(op.get("w", 32 if kind == "tree" else 24))
     h = int(op.get("h", 40 if kind == "tree" else 24))
@@ -105,71 +110,52 @@ def draw_nature_rig(
         local.draw_rect(cx - tw // 2, ty, tw, 3, darken(trunk_d, 0.72), filled=True)
 
         canopy = Canvas(w, h)
-        if variant == "pine":
-            for layer in range(3):
-                ly = ty + 3 - layer * max(5, h // 6)
-                rw = max(5, (w // 2 - 2) - layer * 2)
-                off = sway_dx if layer > 0 else 0
-                canopy.draw_polygon([
-                    (cx + off, ly - 9),
-                    (cx + rw + off, ly + 2),
-                    (cx + rw // 2 + off, ly + 1),
-                    (cx + off, ly + 3),
-                    (cx - rw // 2 + off, ly + 1),
-                    (cx - rw + off, ly + 2),
-                ], foliage_d if layer == 0 else foliage, filled=True)
-                canopy.draw_polygon([
-                    (cx + off, ly - 9),
-                    (cx + off, ly + 2),
-                    (cx - rw + 2 + off, ly + 1),
-                ], foliage_l if layer > 0 else foliage, filled=True)
-        else:
-            # Wide, bushy scalloped leafy crown (never a pointy spade!)
-            cy_c = max(10, ty - h // 5)
-            cr = max(6, w // 3)
-            # Underside shadow lobes spanning wide base
-            for dx, dy, lr in ((-cr * 2 // 3, 2, cr // 2 + 1), (cr * 2 // 3, 2, cr // 2 + 1), (0, 3, cr // 2 + 2)):
-                canopy.draw_circle(cx + dx + sway_dx, cy_c + dy, lr, foliage_d, filled=True)
-            # Main mid-green canopy cloud lobes arranged horizontally wide
-            lobes = (
-                (-cr * 2 // 3, -1, cr // 2 + 1),
-                (cr * 2 // 3, -1, cr // 2 + 1),
-                (-cr // 3, -cr // 3 - 1, cr // 2 + 1),
-                (cr // 3, -cr // 3 - 1, cr // 2 + 1),
-                (0, -cr // 2 + 1, cr // 2 + 1),
-                (0, 0, cr // 2 + 2),
+        # Wide, bushy scalloped leafy crown (never a pointy spade!)
+        cy_c = max(10, ty - h // 5)
+        cr = max(6, w // 3)
+        # Underside shadow lobes spanning wide base
+        for dx, dy, lr in ((-cr * 2 // 3, 2, cr // 2 + 1), (cr * 2 // 3, 2, cr // 2 + 1), (0, 3, cr // 2 + 2)):
+            canopy.draw_circle(cx + dx + sway_dx, cy_c + dy, lr, foliage_d, filled=True)
+        # Main mid-green canopy cloud lobes arranged horizontally wide
+        lobes = (
+            (-cr * 2 // 3, -1, cr // 2 + 1),
+            (cr * 2 // 3, -1, cr // 2 + 1),
+            (-cr // 3, -cr // 3 - 1, cr // 2 + 1),
+            (cr // 3, -cr // 3 - 1, cr // 2 + 1),
+            (0, -cr // 2 + 1, cr // 2 + 1),
+            (0, 0, cr // 2 + 2),
+        )
+        for dx, dy, lr in lobes:
+            canopy.draw_circle(cx + dx + sway_dx, cy_c + dy, lr, foliage, filled=True)
+        # Clustered top-left sunlit leaf puffs + scattered 2px foliage texture
+        for dx, dy, rx_c, ry_c in (
+            (-cr // 3 - 1, -cr // 2 + 1, max(3, cr // 3 + 1), max(2, cr // 4)),
+            (cr // 5, -cr // 2 + 1, max(2, cr // 3), max(2, cr // 4)),
+            (-cr // 2 + 1, -1, max(2, cr // 4 + 1), 2),
+        ):
+            _draw_leaf_cluster(
+                canopy,
+                cx + dx + sway_dx,
+                cy_c + dy,
+                rx_c,
+                ry_c,
+                foliage_l,
+                brighten(foliage_l, 1.12),
+                foliage,
             )
-            for dx, dy, lr in lobes:
-                canopy.draw_circle(cx + dx + sway_dx, cy_c + dy, lr, foliage, filled=True)
-            # Clustered top-left sunlit leaf puffs + scattered 2px foliage texture
-            for dx, dy, rx_c, ry_c in (
-                (-cr // 3 - 1, -cr // 2 + 1, max(3, cr // 3 + 1), max(2, cr // 4)),
-                (cr // 5, -cr // 2 + 1, max(2, cr // 3), max(2, cr // 4)),
-                (-cr // 2 + 1, -1, max(2, cr // 4 + 1), 2),
-            ):
-                _draw_leaf_cluster(
-                    canopy,
-                    cx + dx + sway_dx,
-                    cy_c + dy,
-                    rx_c,
-                    ry_c,
-                    foliage_l,
-                    brighten(foliage_l, 1.12),
-                    foliage,
-                )
-            # Crisp 2x1 leaf transition clusters
-            for lx_o, ly_o in ((-5, -1), (2, -4), (-1, 2), (4, 0), (-7, 2)):
-                canopy.draw_rect(cx + lx_o + sway_dx, cy_c + ly_o, 2, 1, foliage_d if ly_o > 0 else foliage_l, filled=True)
+        # Crisp 2x1 leaf transition clusters
+        for lx_o, ly_o in ((-5, -1), (2, -4), (-1, 2), (4, 0), (-7, 2)):
+            canopy.draw_rect(cx + lx_o + sway_dx, cy_c + ly_o, 2, 1, foliage_d if ly_o > 0 else foliage_l, filled=True)
 
-            if variant == "fruit":
-                fruit_l = brighten(accent, 1.35)
-                fruit_d = darken(accent, 0.72)
-                for fx, fy in ((cx - 5, cy_c), (cx + 4, cy_c + 1), (cx - 1, cy_c - 4), (cx + 2, cy_c - 2)):
-                    ax, ay = fx + sway_dx, fy
-                    canopy.draw_rect(ax, ay, 3, 3, accent, filled=True)
-                    canopy.set_pixel(ax + 2, ay + 2, fruit_d)
-                    canopy.set_pixel(ax, ay, fruit_l)
-                    canopy.set_pixel(ax + 1, ay - 1, foliage_d)
+        if variant == "fruit":
+            fruit_l = brighten(accent, 1.35)
+            fruit_d = darken(accent, 0.72)
+            for fx, fy in ((cx - 5, cy_c), (cx + 4, cy_c + 1), (cx - 1, cy_c - 4), (cx + 2, cy_c - 2)):
+                ax, ay = fx + sway_dx, fy
+                canopy.draw_rect(ax, ay, 3, 3, accent, filled=True)
+                canopy.set_pixel(ax + 2, ay + 2, fruit_d)
+                canopy.set_pixel(ax, ay, fruit_l)
+                canopy.set_pixel(ax + 1, ay - 1, foliage_d)
 
         local.blit(canopy, 0, 0)
 
