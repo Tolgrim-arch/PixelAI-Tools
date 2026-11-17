@@ -8,6 +8,9 @@ from pixelai import foliage as fo
 from pixelai import leafstudy as ls
 
 
+SAKURA_BANDS = ("#ffe1ed", "#f6a9c7", "#dc6c9f", "#923f76")
+
+
 def _draw_fruit(local: Canvas, fx: int, fy: int, r: int, base: RGBA, hi: RGBA, sh: RGBA, leaf: RGBA) -> None:
     """Shaded fruit: top-left highlight, bottom-right shade, tiny stem leaf."""
     for dy in range(-r, r + 1):
@@ -39,23 +42,29 @@ def _crown_bands(cx: int, cy: int, rx: int, ry: int) -> dict[tuple[int, int], in
 
 
 def draw_broadleaf(canvas: Canvas, x: int, y: int, palette: dict[str, RGBA], op: dict[str, Any], frame: int = 0) -> None:
-    """Draw an oak or fruit tree natively at (w, h); default 128x128."""
-    w, h = int(op.get("w", 128)), int(op.get("h", 128))
+    """Draw an oak or fruit tree natively at (w, h); defaults to canvas size."""
+    w, h = int(op.get("w", canvas.width)), int(op.get("h", canvas.height))
     variant = str(op.get("variant", "oak")).lower()
-    colors = [parse_color(c, palette) for c in op.get("band_colors", ls.BAND)]
+    raw_bands = op.get("band_colors")
+    if raw_bands is None and isinstance(op.get("ramp"), (list, tuple)) and len(op["ramp"]) >= 4:
+        r = op["ramp"]
+        raw_bands = [r[-2], r[-3], r[1], r[0]] if len(r) >= 6 else [r[3], r[2], r[1], r[0]]
+    default_bands = SAKURA_BANDS if variant == "sakura" else ls.BAND
+    colors = [parse_color(c, palette) for c in (raw_bands or default_bands)]
     bark = fo.get_bark(op, palette)
     rng = random.Random(int(op.get("seed", 11 if variant == "oak" else 17)))
     local = Canvas(w, h)
-    cx, foot = w // 2, h - 9
+    # Reserve enough bottom margin for the 7px-tall ground shadow and its outline.
+    cx, foot = w // 2, h - max(7, h // 14)
     if op.get("shadow", True):
         fo.draw_ground_shadow(local, cx, foot, w, parse_color(op.get("shadow_color", fo.SHADOW), palette))
-    fo.draw_trunk(local, rng, cx, int(h * 0.44), foot, max(6, w // 9), bark)
+    fo.draw_trunk(local, rng, cx, int(h * 0.44), foot, max(4, w // 9), bark)
 
     off = (-1, 0, 1, 0)[frame % 4] if op.get("sway") else 0
     rx, ry = int(w * 0.36), int(h * 0.28)
-    cy = max(ry + 8, int(h * 0.38))
+    cy = max(ry + 4, int(h * 0.38))
     bands = _crown_bands(cx + off, cy, rx, ry)
-    stamped = ls._stamp(rng, bands, cx + off, cy, reach=9, fringe=0.55, long_from=None)
+    stamped = ls._stamp(rng, bands, cx + off, cy, reach=max(4, round(9 * w / 128)), fringe=0.55, long_from=None)
     for (px, py) in stamped:  # crown cast shadow on the trunk
         for d in (1, 2, 3, 4):
             q = (px, py + d)
@@ -76,4 +85,23 @@ def draw_broadleaf(canvas: Canvas, x: int, y: int, palette: dict[str, RGBA], op:
             if all((fx + a, fy + b) in stamped for a, b in ((0, 0), (-r, -r), (r, r), (0, -r - 1))):
                 _draw_fruit(local, fx, fy, r, accent, brighten(accent, 1.32), darken(accent, 0.68), colors[2])
                 placed += 1
+    elif variant == "sakura":
+        # Bright blossom flecks break up the pink crown without dark internal linework.
+        for _ in range(max(8, w // 5)):
+            px = cx + off + rng.randint(-int(rx * 0.72), int(rx * 0.72))
+            py = cy + rng.randint(-int(ry * 0.62), int(ry * 0.58))
+            if (px, py) in stamped:
+                local.set_pixel(px, py, colors[0])
+                if (px + 1, py) in stamped and rng.random() < 0.55:
+                    local.set_pixel(px + 1, py, colors[1])
+
+        # A few falling petals make every wind frame distinct. They intentionally
+        # remain outline-free so the external silhouette rule is not applied to dust-sized details.
+        local.mark_no_outline = True
+        for i in range(max(3, w // 18)):
+            phase = (frame + i * 2) % 8
+            px = cx - rx + ((i * 13 + phase * 3) % max(1, rx * 2))
+            py = cy + ry // 3 + ((i * 7 + phase * 4) % max(5, foot - (cy + ry // 3)))
+            local.set_pixel(px, py, colors[0 if i % 3 == 0 else 1])
+        local.mark_no_outline = False
     canvas.blit(local, x, y)

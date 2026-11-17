@@ -23,7 +23,7 @@ When the user asks for trees, rocks, plants, or crops, **STOP and ask in simple 
 - `"op": "nature_rig"`
 - `"kind"`: `"tree" | "bush" | "rock" | "flower" | "crop"`
 - `"variant"`:
-  - `tree`: `"oak" | "pine" | "fruit"`
+  - `tree`: `"oak" | "pine" | "fruit" | "sakura"`
   - `rock`: `"boulder" | "mossy" | "ore"`
   - `crop`: `"wheat" | "berry" | "carrot"`
 - `"stage"`: `0 | 1 | 2 | 3` (for `crop`: `0`=seed, `1`=sprout, `2`=growing, `3`=mature)
