@@ -559,6 +559,10 @@ class TestMVP(unittest.TestCase):
         sway_frames, _ = run_frames({"width": 32, "height": 40, "palette": "cozy24", "style": "ext_outline", "ops": [{"op": "nature_rig", "kind": "tree", "variant": "fruit", "sway": True}]})
         self.assertEqual(len(sway_frames), 4)
         self.assertNotEqual(sway_frames[0].pixels, sway_frames[1].pixels)
+        sakura_frames, _ = run_frames({"width": 64, "height": 64, "palette": "cozy24", "style": "ext_outline", "ops": [{"op": "nature_rig", "kind": "tree", "variant": "sakura", "sway": True, "shadow": True, "ground_base": "none"}]})
+        self.assertEqual(len(sakura_frames), 4)
+        self.assertEqual(len({tuple(frame.pixels) for frame in sakura_frames}), 4)
+        self.assertTrue(any(r > g and r > b for r, g, b, a in sakura_frames[0].pixels if a))
 
         # 3. ui_rig panel, bar, button states, heart states
         c_ui = run_spec({
