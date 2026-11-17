@@ -1,0 +1,17 @@
+{
+  "name": "pixelai-tools",
+  "version": "0.8.2",
+  "description": "Local CLI workflow for deterministic pixel art and game assets.",
+  "author": {
+    "name": "Tolgrim-arch"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "PixelAI Tools",
+    "shortDescription": "Pixel art for games",
+    "longDescription": "Generate and inspect pixel art sprites, tilesets, and animations with the local PixelAI CLI.",
+    "developerName": "Tolgrim-arch",
+    "category": "Developer Tools",
+    "defaultPrompt": "Generate a 32\u00d732 pixel art potion sprite with a transparent background."
+  }
+}

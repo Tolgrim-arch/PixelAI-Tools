@@ -27,6 +27,17 @@ def _execute_ops(
     total_frames: int = 1,
 ) -> None:
     """Execute a sequence of drawing operations on a Canvas."""
+    for index, op in enumerate(ops):
+        try:
+            _execute_ops_unchecked(canvas, [op], palette, defs, frame_idx, total_frames)
+        except KeyError as exc:
+            raise ValueError(f"ops[{index}] ({op.get('op')}): missing or unknown field/key {exc}") from exc
+        except (ValueError, TypeError, IndexError, OSError) as exc:
+            kind = op.get("op") if isinstance(op, dict) else None
+            raise ValueError(f"ops[{index}] ({kind}): {exc}") from exc
+
+
+def _execute_ops_unchecked(canvas, ops, palette, defs, frame_idx, total_frames):
     for op in ops:
         kind = op["op"]
         if "z" in op:
@@ -468,6 +479,40 @@ def _apply_post(
     return canvas
 
 
+def resolve_spec_paths(spec: dict[str, Any], base_dir: Path) -> dict[str, Any]:
+    """Anchor declared input paths to the directory containing the spec."""
+    if not isinstance(spec, dict):
+        raise ValueError("spec: expected a JSON object")
+    spec = dict(spec)
+    if "extends" in spec:
+        spec["extends"] = str((base_dir / spec["extends"]).resolve())
+    for key in ("ops", "layers", "frames", "keyframes"):
+        if key not in spec:
+            continue
+        if not isinstance(spec[key], list):
+            raise ValueError(f"{key}: expected an array")
+        entries = []
+        for index, entry in enumerate(spec[key]):
+            if not isinstance(entry, dict):
+                raise ValueError(f"{key}[{index}]: expected an object")
+            if key != "ops":
+                entry = resolve_spec_paths(entry, base_dir)
+            elif entry.get("op") == "load_png" and "path" in entry:
+                if not isinstance(entry["path"], str):
+                    raise ValueError(f"ops[{index}] (load_png): path must be a string")
+                entry = {**entry, "path": str((base_dir / entry["path"]).resolve())}
+            entries.append(entry)
+        spec[key] = entries
+    if "defs" in spec:
+        if not isinstance(spec["defs"], dict):
+            raise ValueError("defs: expected an object")
+        spec["defs"] = {
+            name: resolve_spec_paths(definition, base_dir)
+            for name, definition in spec["defs"].items()
+        }
+    return spec
+
+
 def _resolve_extends(spec: dict[str, Any]) -> dict[str, Any]:
     """Merge parent spec from 'extends' (.png with embedded spec or .json file)."""
     if "extends" not in spec:
@@ -478,7 +523,7 @@ def _resolve_extends(spec: dict[str, Any]) -> dict[str, Any]:
     else:
         parent = json.loads(parent_path.read_text(encoding="utf-8-sig"))
 
-    merged = dict(parent)
+    merged = resolve_spec_paths(parent, parent_path.resolve().parent)
     for k, v in spec.items():
         if k == "extends":
             continue
@@ -487,7 +532,7 @@ def _resolve_extends(spec: dict[str, Any]) -> dict[str, Any]:
             combined.update(v)
             merged[k] = combined
         elif k == "ops" and spec.get("inherit_ops", False):
-            merged["ops"] = list(parent.get("ops", [])) + list(v)
+            merged["ops"] = list(merged.get("ops", [])) + list(v)
         else:
             merged[k] = v
     return merged

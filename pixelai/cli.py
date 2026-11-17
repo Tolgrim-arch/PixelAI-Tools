@@ -17,7 +17,7 @@ from pixelai.exporter import (
 )
 from pixelai.inspect_tool import analyze_image_file, render_ascii
 from pixelai.palettes import list_palettes
-from pixelai.runner import run_frames, run_layers
+from pixelai.runner import resolve_spec_paths, run_frames, run_layers
 
 AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 
@@ -77,43 +77,69 @@ AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 """
 
 
-def _print_diagnostics(frames: list, names: list[str]) -> None:
-    seen: set[str] = set()
-    for f, name in zip(frames, names):
-        if f.clipped_pixels > 0:
-            msg = f"[WARN] ({name}): {f.clipped_pixels} pixel(s) drawn out of canvas bounds."
-            if msg not in seen:
-                print(msg, file=sys.stderr)
-                seen.add(msg)
-        for w in f.warnings:
-            msg = f"[WARN] ({name}): {w}"
-            if msg not in seen:
-                print(msg, file=sys.stderr)
-                seen.add(msg)
+def _diagnostics(frames, names):
+    messages = []
+    for frame, name in zip(frames, names):
+        if frame.clipped_pixels:
+            messages.append(f"({name}): {frame.clipped_pixels} pixel(s) drawn out of canvas bounds.")
+        messages.extend(f"({name}): {warning}" for warning in frame.warnings)
+    return list(dict.fromkeys(messages))
+
+
+def _read_spec(source: str) -> dict:
+    if source == "-":
+        return resolve_spec_paths(json.loads(sys.stdin.read().lstrip("\ufeff")), Path.cwd())
+    path = Path(source).resolve()
+    return resolve_spec_paths(json.loads(path.read_text(encoding="utf-8-sig")), path.parent)
+
+
+def _cmd_validate(args: argparse.Namespace) -> int:
+    spec = _read_spec(args.spec)
+    spec.setdefault("style", "ext_outline")
+    frames, names = run_frames(spec)
+    layers = run_layers(spec) if spec.get("layers") else []
+    warnings = _diagnostics(frames, names) + _diagnostics(
+        [frame for _, frame in layers], [name for name, _ in layers]
+    )
+    print(json.dumps({"valid": True, "frame_count": len(frames), "warnings": warnings}))
+    return 0
 
 
 def _cmd_render(args: argparse.Namespace) -> int:
-    if args.spec == "-":
-        raw = sys.stdin.read().lstrip("\ufeff")
-    else:
-        raw = Path(args.spec).read_text(encoding="utf-8-sig")
-    spec = json.loads(raw)
+    spec = _read_spec(args.spec)
     if args.lineless:
         spec["style"] = "lineless"
     else:
         spec.setdefault("style", "ext_outline")
     frames, names = run_frames(spec)
-    _print_diagnostics(frames, names)
+    layers = run_layers(spec) if args.layers_dir else []
+    warnings = _diagnostics(frames, names) + _diagnostics(
+        [frame for _, frame in layers], [name for name, _ in layers]
+    )
+    for message in warnings:
+        print(f"[WARN] {message}", file=sys.stderr)
 
+    def report(message: str) -> None:
+        if not args.json:
+            print(message)
+
+    artifacts = {}
     out_path = Path(args.output)
     is_gif = out_path.suffix.lower() == ".gif"
-    fps = args.fps or int(spec.get("fps", 8))
-    cols = args.columns or spec.get("columns")
+    fps = args.fps if args.fps is not None else int(spec.get("fps", 8))
+    cols = args.columns if args.columns is not None else spec.get("columns")
+
+    if is_gif and (args.sheet or args.meta or args.godot):
+        raise ValueError("GIF output cannot be combined with --sheet, --meta, or --godot")
+    if fps <= 0:
+        raise ValueError("fps: expected a positive value")
+    if cols is not None and (not isinstance(cols, int) or cols <= 0):
+        raise ValueError("columns: expected a positive integer")
 
     if is_gif:
         out = export_gif(frames, out_path, fps=fps)
-        print(f"Rendered GIF ({len(frames)} frames @ {fps}fps, {frames[0].width}x{frames[0].height}) -> {out}")
-    elif args.sheet or len(frames) > 1 or args.godot:
+        report(f"Rendered GIF ({len(frames)} frames @ {fps}fps, {frames[0].width}x{frames[0].height}) -> {out}")
+    elif args.sheet or len(frames) > 1 or args.godot or args.meta:
         out = export_spritesheet(
             frames,
             out_path,
@@ -122,24 +148,39 @@ def _cmd_render(args: argparse.Namespace) -> int:
             meta_path=args.meta,
             spec_json=json.dumps(spec),
         )
-        print(f"Rendered spritesheet ({len(frames)} frames) -> {out}")
+        report(f"Rendered spritesheet ({len(frames)} frames) -> {out}")
     else:
         out = export_png(frames[0], out_path, spec_json=json.dumps(spec))
-        print(f"Rendered {frames[0].width}x{frames[0].height} -> {out}")
+        report(f"Rendered {frames[0].width}x{frames[0].height} -> {out}")
+
+    artifacts["image"] = str(out.resolve())
+    if args.meta:
+        artifacts["metadata"] = str(Path(args.meta).resolve())
 
     if args.godot:
         tres_out = export_godot_tres(
             out_path, args.godot, frames, frame_names=names, columns=cols, fps=fps
         )
-        print(f"Exported Godot 4 SpriteFrames -> {tres_out}")
+        artifacts["godot"] = str(tres_out.resolve())
+        report(f"Exported Godot 4 SpriteFrames -> {tres_out}")
 
     if args.layers_dir:
-        layers = run_layers(spec)
         paths = export_layers(layers, args.layers_dir)
-        print(f"Exported {len(paths)} layer PNGs -> {args.layers_dir}")
+        artifacts["layers"] = [str(path.resolve()) for path in paths]
+        report(f"Exported {len(paths)} layer PNGs -> {args.layers_dir}")
 
+    result = {
+        "artifacts": artifacts,
+        "width": frames[0].width,
+        "height": frames[0].height,
+        "frame_count": len(frames),
+        "warnings": warnings,
+    }
     if args.ascii:
-        print(render_ascii(frames[0]))
+        result["ascii"] = render_ascii(frames[0])
+        report(result["ascii"])
+    if args.json:
+        print(json.dumps(result))
 
     return 0
 
@@ -312,7 +353,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print ASCII luminance preview of the first frame to stdout.",
     )
+    render_p.add_argument("--json", action="store_true", help="Return artifact paths, frame dimensions, and warnings as JSON.")
     render_p.set_defaults(func=_cmd_render)
+
+    validate_p = sub.add_parser("validate", help="Check a JSON spec in memory without writing output files.")
+    validate_p.add_argument("spec", help="JSON spec path or '-' for stdin.")
+    validate_p.set_defaults(func=_cmd_validate)
 
     inspect_p = sub.add_parser(
         "inspect",
@@ -422,7 +468,11 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    return args.func(args)
+    try:
+        return args.func(args)
+    except (OSError, ValueError, KeyError, IndexError, TypeError, AttributeError, OverflowError) as exc:
+        print(f"pixelai {args.command}: {exc}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

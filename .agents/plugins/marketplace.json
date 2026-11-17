@@ -1,0 +1,17 @@
+{
+  "name": "pixelai-local",
+  "interface": {
+    "displayName": "PixelAI Tools"
+  },
+  "plugins": [
+    {
+      "name": "pixelai-tools",
+      "source": "./",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

@@ -5,8 +5,8 @@ description: Generate pixel art trees (oak, pine, fruit), bushes, rocks (boulder
 
 # pixelai-foliage-nature
 
-## Mandatory Non-Technical Discovery Protocol (Pause & Ask First)
-When the user asks for trees, rocks, plants, or crops, **STOP and ask in simple game terms** before generating (unless already answered):
+## Art direction checklist
+Use the following design choices to interpret the brief. Use sensible defaults for choices the user leaves open so a single prompt can produce a first asset. Ask one plain-language question only if a missing choice would make the result unusable.
 1. **Variante / Aspecto:**
    - Árboles: ¿frondoso (roble), pino o árbol con frutas?
    - Rocas: ¿piedra normal, con musgo o con veta de mineral/oro?

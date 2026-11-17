@@ -21,8 +21,12 @@ description: Core CLI router, shared palettes, and base pixel primitives (pixel,
 - **Keyframes, particles, weather, multi-layer animations:** `pixelai-vfx-animations`
 - **Godot 4 `.tres`, spritesheets, Itch.io showcase, ASCII/PNG QA:** `pixelai-export-qa`
 
-## Regla de Oro para Usuarios No-Artistas
-Cuando el usuario pida un pixel art sin especificar detalles de juego, **detente un momento antes de renderizar** y haz 3–5 preguntas cortas **en lenguaje natural de juego, cero tecnicismos** (ej. *"¿vertical o en diagonal?"*, *"¿con sombra debajo o sin sombra?"*, *"¿sobre pasto ya dibujado o incluido?"*). Nunca preguntes sobre JSON, bitmasks o nombres internos de paletas.
+## Prompt-to-asset workflow
+
+1. Run `python -m pixelai --version`. If the runtime is missing, install the bundled project from the plugin root (two directories above this skill) using `python -m pip install "<plugin-root>"`. Use the same interpreter throughout.
+2. Choose the closest specialized skill. Use reasonable defaults for unspecified art direction and use `python -m pixelai guide` for unfamiliar operations.
+3. Write a JSON spec next to the intended assets. Run `python -m pixelai validate spec.json` and correct reported errors. Check warnings for accidental clipping.
+4. Run `python -m pixelai render spec.json -o output.png --json`. Use the returned artifact paths and `inspect` to check the result. Review the actual image when the host can display it.
 
 ## Aesthetic Standard (Mandatory)
 - **Default (`"style": "ext_outline"`):** Lineless Interior + 1px External Outline. Pure color planes, specular bevels (`"bevel": true`), recessed cavities (`"recessed": true`), ZERO dark internal lines.

@@ -5,8 +5,8 @@ description: Generate pixel art RPG items, inventory icons, potions, swords, shi
 
 # pixelai-items-icons
 
-## Mandatory Non-Technical Discovery Protocol (Pause & Ask First)
-When a user asks for an item (for example: *"quiero una poción de vida"* or *"una espada"*), **STOP and briefly ask these game-design questions in plain, non-technical language** before rendering (unless they already specified them):
+## Art direction checklist
+Use the following design choices to interpret the brief. Use sensible defaults for choices the user leaves open so a single prompt can produce a first asset. Ask one plain-language question only if a missing choice would make the result unusable.
 1. **Orientación:** ¿La quieres recta en **vertical** (ej. frasco o espada parada) o **inclinada en diagonal** a 45° (estilo clásico de inventario RPG)?
 2. **Dónde se usará:** ¿Es para un **icono de inventario/menú** (sin sombra debajo) o **tirada en el suelo del mapa** para recoger (con sombra en el piso)?
 3. **Detalles del objeto:**
