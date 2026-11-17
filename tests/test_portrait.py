@@ -95,3 +95,17 @@ class MistriaPortraitTest(unittest.TestCase):
         self.assertNotEqual(waving.get_pixel(102, 70), idle.get_pixel(102, 70))
         self.assertNotEqual(waving.get_pixel(44, 18), idle.get_pixel(44, 18))
 
+    def test_anime_accessories_change_portrait_without_splitting_silhouette(self):
+        base = self.render_mistria(preset="villager", hair_style="layered")
+        anime = self.render_mistria(
+            preset="villager", hair_style="spiky", headband=True, cheek_marks=3
+        )
+        self.assertEqual(analyze_canvas(anime)["islands"], 1)
+        self.assertNotEqual(base.get_pixel(59, 41), anime.get_pixel(59, 41))
+        face_differences = sum(
+            base.get_pixel(x, y) != anime.get_pixel(x, y)
+            for y in range(60, 76)
+            for x in range(40, 80)
+        )
+        self.assertGreater(face_differences, 6)
+

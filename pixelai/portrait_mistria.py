@@ -88,6 +88,9 @@ def draw_mistria_portrait(
     has_hat = bool(op.get("hat", preset == "farmer"))
     has_scar = bool(op.get("scar", False))
     has_beard = bool(op.get("beard", False))
+    hair_style = str(op.get("hair_style", "layered")).lower()
+    headband = bool(op.get("headband", False))
+    cheek_marks = max(0, min(3, int(op.get("cheek_marks", 0))))
 
     def col(key: str, default_key: str, fallback: str) -> RGBA:
         val = op.get(key)
@@ -155,6 +158,10 @@ def draw_mistria_portrait(
     blush = (min(255, skin[0] + 5), max(0, skin[1] - 58), max(0, skin[2] - 48), 255)
     mouth_col = (max(0, skin_d[0] - 24), max(0, skin_d[1] - 34), max(0, skin_d[2] - 28), 255)
     beard_col = col("beard_color", "hair_d", "#4f281f")
+    headband_col = col("headband_color", "garment_d", "#24304a")
+    headband_plate = col("headband_plate", "shirt", "#aeb8bd")
+    headband_plate_l = brighten(headband_plate, 1.24)
+    headband_emblem = col("headband_emblem", "ink", "#4d5961")
 
     if op.get("fill_background", False):
         bg = col("background", "bg", "#d7e6cf")
@@ -392,6 +399,14 @@ def draw_mistria_portrait(
         local.draw_line(sx0, sy0, sx0 + round(4 * s), sy0 + round(5 * s), skin_d)
         local.set_pixel(sx0 + 1, sy0, skin_l)
 
+    # Symmetric cheek markings, useful for whiskers, ritual paint, or scars.
+    if cheek_marks:
+        mark_col = col("cheek_mark_color", "skin_d", "#b86f59")
+        for i in range(cheek_marks):
+            mark_y = gy(5.5 + i * 3.0)
+            local.draw_line(round(gx(-14)), round(mark_y), round(gx(-9)), round(mark_y + s), mark_col)
+            local.draw_line(round(gx(9)), round(mark_y + s), round(gx(14)), round(mark_y), mark_col)
+
     # Optional Neat Cozy Beard (kept clean along jawline so mouth remains readable)
     if has_beard:
         _fill_tapered_polygon(local, [
@@ -418,19 +433,24 @@ def draw_mistria_portrait(
         local.set_pixel(mx + mw, my - 1, mouth_col)
 
     # --- 6. Voluminous Front Hair Crown, Specular Band & Swept Bangs ---
-    # Crown hair mass
-    _fill_tapered_polygon(local, [
-        (gx(-21), gy(-6)),
-        (gx(-19), gy(-19)),
-        (gx(-8), gy(-27)),
-        (gx(7), gy(-26)),
-        (gx(19), gy(-18)),
-        (gx(20), gy(-4)),
-        (gx(15), gy(-8)),
-        (gx(5), gy(-13)),
-        (gx(-8), gy(-12)),
-        (gx(-17), gy(-4)),
-    ], hair)
+    # Crown hair mass. Spiky keeps the face anchors while producing a
+    # readable starburst silhouette for energetic anime characters.
+    if hair_style == "spiky":
+        _fill_tapered_polygon(local, [
+            (gx(-22), gy(-4)), (gx(-27), gy(-16)), (gx(-18), gy(-14)),
+            (gx(-22), gy(-27)), (gx(-11), gy(-22)), (gx(-8), gy(-34)),
+            (gx(0), gy(-25)), (gx(7), gy(-35)), (gx(10), gy(-24)),
+            (gx(20), gy(-31)), (gx(18), gy(-20)), (gx(29), gy(-22)),
+            (gx(22), gy(-10)), (gx(25), gy(-2)), (gx(15), gy(-7)),
+            (gx(5), gy(-13)), (gx(-8), gy(-12)), (gx(-17), gy(-4)),
+        ], hair)
+    else:
+        _fill_tapered_polygon(local, [
+            (gx(-21), gy(-6)), (gx(-19), gy(-19)), (gx(-8), gy(-27)),
+            (gx(7), gy(-26)), (gx(19), gy(-18)), (gx(20), gy(-4)),
+            (gx(15), gy(-8)), (gx(5), gy(-13)), (gx(-8), gy(-12)),
+            (gx(-17), gy(-4)),
+        ], hair)
     # Specular 90s-anime zig-zag hair halo across crown
     _fill_tapered_polygon(local, [
         (gx(-16), gy(-16)),
@@ -485,6 +505,18 @@ def draw_mistria_portrait(
         (gx(-17), gy(13)),
         (gx(-20), gy(16)),
     ], hair)
+
+    # Cloth forehead protector with a beveled metal plate and a neutral emblem.
+    if headband:
+        _fill_tapered_polygon(local, [
+            (gx(-20), gy(-13)), (gx(19), gy(-13)),
+            (gx(19), gy(-6)), (gx(-19), gy(-6)),
+        ], headband_col)
+        local.draw_rect(round(gx(-10)), round(gy(-14)), max(10, round(20 * s)), max(5, round(8 * s)), headband_plate, filled=True, bevel=True)
+        ex, ey = round(gx(0)), round(gy(-10))
+        local.draw_line(ex - round(3 * s), ey, ex, ey - round(2 * s), headband_emblem)
+        local.draw_line(ex, ey - round(2 * s), ex + round(3 * s), ey, headband_emblem)
+        local.set_pixel(ex + round(3 * s), ey + 1, headband_plate_l)
 
     # --- 7. Optional Cozy Straw Hat or Samurai Kasa ---
     if has_hat:

@@ -23,6 +23,7 @@ Confirm concisely with the user:
 - **Mistria Preset:** `{"op": "portrait_rig", "style": "mistria", "preset": "samurai|farmer", "x": 1, "y": 1, "width": 120, "height": 160, "face_dir": "three_quarter_left|three_quarter_right", "hat": false, "scar": true}` (uses `"palette": "mistria_portrait"` or custom colors).
 - **Field Farmer Preset:** `{"op": "portrait_rig", "preset": "field_farmer", "x": 0, "y": 0, "hat": true, "expression": "smile|neutral", "face_dir": "three_quarter_left|three_quarter_right"}`
 - **Custom Cozy Bust:** `{"op": "portrait_rig", "style": "cozy", "width": 64, "height": 80, "face_dir": "front|three_quarter_left|three_quarter_right", "gesture": "idle|wave|hip", "skin": "#f2c38f", "hair": "#6b3f35", "shirt": "#d9e5d2", "garment": "#704b3b"}`
+- **Anime Accessories:** `hair_style` (`layered|spiky`), `headband` (`true|false`), and `cheek_marks` (`0..3`) add reusable silhouette and facial-detail variants without changing the preset.
 
 ## JSON Example (Fields of Mistria Style Samurai Portrait)
 ```json
