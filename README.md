@@ -73,6 +73,37 @@ python -m pixelai.cli extract sprite.png
 
 ---
 
+## Validate and automate renders
+
+```powershell
+pixelai validate ./specs/bush_64.json
+pixelai render ./specs/bush_64.json -o ./bush.png --json
+```
+
+`validate` runs the renderer in memory and reports the first error or a JSON
+summary with warnings. `render --json` writes one JSON result to stdout with
+absolute artifact paths, frame dimensions, frame count, and warnings.
+Errors go to stderr and return a nonzero exit code.
+
+Relative `extends` and `load_png` input paths resolve from the spec file's
+directory, or from the working directory for stdin. Inherited operations use
+their parent spec's directory. Output flags resolve from the working directory.
+Embedded specs record resolved asset paths when external files are referenced.
+
+## Local Codex plugin
+
+From the repository root, using Python 3.11 or newer:
+
+```powershell
+python -m pip install .
+codex plugin marketplace add .
+codex plugin add pixelai-tools@pixelai-local
+```
+
+Open a Codex chat with PixelAI Tools and request a sprite or animation in your
+workspace. The plugin uses the local Python CLI and the included art skills.
+For development checks, run `python -m unittest discover -s tests -q`.
+
 ## Agent Integration (Antigravity, Claude Code, Codex)
 
 Drop [SKILL.md](SKILL.md) into your project or let your agent run `python -m pixelai.cli guide` to discover the full JSON DSL, isometric primitives, and palette keys in a single call.

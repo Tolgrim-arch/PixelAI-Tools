@@ -150,12 +150,22 @@ def export_godot_tres(
         raise ValueError("Cannot export Godot .tres with zero frames")
     fw, fh = frames[0].width, frames[0].height
     cols = columns if (columns and columns > 0) else len(frames)
-    sheet_name = Path(sheet_path).name
+    sheet = Path(sheet_path).resolve()
+    out = Path(tres_path)
+    for directory in out.resolve().parents:
+        if (directory / "project.godot").is_file():
+            if not sheet.is_relative_to(directory):
+                raise ValueError("Godot spritesheet must be inside the project containing the .tres")
+            sheet_resource = sheet.relative_to(directory).as_posix()
+            break
+    else:
+        sheet_resource = sheet.name
 
+    resource_path = json.dumps("res://" + sheet_resource, ensure_ascii=False)
     lines = [
         f'[gd_resource type="SpriteFrames" load_steps={len(frames) + 2} format=3]',
         "",
-        f'[ext_resource type="Texture2D" path="res://{sheet_name}" id="1_tex"]',
+        f'[ext_resource type="Texture2D" path={resource_path} id="1_tex"]',
         "",
     ]
     frame_refs = []
@@ -183,7 +193,6 @@ def export_godot_tres(
         "}]",
         "",
     ])
-    out = Path(tres_path)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8")
     return out
