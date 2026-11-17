@@ -9,8 +9,8 @@ description: Generate 16-tile Wang bitmask autotilesets, seamless terrain textur
 - **Tilesets Usually Use Pure Lineless (`--lineless` or `"style": "lineless"`):** Ground tiles and autotile atlases tile seamlessly without external 1px black borders! Use `"style": "ext_outline"` only for standalone isolated props/islands.
 - **Render CLI:** `python -m pixelai render - -o tileset.png --lineless`
 
-## Mandatory Non-Technical Discovery Protocol (Pause & Ask First)
-Before generating terrain tiles, **STOP and ask concisely in plain game language (never mention "Wang bitmask" to non-technical users)**:
+## Art direction checklist
+Use the following design choices to interpret the brief. Use sensible defaults for choices the user leaves open so a single prompt can produce a first asset. Ask one plain-language question only if a missing choice would make the result unusable.
 1. **Vista del juego:** ¿Vista desde arriba (top-down clásico) o en ángulo isométrico tipo rombo?
 2. **Qué necesitas:** ¿Un set completo de bordes para unir agua/tierra con pasto automáticamente, un par de suelos repetibles, o un mapa de ejemplo ya armado?
 3. **Terrenos y bordes:** ¿Qué materiales se conectan (ej. agua con pasto, camino de tierra sobre pasto, adoquín con musgo) y de qué tamaño son los cuadros del mapa (ej. 16x16 o 32x32)?

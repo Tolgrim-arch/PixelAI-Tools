@@ -10,8 +10,8 @@ description: Generate top-down 3/4 cozy farm animals and creatures (chickens, he
 - **Render CLI:** `python -m pixelai render - -o out.png` (or `.gif --fps 8`, or `--sheet --columns 4 --godot out.tres`).
 - **Full Pack Shortcut:** `python -m pixelai pack <chicken|cow> -o pack_dir/ --variant <variant>`
 
-## Mandatory Non-Technical Discovery Protocol (Pause & Ask First)
-When the user asks for a top-down animal (e.g., *"quiero una gallina que picotee el suelo estilo Stardew Valley"*), **STOP before generating** and ask these short questions **in plain game language (zero technical terms like JSON, flags, or rigs)**:
+## Art direction checklist
+Use the following design choices to interpret the brief. Use sensible defaults for choices the user leaves open so a single prompt can produce a first asset. Ask one plain-language question only if a missing choice would make the result unusable.
 1. **Direcciones:** ¿La quieres mirando hacia las 4 direcciones (frente, espalda, izquierda y derecha) o solo de lado?
 2. **Animaciones:** Además de estar quieta (`idle`) y caminar (`walk`), ¿quieres que corra, haga acciones (picotear, pastar, dormir en el nido) o muestre reacciones (feliz, sorprendida, enojada, triste, enferma)?
 3. **Sombra debajo:** ¿Le incluimos su sombra en el suelo o tu juego ya dibuja sombras aparte?

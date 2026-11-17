@@ -5,8 +5,8 @@ description: Generate pixel art game UI and HUD components — 9-slice dialogue 
 
 # pixelai-ui-hud
 
-## Mandatory Non-Technical Discovery Protocol (Pause & Ask First)
-When the user asks for UI or HUD pieces, **STOP and ask concisely in plain game language** (unless already specified):
+## Art direction checklist
+Use the following design choices to interpret the brief. Use sensible defaults for choices the user leaves open so a single prompt can produce a first asset. Ask one plain-language question only if a missing choice would make the result unusable.
 1. **Material / Estilo visual:** ¿De qué material quieres la interfaz: **madera cálida** (estilo granja), **piedra**, **borde dorado**, **pergamino/papel**, o **oscuro/moderno**?
 2. **Estados que necesitas:**
    - Si es **botón**: ¿necesitas los 3 estados (**normal**, **al pasar el mouse**, **presionado**)?

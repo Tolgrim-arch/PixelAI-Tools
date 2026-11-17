@@ -9,8 +9,8 @@ description: Generate top-down 3/4 humanoid character sprites and 4-direction an
 - **Default (`"style": "ext_outline"`):** Lineless Interior + 1px External Outline (no internal dark lines). Optional `--lineless`.
 - **Render CLI:** `python -m pixelai render - -o char.png` (or `.gif --fps 8`, or `--sheet --columns 4 --meta sheet.json --godot char.tres`).
 
-## Mandatory Non-Technical Discovery Protocol (Pause & Ask First)
-Before generating full character sheets, **STOP and ask concisely in plain game language (zero technical jargon)**:
+## Art direction checklist
+Use the following design choices to interpret the brief. Use sensible defaults for choices the user leaves open so a single prompt can produce a first asset. Ask one plain-language question only if a missing choice would make the result unusable.
 1. **Tamaño y detalle:** ¿Personaje chiquito estilo retro clásico (16x16), tamaño estándar cozy tipo Stardew (32x32), o grande con mucho detalle (64x64)?
 2. **Direcciones:** ¿Las 4 direcciones (frente, espalda, izquierda, derecha) o solo una vista?
 3. **Animaciones:** ¿Quieto + caminando, o también corriendo y usando herramienta/arma?
