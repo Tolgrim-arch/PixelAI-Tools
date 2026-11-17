@@ -20,6 +20,60 @@ def _draw_fruit(local: Canvas, fx: int, fy: int, r: int, base: RGBA, hi: RGBA, s
     local.set_pixel(fx, fy - r - 1, leaf)
 
 
+def _draw_sakura(local: Canvas, palette: dict[str, RGBA], op: dict[str, Any], frame: int) -> None:
+    """Draw an open, branch-led cherry tree rather than a solid recolored broadleaf crown."""
+    w, h = local.width, local.height
+    rng = random.Random(int(op.get("seed", 29)))
+    cx, foot = w // 2, h - max(7, h // 14)
+    sway = (-1, 0, 1, 0)[frame % 4] if op.get("sway") else 0
+    bark = [parse_color(c, palette) for c in op.get("bark_ramp", fo.BARK)]
+    blossom = [parse_color(c, palette) for c in SAKURA_BANDS]
+    shadow = parse_color(op.get("shadow_color", fo.SHADOW), palette)
+
+    if op.get("shadow", True):
+        fo.draw_ground_shadow(local, cx, foot, w, shadow)
+
+    # Low, split trunk with visible boughs: the key cherry-tree silhouette cue.
+    trunk_top = int(h * 0.48)
+    fo.draw_trunk(local, rng, cx, trunk_top, foot, max(4, w // 10), bark)
+    branch_col = bark[2]
+    for pts in (
+        ((cx, trunk_top + 12), (cx - 10 + sway, trunk_top - 2), (cx - 18 + sway, trunk_top - 8)),
+        ((cx, trunk_top + 8), (cx + 9 + sway, trunk_top - 5), (cx + 19 + sway, trunk_top - 10)),
+        ((cx - 4, trunk_top + 4), (cx - 3 + sway, trunk_top - 10), (cx - 8 + sway, trunk_top - 17)),
+    ):
+        local.draw_line(*pts[0], *pts[1], branch_col)
+        local.draw_line(*pts[1], *pts[2], branch_col)
+
+    # Five airy blossom masses with gaps between them; each gets petal highlights.
+    clusters = (
+        (cx - 18 + sway, int(h * .29), 7, 5),
+        (cx - 7 + sway, int(h * .20), 8, 5),
+        (cx + 7 + sway, int(h * .23), 8, 6),
+        (cx + 18 + sway, int(h * .34), 7, 5),
+        (cx - 1 + sway, int(h * .36), 9, 5),
+    )
+    for i, (px, py, rx, ry) in enumerate(clusters):
+        local.draw_ellipse(px, py + 1, rx, ry, blossom[2], filled=True)
+        local.draw_ellipse(px, py, max(2, rx - 1), max(2, ry - 1), blossom[1], filled=True)
+        for j in range(4):
+            bx = px + rng.randint(-rx + 2, rx - 2)
+            by = py + rng.randint(-ry + 1, ry - 1)
+            if ((bx - px) / max(1, rx)) ** 2 + ((by - py) / max(1, ry)) ** 2 <= 1:
+                local.set_pixel(bx, by, blossom[0])
+        local.set_pixel(px + (i % 3) - 1, py, blossom[0])
+        # Dark pink one-pixel calyxes make the masses read as blossoms, not foliage.
+        local.set_pixel(px, py + min(ry, 2), blossom[2])
+
+    local.mark_no_outline = True
+    for i in range(max(3, w // 18)):
+        phase = (frame + i * 2) % 8
+        px = cx - w // 3 + ((i * 13 + phase * 3) % max(1, w // 2))
+        py = int(h * .42) + ((i * 7 + phase * 4) % max(5, foot - int(h * .42)))
+        local.set_pixel(px, py, blossom[i % 2])
+    local.mark_no_outline = False
+
+
 def _crown_bands(cx: int, cy: int, rx: int, ry: int) -> dict[tuple[int, int], int]:
     """Build multi-lobe crown with flat 4-band shading (0=light, 1=base, 2=shade, 3=deep) like leafstudy rows 2-3."""
     lobes = (
@@ -54,6 +108,10 @@ def draw_broadleaf(canvas: Canvas, x: int, y: int, palette: dict[str, RGBA], op:
     bark = fo.get_bark(op, palette)
     rng = random.Random(int(op.get("seed", 11 if variant == "oak" else 17)))
     local = Canvas(w, h)
+    if variant == "sakura":
+        _draw_sakura(local, palette, op, frame)
+        canvas.blit(local, x, y)
+        return
     # Reserve enough bottom margin for the 7px-tall ground shadow and its outline.
     cx, foot = w // 2, h - max(7, h // 14)
     if op.get("shadow", True):
