@@ -1,0 +1,36 @@
+{
+  "width": 122,
+  "height": 164,
+  "palette": "mistria_portrait",
+  "style": "ext_outline",
+  "ops": [
+    {
+      "op": "portrait_rig",
+      "preset": "villager",
+      "x": 1,
+      "y": 1,
+      "width": 120,
+      "height": 160,
+      "face_dir": "three_quarter_right",
+      "expression": "smile",
+      "hair_style": "spiky",
+      "headband": true,
+      "cheek_marks": 3,
+      "skin": "#f4bd91",
+      "skin_l": "#ffdec0",
+      "skin_d": "#c87c62",
+      "hair": "#f2c230",
+      "hair_l": "#fff078",
+      "hair_d": "#b77620",
+      "eye_color": "#3d8fc4",
+      "shirt": "#202a3d",
+      "garment": "#e86f25",
+      "garment_d": "#9f3e24",
+      "accent": "#28344d",
+      "headband_color": "#1d2944",
+      "headband_plate": "#aebac2",
+      "headband_emblem": "#4d5961",
+      "cheek_mark_color": "#a95d4f"
+    }
+  ]
+}
