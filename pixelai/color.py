@@ -80,3 +80,84 @@ def nearest_palette_color(target: RGBA, palette: Mapping[str, RGBA]) -> RGBA:
         key=lambda c: (c[0] - tr) ** 2 * 2 + (c[1] - tg) ** 2 * 4 + (c[2] - tb) ** 2 * 3,
     )
     return (best[0], best[1], best[2], ta)
+
+
+def luminance(c: RGBA) -> float:
+    """Return perceptual luminance in [0.0, 255.0]."""
+    return 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]
+
+
+def lerp_rgba(a: RGBA, b: RGBA, t: float) -> RGBA:
+    """Linearly interpolate between two RGBA colors."""
+    t = max(0.0, min(1.0, t))
+    return (
+        max(0, min(255, int(round(a[0] + (b[0] - a[0]) * t)))),
+        max(0, min(255, int(round(a[1] + (b[1] - a[1]) * t)))),
+        max(0, min(255, int(round(a[2] + (b[2] - a[2]) * t)))),
+        max(0, min(255, int(round(a[3] + (b[3] - a[3]) * t)))),
+    )
+
+
+def blend_add(base: RGBA, glow: RGBA, amount: float = 1.0) -> RGBA:
+    """Additive blend preserving base alpha."""
+    amt = max(0.0, amount)
+    return (
+        max(0, min(255, int(round(base[0] + glow[0] * amt)))),
+        max(0, min(255, int(round(base[1] + glow[1] * amt)))),
+        max(0, min(255, int(round(base[2] + glow[2] * amt)))),
+        base[3],
+    )
+
+
+def blend_screen(base: RGBA, glow: RGBA, amount: float = 1.0) -> RGBA:
+    """Screen blend preserving base alpha for soft luminous highlights."""
+    amt = max(0.0, min(1.0, amount))
+    sr = 255 - ((255 - base[0]) * (255 - glow[0])) // 255
+    sg = 255 - ((255 - base[1]) * (255 - glow[1])) // 255
+    sb = 255 - ((255 - base[2]) * (255 - glow[2])) // 255
+    return lerp_rgba(base, (sr, sg, sb, base[3]), amt)
+
+
+MATERIAL_PRESETS: dict[str, dict[str, object]] = {
+    "gold_specular": {
+        "ramp": ("#5c2e14", "#9e5516", "#d98b1e", "#ffd24a", "#fff7b8"),
+        "reflectance": "metallic_specular",
+        "outline": "#3b1d0d",
+    },
+    "silver_chrome": {
+        "ramp": ("#2b3347", "#53627d", "#8ca0bd", "#cbd7e6", "#ffffff"),
+        "reflectance": "metallic_specular",
+        "outline": "#1b202e",
+    },
+    "bronze_aged": {
+        "ramp": ("#3f261c", "#6e4228", "#a1663a", "#cf9155", "#f2c483"),
+        "reflectance": "metallic_specular",
+        "outline": "#291812",
+    },
+    "emerald_crystal": {
+        "ramp": ("#103d2e", "#1d6e4a", "#32a866", "#74e08e", "#d6ffcf"),
+        "reflectance": "crystalline",
+        "outline": "#0b261d",
+    },
+    "ruby_enchanted": {
+        "ramp": ("#4a1225", "#8a1c38", "#cf324e", "#ff6e78", "#ffd4d8"),
+        "reflectance": "crystalline",
+        "outline": "#2b0a16",
+    },
+    "amethyst_void": {
+        "ramp": ("#291642", "#4e2878", "#8545bd", "#bd7ef2", "#f0d4ff"),
+        "reflectance": "crystalline",
+        "outline": "#170b26",
+    },
+    "frost_ice": {
+        "ramp": ("#214b6e", "#3878a3", "#64b2d9", "#a8e4f5", "#f0fcff"),
+        "reflectance": "crystalline",
+        "outline": "#142f47",
+    },
+    "obsidian_dark": {
+        "ramp": ("#161421", "#282438", "#433d5c", "#746c94", "#b5add6"),
+        "reflectance": "metallic_specular",
+        "outline": "#0c0a12",
+    },
+}
+

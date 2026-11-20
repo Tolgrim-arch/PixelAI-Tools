@@ -4,11 +4,11 @@ from pathlib import Path
 import json
 from typing import Any
 from pixelai.canvas import Canvas
-from pixelai.color import RGBA, TRANSPARENT, parse_color
+from pixelai.color import RGBA, TRANSPARENT, brighten, darken, parse_color
 from pixelai.exporter import extract_spec_from_png
 from pixelai.inspect_tool import load_png_as_canvas
 from pixelai.palettes import resolve_palette
-from pixelai import autotile, building, creatures, filters, iso, items, materials, nature, rig, ui
+from pixelai import autotile, building, creatures, filters, fx, iso, items, materials, nature, rig, ui
 
 
 _GENERATOR_OPS = frozenset({
@@ -174,13 +174,23 @@ def _execute_ops_unchecked(canvas, ops, palette, defs, frame_idx, total_frames):
                     parse_color(k, palette): parse_color(v, palette)
                     for k, v in op["remap"].items()
                 }
+            src_def = defs[def_name]
+            ramp_shift = float(op.get("ramp_shift", 0.0))
+            if ramp_shift != 0.0:
+                src_def = src_def.copy()
+                for i, px in enumerate(src_def.pixels):
+                    if px[3] > 0:
+                        if ramp_shift > 0:
+                            src_def.pixels[i] = brighten(px, 1.0 + 0.16 * ramp_shift)
+                        else:
+                            src_def.pixels[i] = darken(px, max(0.35, 1.0 + 0.22 * ramp_shift))
             pivot = (
                 (float(op["pivot"][0]), float(op["pivot"][1]))
                 if "pivot" in op
                 else None
             )
             canvas.blit(
-                defs[def_name],
+                src_def,
                 int(op.get("x", 0)),
                 int(op.get("y", 0)),
                 flip_x=bool(op.get("flip_x", False)),
@@ -403,17 +413,52 @@ def _execute_ops_unchecked(canvas, ops, palette, defs, frame_idx, total_frames):
         canvas.clip_to_opaque = False
 
 
+_STYLE_PROFILES: dict[str, dict[str, Any]] = {
+    "cozy_modern": {
+        "selout": True,
+        "directional_selout": True,
+        "selout_amount": 0.55,
+        "clean_jaggies": True,
+    },
+    "16bit_cluster": {
+        "selout": True,
+        "directional_selout": True,
+        "selout_amount": 0.72,
+        "clean_jaggies": True,
+    },
+    "crisp_retro": {
+        "selout": False,
+        "directional_selout": False,
+        "clean_jaggies": True,
+    },
+    "enchanted_hd": {
+        "selout": True,
+        "directional_selout": True,
+        "selout_amount": 0.48,
+        "clean_jaggies": True,
+    },
+}
+
+
 def _resolve_post_ops(
     spec: dict[str, Any], palette: dict[str, RGBA]
 ) -> list[dict[str, Any]]:
-    """Enforce 'ext_outline' (default when set) or 'lineless' (no external outline)."""
+    """Enforce 'ext_outline' / 'lineless', style_profile presets, and top-level material recoloring."""
     style = spec.get("style")
+    profile_name = spec.get("style_profile")
+    profile_cfg: dict[str, Any] = {}
+    if profile_name:
+        key = str(profile_name).strip().lower()
+        if key not in _STYLE_PROFILES:
+            avail = ", ".join(sorted(_STYLE_PROFILES))
+            raise ValueError(f"Unknown style_profile {profile_name!r}. Available: {avail}")
+        profile_cfg = _STYLE_PROFILES[key]
+
     raw_post = list(spec.get("post", []))
 
     if style == "lineless":
-        return [p for p in raw_post if p.get("op") != "outline"]
-
-    if style == "ext_outline" and not any(p.get("op") == "outline" for p in raw_post):
+        out_ops = [p for p in raw_post if p.get("op") != "outline"]
+    elif style == "ext_outline" and not any(p.get("op") == "outline" for p in raw_post):
         fallback_col: Any = "#21181b"
         if "ink" in palette:
             fallback_col = "ink"
@@ -423,22 +468,43 @@ def _resolve_post_ops(
             if lum < 65:
                 fallback_col = "0"
         default_col = spec.get("outline_color", fallback_col)
-        outline_op: dict[str, Any] = {"op": "outline", "color": default_col}
+        outline_op: dict[str, Any] = {"op": "outline", "color": default_col, **profile_cfg}
         if spec.get("auto_pad"):
             outline_op["auto_pad"] = True
         # Insert before 'scale' so the outline stays 1px in art resolution
-        out: list[dict[str, Any]] = []
+        out_ops = []
         inserted = False
         for p in raw_post:
             if p.get("op") == "scale" and not inserted:
-                out.append(outline_op)
+                out_ops.append(outline_op)
                 inserted = True
-            out.append(p)
+            out_ops.append(p)
         if not inserted:
-            out.append(outline_op)
-        return out
+            out_ops.append(outline_op)
+    else:
+        out_ops = []
+        for p in raw_post:
+            if p.get("op") == "outline" and profile_cfg:
+                merged_p = {**profile_cfg, **p}
+                out_ops.append(merged_p)
+            else:
+                out_ops.append(p)
 
-    return raw_post
+    # Top-level material recolor shortcut (e.g. "material": "gold_specular")
+    if "material" in spec and not any(p.get("op") == "recolor_material" for p in out_ops):
+        mat_op: dict[str, Any] = {"op": "recolor_material", "material": spec["material"]}
+        final_ops: list[dict[str, Any]] = []
+        inserted_mat = False
+        for p in out_ops:
+            if p.get("op") == "scale" and not inserted_mat:
+                final_ops.append(mat_op)
+                inserted_mat = True
+            final_ops.append(p)
+        if not inserted_mat:
+            final_ops.append(mat_op)
+        return final_ops
+
+    return out_ops
 
 
 def _apply_post(
@@ -453,6 +519,21 @@ def _apply_post(
                 selout=bool(post.get("selout", False)),
                 selout_amount=float(post.get("selout_amount", 0.55)),
                 auto_pad=bool(post.get("auto_pad", False)),
+                directional_selout=bool(post.get("directional_selout", False)),
+                clean_jaggies=bool(post.get("clean_jaggies", False)),
+            )
+        elif kind == "recolor_material":
+            targets = (
+                [parse_color(c, palette) for c in post["target_colors"]]
+                if "target_colors" in post
+                else None
+            )
+            canvas = filters.recolor_material(
+                canvas,
+                post["material"],
+                target_colors=targets,
+                reflectance=post.get("reflectance"),
+                recolor_outline=bool(post.get("recolor_outline", True)),
             )
         elif kind == "drop_shadow":
             col = (
@@ -532,11 +613,75 @@ def _check_fresh(spec: dict[str, Any]) -> None:
         visit(spec, "spec")
 
 
+_LIBRARY_ROOT = Path(__file__).resolve().parent.parent / "library"
+
+
+def _resolve_import_path(ref: str) -> Path:
+    """Resolve '@namespace/name' against the built-in library or a relative file path."""
+    if ref.startswith("@"):
+        rel = ref[1:].strip("/")
+        if not rel.endswith(".json"):
+            rel += ".json"
+        candidate = _LIBRARY_ROOT / rel
+        if not candidate.exists():
+            raise ValueError(f"Unknown library import {ref!r} (expected {candidate})")
+        return candidate
+    candidate = Path(ref)
+    if not candidate.exists():
+        raise ValueError(f"Import file not found: {ref!r}")
+    return candidate
+
+
+def _resolve_imports(spec: dict[str, Any]) -> dict[str, Any]:
+    """Merge reusable defs, palette_ext, material, and fx from 'imports'."""
+    imports = spec.get("imports")
+    if not imports:
+        return spec
+    if not isinstance(imports, list):
+        raise ValueError("imports: expected an array of '@namespace/name' or file paths")
+
+    merged = dict(spec)
+    combined_defs: dict[str, Any] = {}
+    combined_pal_ext: dict[str, Any] = {}
+    imported_fx: list[dict[str, Any]] = []
+    imported_material: str | None = None
+
+    for ref in imports:
+        if not isinstance(ref, str):
+            raise ValueError(f"imports entry must be a string, got {type(ref).__name__}")
+        path = _resolve_import_path(ref)
+        lib_data = resolve_spec_paths(json.loads(path.read_text(encoding="utf-8-sig")), path.parent)
+        if isinstance(lib_data.get("defs"), dict):
+            combined_defs.update(lib_data["defs"])
+        if isinstance(lib_data.get("palette_ext"), dict):
+            combined_pal_ext.update(lib_data["palette_ext"])
+        if isinstance(lib_data.get("fx"), list):
+            imported_fx.extend(lib_data["fx"])
+        if "material" in lib_data and isinstance(lib_data["material"], str):
+            imported_material = lib_data["material"]
+        if "palette" in lib_data and "palette" not in merged:
+            merged["palette"] = lib_data["palette"]
+
+    if combined_defs:
+        own_defs = merged.get("defs", {})
+        combined_defs.update(own_defs)
+        merged["defs"] = combined_defs
+    if combined_pal_ext:
+        own_ext = merged.get("palette_ext", {})
+        combined_pal_ext.update(own_ext)
+        merged["palette_ext"] = combined_pal_ext
+    if imported_fx and "fx" not in merged:
+        merged["fx"] = imported_fx
+    if imported_material and "material" not in merged:
+        merged["material"] = imported_material
+    return merged
+
+
 def _resolve_extends(spec: dict[str, Any]) -> dict[str, Any]:
-    """Merge parent spec from 'extends' (.png with embedded spec or .json file)."""
+    """Merge parent spec from 'extends' (.png with embedded spec or .json file) and 'imports'."""
     _check_fresh(spec)
     if "extends" not in spec:
-        return spec
+        return _resolve_imports(spec)
     parent_path = Path(spec["extends"])
     if parent_path.suffix.lower() == ".png":
         parent = extract_spec_from_png(parent_path)
@@ -556,7 +701,7 @@ def _resolve_extends(spec: dict[str, Any]) -> dict[str, Any]:
         else:
             merged[k] = v
     _check_fresh(merged)
-    return merged
+    return _resolve_imports(merged)
 
 
 _TWEEN_KEYS = ("x", "y", "cx", "cy", "rx", "ry", "r", "w", "h", "angle", "x0", "y0", "x1", "y1")
@@ -696,10 +841,23 @@ def run_frames(spec: dict[str, Any]) -> tuple[list[Canvas], list[str]]:
         if fc > 1:
             raw_frames = [{"name": f"frame_{i}", "ops": []} for i in range(fc)]
 
+    fx_list = spec.get("fx", [])
+    if not isinstance(fx_list, list):
+        raise ValueError("fx: expected an array of FX objects")
+
     if not raw_frames:
         canvas = Canvas(width, height, fill=bg)
         _execute_ops(canvas, _merge_frame_ops_into_base([], base_ops), palette, defs, frame_idx=0, total_frames=1)
-        return [_apply_post(canvas, post_ops, palette)], ["frame_0"]
+        base_frame = _apply_post(canvas, post_ops, palette)
+        if fx_list:
+            fx_frames = fx.apply_fx_pipeline(
+                [base_frame],
+                fx_list,
+                palette=palette,
+                total_frames=spec.get("frame_count"),
+            )
+            return fx_frames, [f"frame_{i}" for i in range(len(fx_frames))]
+        return [base_frame], ["frame_0"]
 
     total = len(raw_frames)
     frames: list[Canvas] = []
@@ -714,6 +872,8 @@ def run_frames(spec: dict[str, Any]) -> tuple[list[Canvas], list[str]]:
         _execute_ops(canvas, effective_ops, palette, defs, frame_idx=idx, total_frames=total)
         frames.append(_apply_post(canvas, post_ops, palette))
         names.append(fspec.get("name", f"frame_{idx}"))
+    if fx_list:
+        frames = fx.apply_fx_pipeline(frames, fx_list, palette=palette)
     return frames, names
 
 
