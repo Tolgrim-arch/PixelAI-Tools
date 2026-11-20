@@ -1,0 +1,18 @@
+{
+  "width": 224, "height": 88, "fresh": true, "style": "lineless",
+  "background": "#292636",
+  "ops": [
+    {"op":"rect","x":8,"y":8,"w":64,"h":32,"color":"#7d8790","bevel":true},
+    {"op":"scatter","x":9,"y":9,"w":62,"h":30,"color":"#b6c1c5","pattern":"rock","density":0.65},
+    {"op":"rect","x":80,"y":8,"w":64,"h":32,"color":"#89614a","bevel":true},
+    {"op":"scatter","x":81,"y":9,"w":62,"h":30,"color":"#b48c60","pattern":"soil","density":0.6},
+    {"op":"rect","x":152,"y":8,"w":64,"h":32,"color":"#467e48","bevel":true},
+    {"op":"scatter","x":153,"y":9,"w":62,"h":30,"color":"#85ad58","pattern":"leaves","density":0.7},
+    {"op":"rect","x":8,"y":48,"w":64,"h":32,"color":"#78513e","bevel":true},
+    {"op":"scatter","x":9,"y":49,"w":62,"h":30,"color":"#b5835e","pattern":"bark","density":0.7},
+    {"op":"rect","x":80,"y":48,"w":64,"h":32,"color":"#3c7b9c","bevel":true},
+    {"op":"scatter","x":81,"y":49,"w":62,"h":30,"color":"#8dc7cd","pattern":"water","density":0.65},
+    {"op":"rect","x":152,"y":48,"w":64,"h":32,"color":"#8d556d","bevel":true},
+    {"op":"scatter","x":153,"y":49,"w":62,"h":30,"color":"#bf8590","pattern":"cloth","density":0.7}
+  ]
+}

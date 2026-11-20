@@ -9,6 +9,12 @@ description: Generate top-down 3/4 cozy pixel art buildings, cottages, farmhouse
 - **Default (`"style": "ext_outline"`):** Lineless Interior + 1px External Outline. Uses pure color planes, shingle/cobble scatter, eave shadows, and recessed windows/doors with ZERO internal dark lines.
 - **Render CLI:** `python -m pixelai render - -o building.png` (or `building.gif --fps 6` when `smoke: true`).
 
+## Fresh construction and architectural shadows
+- Start a new spec from the current brief; do not reuse discarded buildings or load rejected PNGs as new work. Render at the final native dimensions.
+- Ground shadows follow a straight architectural footprint, never a circular tree shadow. Default opacity is 0.22; use `shadow_opacity: 0.12..0.25` for a soft low-opacity ground shadow, or `ground_shadow:false` for engine lighting.
+- `shadow_dx`/`shadow_dy` set integer projection offsets; leave canvas space on the projected side. Keep eave shadows attached to the facade and foundation contacts aligned.
+- Prefer PNG when preserving partial shadow alpha. GIF only supports binary transparency; use a PNG spritesheet or omit ground shadows for an animated engine asset.
+
 ## Interactive Clarification Checklist
 Confirm concisely with the user:
 1. **Building Type (`roof_style`):** `"gable"` (cottage/farmhouse), `"pitched"` (shop/shed), or `"barn"` (red barn/coop)?
@@ -21,6 +27,7 @@ Confirm concisely with the user:
 - `"op": "building"`
 - Position & Size: `x`, `y`, `w`, `h`, optional `roof_h`, `foundation_h`
 - Style & Details: `"roof_style": "gable|pitched|barn"`, `"timber_frame": true`, `"chimney": true`, `"smoke": true`, `"door": true`, `"ground_shadow": true`, `"seed": 42`
+- Shadow: `"shadow_opacity": 0.22` (0..1), optional `"shadow_dx"`, `"shadow_dy"`, `"shadow_color"`. Ground shadows are excluded from external outlining.
 - Customizing facades further: Add `rect` (`"bevel": true` / `"recessed": true`), `scatter` (`"pattern": "shingle|brick|cobble|wood"`), or signage props on top after `building`.
 
 ## JSON Example (Animated Cozy Farmhouse)

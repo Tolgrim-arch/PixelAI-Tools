@@ -1,0 +1,63 @@
+{
+  "width": 768,
+  "height": 128,
+  "style": "ext_outline",
+  "fresh": true,
+  "frame_count": 1,
+  "ops": [
+    {
+      "op": "nature_rig",
+      "kind": "tree",
+      "variant": "oak",
+      "seed": 1,
+      "x": 0,
+      "w": 128,
+      "h": 128
+    },
+    {
+      "op": "nature_rig",
+      "kind": "tree",
+      "variant": "oak",
+      "seed": 2,
+      "x": 128,
+      "w": 128,
+      "h": 128
+    },
+    {
+      "op": "nature_rig",
+      "kind": "tree",
+      "variant": "pine",
+      "seed": 1,
+      "x": 256,
+      "w": 128,
+      "h": 128
+    },
+    {
+      "op": "nature_rig",
+      "kind": "tree",
+      "variant": "pine",
+      "seed": 2,
+      "x": 384,
+      "w": 128,
+      "h": 128
+    },
+    {
+      "op": "nature_rig",
+      "kind": "tree",
+      "variant": "fruit",
+      "seed": 1,
+      "x": 512,
+      "w": 128,
+      "h": 128
+    },
+    {
+      "op": "nature_rig",
+      "kind": "tree",
+      "variant": "fruit",
+      "seed": 2,
+      "x": 640,
+      "w": 128,
+      "h": 128
+    }
+  ]
+}

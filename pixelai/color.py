@@ -6,6 +6,11 @@ RGBA = tuple[int, int, int, int]
 TRANSPARENT: RGBA = (0, 0, 0, 0)
 
 
+def ground_shadow_color(color: RGBA) -> RGBA:
+    """Keep ground shadows subtle while preserving an already lower alpha."""
+    return (*color[:3], min(color[3], 64))
+
+
 def parse_color(
     value: str | list[int] | tuple[int, ...],
     palette: Mapping[str, RGBA] | None = None,

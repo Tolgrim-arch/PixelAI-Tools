@@ -19,6 +19,13 @@ Use the following design choices to interpret the brief. Use sensible defaults f
 - **Default (`"style": "ext_outline"`):** Lineless Interior + 1px External Outline with crisp top/left specular bevels. Optional `--lineless` for seamless 9-slice Godot/Unity slicing.
 - **Render CLI:** `python -m pixelai render - -o ui.png`
 
+## Native size and originality
+- Create a new JSON spec for each brief. Never load or present a discarded PNG as a new asset.
+- Render panels directly at the final `w`/`h`. Never stretch a small panel PNG across a large container: corners, nails, bevels and runes must remain native pixels.
+- For large containers, use `frame_width: 6..12`; compact panels default to 3. Keep `2 * frame_width < min(w, h)` and reserve the central content rectangle for text/icons.
+- Themes have native material details: wood grain/nails, stone joints, gold corner inlays, paper folds and dark illuminated runes. `inner_fill:false` leaves content fully transparent while retaining the decorated frame.
+- Inspect a fresh render at 1x and integer zoom. Compare different sizes to confirm border thickness changes only when explicitly requested.
+
 ## `ui_rig` Reference
 - `"op": "ui_rig"`
 - `"kind"`: `"panel" | "bar" | "button" | "heart" | "slot"`
@@ -28,6 +35,7 @@ Use the following design choices to interpret the brief. Use sensible defaults f
   - `heart`: `"full" | "half" | "empty"`
   - `slot`: `"normal" | "selected"`
 - `"fill"`: `0.0..1.0` (for `bar`), `"fill_color"` (palette key or hex), `"segmented"`: `true | false`, `"inner_fill"`: `true | false`
+- Panels: `"frame_width": 3..12` (default 3), `"w"`, `"h"` in final native pixels. Components require dimensions of at least 8px; panel borders must leave positive content space.
 
 ## JSON Example (Wood RPG Panel + Half Health Bar + Selected Slot)
 ```json

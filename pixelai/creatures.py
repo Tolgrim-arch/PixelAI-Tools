@@ -2,7 +2,7 @@
 
 from typing import Any
 from pixelai.canvas import Canvas
-from pixelai.color import RGBA, parse_color
+from pixelai.color import ground_shadow_color, RGBA, parse_color
 
 
 def draw_emote(
@@ -206,7 +206,7 @@ def _draw_chicken_side(
     beak = parse_color("wheat", palette)
     beak_d = parse_color("wheat_d", palette)
     eye = parse_color("ink", palette)
-    shadow = parse_color("shadow", palette)
+    shadow = ground_shadow_color(parse_color("shadow", palette))
     water_l = parse_color("water_l", palette)
     water = parse_color("water", palette)
     grass_l = parse_color("grass_l", palette)
@@ -507,7 +507,7 @@ def _draw_chicken_front_back(
     beak = parse_color("wheat", palette)
     beak_d = parse_color("wheat_d", palette)
     eye = parse_color("ink", palette)
-    shadow = parse_color("shadow", palette)
+    shadow = ground_shadow_color(parse_color("shadow", palette))
     cx = 12  # Exact symmetry axis
 
     f = frame % 4
@@ -711,7 +711,7 @@ def _cow_palette(variant: str) -> dict[str, RGBA]:
         "eye": (38, 30, 36, 255),
         "eye_hi": (255, 255, 255, 255),
         "sick_tint": (154, 206, 128, 255),
-        "shadow": (40, 34, 48, 88),
+        "shadow": ground_shadow_color((40, 34, 48, 88)),
     }
 
 
@@ -747,8 +747,10 @@ def _draw_cow_front_back(
     # Ground shadow (no outline)
     if draw_shadow:
         local.mark_no_outline = True
+        local.mark_shadow = True
         sh_rx = 6 if jump_y < -1 else 8
         local.draw_ellipse(16, 28, sh_rx, 2, c["shadow"])
+        local.mark_shadow = False
         local.mark_no_outline = False
 
     by = jump_y
@@ -853,8 +855,10 @@ def _draw_cow_side(
     # Ground shadow (no outline)
     if draw_shadow:
         local.mark_no_outline = True
+        local.mark_shadow = True
         sh_rx = 10 if is_lying else (7 if pose in ("jump", "fall") else 9)
         local.draw_ellipse(16, 27, sh_rx, 2, c["shadow"])
+        local.mark_shadow = False
         local.mark_no_outline = False
 
     if nest_prop and is_lying:
@@ -1101,6 +1105,8 @@ def draw_animal_rig(
 ) -> None:
     """Render a parametric cozy farm animal rig ('chicken' or 'cow')."""
     species = str(op.get("species", "chicken")).lower()
+    if species not in ("chicken", "cow"):
+        raise ValueError(f"Unsupported animal species: {species!r}; choose chicken or cow")
     direction = op.get("dir", "right").lower()
     pose = op.get("pose", "walk").lower()
     frame = int(op.get("frame", frame_idx))
@@ -1113,7 +1119,7 @@ def draw_animal_rig(
         direction = iso_map.get(direction, direction)
 
     if species == "cow":
-        if pose == "surprised" or (pose == "jump" and perspective != "platformer") or direction in ("down", "up"):
+        if direction in ("down", "up"):
             eff_dir = "up" if direction == "up" else "down"
             _draw_cow_front_back(canvas, x, y, palette, eff_dir, pose, frame, op=op)
         else:
@@ -1130,7 +1136,7 @@ def draw_animal_rig(
             )
         return
 
-    if pose == "surprised" or (pose == "jump" and perspective != "platformer") or direction in ("down", "up"):
+    if direction in ("down", "up"):
         eff_dir = "up" if direction == "up" else "down"
         _draw_chicken_front_back(canvas, x, y, palette, eff_dir, pose, frame, op=op)
     else:

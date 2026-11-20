@@ -24,6 +24,72 @@ _HEART_ROWS = (
 )
 
 
+def _draw_panel(local: Canvas, theme: str, colors: tuple[RGBA, RGBA, RGBA, RGBA],
+                frame: int, filled: bool) -> None:
+    """Build material framing at final resolution; details never scale with width."""
+    base, light, dark, inner = colors
+    w, h = local.width, local.height
+    cut = max(1, frame // 2)
+    local.draw_polygon([(cut, 0), (w - 1 - cut, 0), (w - 1, cut),
+                        (w - 1, h - 1 - cut), (w - 1 - cut, h - 1),
+                        (cut, h - 1), (0, h - 1 - cut), (0, cut)], base, filled=True)
+    local.draw_line(cut, 0, w - 1 - cut, 0, light)
+    local.draw_line(0, cut, 0, h - 1 - cut, light)
+    local.draw_line(cut, h - 1, w - 1 - cut, h - 1, darken(base, 0.88))
+    local.draw_line(w - 1, cut, w - 1, h - 1 - cut, darken(base, 0.88))
+    # Recess is a broad plane with a one-pixel reflected lip, not a dark outline.
+    local.draw_rect(frame - 1, frame - 1, w - 2 * frame + 2, h - 2 * frame + 2,
+                    brighten(base, 1.1), filled=True)
+    local.draw_rect(frame, frame, w - 2 * frame, h - 2 * frame,
+                    inner if filled else (0, 0, 0, 0), filled=True)
+    pitch = {"wood": 17, "stone": 16, "gold": 14, "paper": 21, "dark": 18}[theme]
+    mid = max(1, frame // 2)
+    for tx in range(frame + 4, w - frame - 4, pitch):
+        for ty in (mid, h - 1 - mid):
+            if theme == "wood":
+                local.draw_line(tx, ty, min(tx + 6, w - frame - 1), ty, brighten(base, 1.12))
+                if frame >= 5:
+                    local.draw_line(tx + 2, ty + 1, tx + 4, ty + 1, brighten(base, 1.06))
+            elif theme == "stone":
+                local.draw_line(tx, 1 if ty == mid else h - frame + 1,
+                                tx, frame - 2 if ty == mid else h - 2, brighten(base, 1.16))
+                local.set_pixel(tx + 3, ty, light)
+            elif theme == "gold":
+                local.draw_line(tx - 1, ty, tx, ty - 1, light)
+                local.draw_line(tx, ty - 1, tx + 1, ty, light)
+                local.set_pixel(tx, ty + 1, brighten(base, 1.13))
+            elif theme == "paper":
+                local.draw_line(tx, ty, tx + 3, ty, brighten(base, 1.05))
+            else:
+                # Illuminated runes are inset into the frame, leaving content clear.
+                local.draw_line(tx - 1, ty + 1, tx, ty - 1, light)
+                local.draw_line(tx, ty - 1, tx + 1, ty + 1, light)
+                local.set_pixel(tx, ty, light)
+    for cx, cy in ((mid, mid), (w - 1 - mid, mid),
+                   (mid, h - 1 - mid), (w - 1 - mid, h - 1 - mid)):
+        if theme == "wood":
+            local.set_pixel(cx, cy, (214, 192, 146, 255))
+            if frame >= 5:
+                local.set_pixel(cx + 1, cy, brighten(base, 1.18))
+                local.set_pixel(cx, cy - 1, (245, 227, 183, 255))
+        elif theme == "gold":
+            radius = max(1, (frame - 2) // 2)
+            local.draw_polygon([(cx, cy - radius), (cx + radius, cy),
+                                (cx, cy + radius), (cx - radius, cy)], light, filled=True)
+            local.set_pixel(cx, cy, (91, 158, 156, 255))
+        elif theme == "paper":
+            inward_x = 1 if cx < w // 2 else -1
+            inward_y = 1 if cy < h // 2 else -1
+            local.draw_polygon([(cx - inward_x, cy - inward_y),
+                                (cx + inward_x * max(1, frame // 2), cy - inward_y),
+                                (cx - inward_x, cy + inward_y * max(1, frame // 2))],
+                               light, filled=True)
+        elif theme == "stone":
+            local.draw_line(cx - 1, cy, cx + 1, cy, light)
+        else:
+            local.set_pixel(cx, cy, brighten(light, 1.3))
+
+
 def _draw_single_heart(
     local: Canvas,
     ox: int,
@@ -81,15 +147,20 @@ def draw_ui_rig(
     default_h = 32 if kind == "panel" else (12 if kind in ("bar", "button", "hearts") else 16)
     w = int(op.get("w", default_w))
     h = int(op.get("h", default_h))
+    if kind not in {"panel", "slot", "button", "bar", "heart", "hearts"}:
+        raise ValueError(f"Unknown UI kind: {kind}")
+    if theme not in _THEMES:
+        raise ValueError(f"Unknown UI theme: {theme}")
+    if w < 8 or h < 8:
+        raise ValueError("UI components require w and h of at least 8 pixels")
     local = Canvas(w, h)
 
     if kind == "panel":
-        local.draw_rect(0, 0, w, h, base, filled=True, bevel=True)
-        if bool(op.get("inner_fill", True)) and w > 6 and h > 6:
-            local.draw_rect(2, 2, w - 4, h - 4, dark, filled=True)
-            local.draw_rect(3, 3, w - 6, h - 6, inner, filled=True)
-        for rx, ry in ((1, 1), (w - 2, 1), (1, h - 2), (w - 2, h - 2)):
-            local.set_pixel(rx, ry, light)
+        frame = int(op.get("frame_width", 3))
+        if not 3 <= frame <= 12 or 2 * frame >= min(w, h):
+            raise ValueError("frame_width must be 3..12 and leave a positive content area")
+        _draw_panel(local, theme, (base, light, dark, inner), frame,
+                    bool(op.get("inner_fill", True)))
 
     elif kind == "slot":
         bg = brighten(inner, 1.12) if state == "selected" else inner

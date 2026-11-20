@@ -75,6 +75,26 @@ python -m pixelai.cli extract sprite.png
 
 ## Validate and automate renders
 
+New artwork can enforce generation without imported assets:
+
+```powershell
+pixelai validate ./specs/new_asset.json --fresh
+pixelai render ./specs/new_asset.json -o ./new_asset.png --fresh --json
+```
+
+`--fresh` (or top-level `"fresh": true`) rejects `extends` and `load_png`
+throughout definitions, layers, frames and keyframes. Local procedural stamps
+remain available. This prevents file reuse; it does not detect copied geometry
+or decide whether a design was previously rejected. Rejected assets must never
+be used as the basis of a new delivery.
+
+Surface accents support `rock`, `soil`, `leaves`, `bark`, `water`, and `cloth`
+alongside `wood`, `grass`, `brick`, `cobble`, and `shingle`. Use `scatter` with
+`target_color` or `inside:true` to preserve the silhouette. Render UI at final
+native dimensions rather than stretching a small exported panel. Building
+ground shadows use a straight projection with `shadow_opacity: 0.22` by default;
+PNG preserves partial transparency.
+
 ```powershell
 pixelai validate ./specs/bush_64.json
 pixelai render ./specs/bush_64.json -o ./bush.png --json

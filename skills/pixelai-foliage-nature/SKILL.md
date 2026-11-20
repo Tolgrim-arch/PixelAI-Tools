@@ -44,3 +44,18 @@ Use the following design choices to interpret the brief. Use sensible defaults f
   ]
 }
 ```
+
+
+## Native generation quality protocol
+
+- Start from a new JSON spec. Do not use `extends` or `load_png` by default. Never present rejected assets as new designs; reuse only when explicitly requested.
+- Set `w` and `h` to native asset dimensions when arranging several assets. Trees otherwise use canvas dimensions. Do not enlarge a 32px source into a nominal 128px asset.
+- `seed` controls deterministic tree geometry and foliage. Compare two seeds per requested species; require silhouette differences, not only color/noise. Keep the seed fixed across wind frames.
+- Tree and rock ground shadows have alpha capped at 64/255. `shadow_color: "#29343c30"` gives a lighter shadow; `shadow: false` disables it. Review transparency on a light background; no solid black ellipse or shadow outline.
+- Fruit uses `accent_color`, e.g. `"#dc5146"`. Prefer native 64-128px trees for visible stem, leaf, cleft and reflection. Reject red dots and overlapping fruit bodies.
+- Inspect every variant at delivery size (32, 64 or 128px) and nearest-neighbor enlargement. Oak requires unequal branch crowns and silhouette notches; pine requires irregular lateral boughs and stepped gaps. Reject circular canopies or continuous triangles covered in noise.
+- Rocks require angular shade planes with restrained mineral grain; reject an oval and internal ink cracks.
+
+```json
+{"width":128,"height":128,"style":"ext_outline","ops":[{"op":"nature_rig","kind":"tree","variant":"fruit","w":128,"h":128,"seed":23,"accent_color":"#dc5146","shadow_color":"#29343c30"}]}
+```

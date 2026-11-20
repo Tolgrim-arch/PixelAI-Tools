@@ -513,8 +513,26 @@ def resolve_spec_paths(spec: dict[str, Any], base_dir: Path) -> dict[str, Any]:
     return spec
 
 
+def _check_fresh(spec: dict[str, Any]) -> None:
+    """Reject external asset reuse throughout a fresh generation spec."""
+    if "fresh" in spec and not isinstance(spec["fresh"], bool):
+        raise ValueError("fresh must be a boolean")
+    def visit(value, path):
+        if isinstance(value, dict):
+            if "extends" in value or value.get("op") == "load_png":
+                raise ValueError(f"{path}: fresh generation forbids extends and load_png; draw a new asset")
+            for key, child in value.items():
+                visit(child, f"{path}.{key}")
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                visit(child, f"{path}[{index}]")
+    if spec.get("fresh", False):
+        visit(spec, "spec")
+
+
 def _resolve_extends(spec: dict[str, Any]) -> dict[str, Any]:
     """Merge parent spec from 'extends' (.png with embedded spec or .json file)."""
+    _check_fresh(spec)
     if "extends" not in spec:
         return spec
     parent_path = Path(spec["extends"])
@@ -535,6 +553,7 @@ def _resolve_extends(spec: dict[str, Any]) -> dict[str, Any]:
             merged["ops"] = list(merged.get("ops", [])) + list(v)
         else:
             merged[k] = v
+    _check_fresh(merged)
     return merged
 
 

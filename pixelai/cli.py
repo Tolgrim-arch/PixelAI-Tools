@@ -27,6 +27,9 @@ AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 - **Discarded:** Dark internal outlines (`edge`/`ridge`) are permanently disabled.
 
 ## CLI Usage
+- New assets: `pixelai validate spec.json --fresh` then `pixelai render spec.json -o out.png --fresh --json`. Top-level `"fresh": true` also rejects external reuse in nested frames, layers, and definitions.
+- Never reuse rejected outputs. Use extends/load_png only for an explicitly requested edit of an accepted asset. A fresh spec cannot detect copied JSON geometry: design a new silhouette and inspect it.
+- Generate UI directly at final w/h; never stretch a small panel to fill a large container. Generate and inspect down/up/left/right for every top-down creature or human sheet.
 - Default (Lineless Interior + External Outline): `pixelai render spec.json -o out.png`
 - Pure Lineless (0 outlines): `pixelai render spec.json -o out.png --lineless`
 - Animated GIF: `pixelai render spec.json -o anim.gif --fps 8`
@@ -47,8 +50,8 @@ AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 - `{"op": "fill", "x": 4, "y": 4, "color": "water"}`
 - `{"op": "grid", "x": 0, "y": 0, "rows": ["..oo..", ".oggo."]}` (`.` and ` ` = transparent)
 - `{"op": "dither", "x": 0, "y": 0, "w": 8, "h": 8, "color_a": "grass", "color_b": "grass_d"}`
-- `{"op": "scatter", "x": 0, "y": 0, "w": 32, "h": 32, "color": "grass_l", "target_color": "grass", "pattern": "noise|brick|shingle|cobble|wood|grass", "density": 0.2, "seed": 42}`
-- `{"op": "building", "x": 12, "y": 14, "w": 104, "h": 98, "roof_style": "gable|pitched|barn", "wall_color": "cream", "roof_color": "roof", "timber_frame": true, "chimney": true, "smoke": true}` (Top-down 3/4 cozy farmhouse/cottage/barn generator)
+- `{"op": "scatter", "x": 0, "y": 0, "w": 32, "h": 32, "color": "grass_l", "target_color": "grass", "pattern": "noise|brick|shingle|cobble|wood|grass|rock|soil|leaves|bark|water|cloth", "density": 0.2, "seed": 42}` (Use material accents clipped to the surface; avoid random noise as a substitute for material planes.)
+- `{"op": "building", "x": 12, "y": 14, "w": 104, "h": 98, "roof_style": "gable|pitched|barn", "wall_color": "cream", "roof_color": "roof", "timber_frame": true, "chimney": true, "smoke": true, "shadow_opacity": 0.22}` (Top-down 3/4 architecture; straight projected ground shadow, optional shadow_dx/shadow_dy; PNG preserves partial alpha.)
 - `{"op": "stamp", "def": "sub_sprite", "x": 4, "y": 4, "flip_x": false, "flip_y": false, "angle": 45, "pivot": [4, 4], "remap": {"wood": "stone"}}`
 - `{"op": "load_png", "path": "base.png", "x": 0, "y": 0, "crop": [0, 0, 16, 16]}`
 - `{"op": "tilemap", "mode": "ortho|iso", "tile_w": 16, "tile_h": 16, "map": {"G": "grass_tile"}, "rows": ["GGG", "GGG"]}`
@@ -58,9 +61,9 @@ AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 - `{"op": "portrait_rig", "style": "mistria", "preset": "samurai|farmer", "x": 1, "y": 1, "width": 120, "height": 160, "face_dir": "three_quarter_left|three_quarter_right", "hat": false, "scar": true}` (Fields of Mistria style waist-up portrait engine with 90s-anime facial proportions, cel-shading, and samurai or farmer attire)
 - `{"op": "portrait_rig", "preset": "field_farmer", "x": 0, "y": 0, "hat": true, "expression": "smile|neutral", "face_dir": "three_quarter_left|three_quarter_right"}` (Native 116 x 144 field farmer bust, with overridable material colors such as skin, hair, denim and straw.)
 - `{"op": "animal_rig", "x": 0, "y": 0, "species": "chicken|cow", "dir": "down|up|left|right|se|sw|ne|nw", "pose": "idle|walk|run|peck|graze|nest|lie|sleep|jump|fall|surprised|happy|sad|angry|sick", "perspective": "topdown|platformer|iso", "shadow": true, "emotes": true, "ground_prop": "auto|grass|seeds|none", "nest_prop": false, "frame": 0}` (Cozy farm creature rig with auto-looping frames, hip-pivot peck, optional props/shadows/emotes)
-- `{"op": "item_rig", "x": 0, "y": 0, "kind": "potion|sword|shield|chest|gem|key|coin|apple", "orientation": "vertical|diagonal", "size": 24, "fill_level": 0.78, "state": "closed|open", "shine": true, "shadow": false}` (Parametric RPG items, weapons, and inventory/world loot icons)
+- `{"op": "item_rig", "x": 0, "y": 0, "kind": "potion|sword|shield|chest|gem|key|coin|apple|axe|pickaxe|carrot|bread|fish", "orientation": "vertical|diagonal", "size": 24, "fill_level": 0.78, "state": "closed|open", "shine": true, "shadow": false}` (Parametric RPG items, weapons, and inventory/world loot icons)
 - `{"op": "nature_rig", "x": 0, "y": 0, "kind": "tree|bush|rock|flower|crop", "variant": "oak|pine|fruit|sakura|boulder|mossy|ore|wheat|berry|carrot", "stage": 3, "sway": false, "shadow": true, "ground_base": "none|grass|soil"}` (Trees, rocks, flowers, and 4-stage crops)
-- `{"op": "ui_rig", "x": 0, "y": 0, "kind": "panel|bar|button|heart|slot", "theme": "wood|stone|gold|paper|dark", "state": "normal|hover|pressed|full|half|empty|selected", "fill": 0.75, "w": 48, "h": 12}` (9-slice UI panels, HUD bars, hearts, slots, and buttons)
+- `{"op": "ui_rig", "x": 0, "y": 0, "kind": "panel|bar|button|heart|slot", "theme": "wood|stone|gold|paper|dark", "state": "normal|hover|pressed|full|half|empty|selected", "fill": 0.75, "w": 48, "h": 12}` (Native pixel UI; panels support frame_width 3..12, theme-specific details and inner_fill:false for a transparent center. Render at final dimensions.)
 - `{"op": "emote", "x": 18, "y": 2, "kind": "heart|angry|sweat|zzz|exclamation|sick", "frame": 0, "outline": false}`
 - Universal op flags: `"inside": true` (clips shading/markings strictly inside existing opaque silhouette), `"outline": false` (excludes floating particles/emotes/shadows from external outline).
 - `{"op": "mirror_x"}` / `{"op": "mirror_y"}`
@@ -95,6 +98,8 @@ def _read_spec(source: str) -> dict:
 
 def _cmd_validate(args: argparse.Namespace) -> int:
     spec = _read_spec(args.spec)
+    if args.fresh:
+        spec["fresh"] = True
     spec.setdefault("style", "ext_outline")
     frames, names = run_frames(spec)
     layers = run_layers(spec) if spec.get("layers") else []
@@ -107,6 +112,8 @@ def _cmd_validate(args: argparse.Namespace) -> int:
 
 def _cmd_render(args: argparse.Namespace) -> int:
     spec = _read_spec(args.spec)
+    if args.fresh:
+        spec["fresh"] = True
     if args.lineless:
         spec["style"] = "lineless"
     else:
@@ -355,9 +362,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     render_p.add_argument("--json", action="store_true", help="Return artifact paths, frame dimensions, and warnings as JSON.")
     render_p.set_defaults(func=_cmd_render)
+    render_p.add_argument("--fresh", action="store_true", help="Generate from scratch: reject extends and load_png, including nested definitions and frames.")
 
     validate_p = sub.add_parser("validate", help="Check a JSON spec in memory without writing output files.")
     validate_p.add_argument("spec", help="JSON spec path or '-' for stdin.")
+    validate_p.add_argument("--fresh", action="store_true", help="Reject external asset reuse (extends and load_png) throughout the spec.")
     validate_p.set_defaults(func=_cmd_validate)
 
     inspect_p = sub.add_parser(

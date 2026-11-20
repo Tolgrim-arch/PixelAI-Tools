@@ -2,7 +2,7 @@
 
 from typing import Any
 from pixelai.canvas import Canvas
-from pixelai.color import RGBA, brighten as _brighten, darken as _darken, parse_color
+from pixelai.color import ground_shadow_color, RGBA, brighten as _brighten, darken as _darken, parse_color
 from pixelai.portrait import draw_field_farmer
 
 
@@ -89,7 +89,7 @@ def draw_char_rig(
     hat_l = _brighten(hat, 1.16) if hat else None
     tool_col = parse_color(op.get("tool", "stone_l" if "stone_l" in palette else "#b5bfd1"), palette)
     handle_col = parse_color(op.get("handle", "wood" if "wood" in palette else "#9c603c"), palette)
-    shadow_col = parse_color(op.get("shadow_color", "shadow" if "shadow" in palette else "#33293a"), palette)
+    shadow_col = ground_shadow_color(parse_color(op.get("shadow_color", "shadow" if "shadow" in palette else "#33293a"), palette))
 
     if draw_shadow:
         prev_sh, prev_no = canvas.mark_shadow, canvas.mark_no_outline
@@ -168,8 +168,8 @@ def draw_char_rig(
     if is_iso or direction in ("down", "up"):
         tx = px_i(4.8)
         tw = sc(6.4)
-        canvas.draw_rect(tx, torso_y, tw, torso_h, shirt)
-        canvas.draw_rect(tx, torso_y, tw, sc(0.9), shirt_l)
+        canvas.draw_polygon([pt(5.5, 7.7), pt(10.4, 7.7), pt(11.2, 8.7), pt(10.5, 11.5), pt(5.4, 11.5), pt(4.8, 8.7)], shirt, filled=True)
+        canvas.draw_polygon([pt(5.6, 7.7), pt(10.2, 7.7), pt(10.6, 8.4), pt(5.2, 8.4)], shirt_l, filled=True)
         canvas.draw_rect(px_i(5.3), torso_y + sc(1.3), sc(5.4), torso_h - sc(1.3), pants)
         # Belt + brass buckle or overalls straps
         canvas.draw_rect(px_i(5.2), torso_y + sc(1.3), sc(5.6), max(1, sc(0.6)), belt_col)
@@ -182,8 +182,8 @@ def draw_char_rig(
     else:
         tx = px_i(5.6)
         tw = sc(4.8)
-        canvas.draw_rect(tx, torso_y, tw, torso_h, shirt)
-        canvas.draw_rect(tx, torso_y, tw, sc(0.9), shirt_l)
+        canvas.draw_polygon([pt(6.2, 7.7), pt(9.6, 7.7), pt(10.4, 8.6), pt(9.8, 11.5), pt(6.0, 11.5), pt(5.6, 8.6)], shirt, filled=True)
+        canvas.draw_polygon([pt(6.3, 7.7), pt(9.5, 7.7), pt(9.9, 8.4), pt(5.9, 8.4)], shirt_l, filled=True)
         canvas.draw_rect(tx, torso_y + sc(1.3), tw, torso_h - sc(1.3), pants)
         canvas.draw_rect(tx, torso_y + sc(1.3), tw, max(1, sc(0.6)), belt_col)
 

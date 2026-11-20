@@ -17,7 +17,13 @@ def _draw_fruit(local: Canvas, fx: int, fy: int, r: int, base: RGBA, hi: RGBA, s
         for dx in range(-r, r + 1):
             if dx * dx + dy * dy <= r * r:
                 local.set_pixel(fx + dx, fy + dy, hi if dx + dy < -r // 2 else sh if dx + dy > r // 2 else base)
-    local.set_pixel(fx, fy - r - 1, leaf)
+    # Apple cleft, short stem and offset leaf keep fruit legible beyond a red dot.
+    local.set_pixel(fx, fy - r, sh)
+    local.set_pixel(fx, fy - r - 1, (112, 75, 44, 255))
+    local.set_pixel(fx + 1, fy - r - 1, leaf)
+    if r >= 3:
+        local.set_pixel(fx + 2, fy - r - 2, brighten(leaf, 1.3))
+        local.set_pixel(fx - 1, fy - 1, (255, 225, 175, 255))
 
 
 def _draw_sakura(local: Canvas, palette: dict[str, RGBA], op: dict[str, Any], frame: int) -> None:
@@ -74,19 +80,24 @@ def _draw_sakura(local: Canvas, palette: dict[str, RGBA], op: dict[str, Any], fr
     local.mark_no_outline = False
 
 
-def _crown_bands(cx: int, cy: int, rx: int, ry: int) -> dict[tuple[int, int], int]:
+def _crown_bands(cx: int, cy: int, rx: int, ry: int, rng: random.Random) -> dict[tuple[int, int], int]:
     """Build multi-lobe crown with flat 4-band shading (0=light, 1=base, 2=shade, 3=deep) like leafstudy rows 2-3."""
+    # Offset branch crowns leave deep sky notches between the lower boughs.
+    handed = rng.choice((-1, 1))
     lobes = (
-        (cx - int(rx * 0.42), cy - int(ry * 0.25), int(rx * 0.56)),
-        (cx + int(rx * 0.36), cy - int(ry * 0.20), int(rx * 0.52)),
-        (cx, cy - int(ry * 0.38), int(rx * 0.54)),
-        (cx - int(rx * 0.48), cy + int(ry * 0.14), int(rx * 0.50)),
-        (cx + int(rx * 0.46), cy + int(ry * 0.14), int(rx * 0.50)),
-        (cx, cy + int(ry * 0.06), int(rx * 0.68)),
+        (cx - int(rx * .45), cy + int(ry * .22), int(rx * .40)),
+        (cx + int(rx * .48), cy + int(ry * .38), int(rx * .36)),
+        (cx + handed * int(rx * .15), cy - int(ry * .53), int(rx * .43)),
+        (cx - int(rx * .48), cy - int(ry * .30), int(rx * .36)),
+        (cx + int(rx * .46), cy - int(ry * .08), int(rx * .39)),
+        (cx - handed * int(rx * .14), cy + int(ry * .04), int(rx * .42)),
     )
     bands: dict[tuple[int, int], int] = {}
     # Paint back-to-front / bottom-to-top so upper-left lobes overlap cleanly
     for lx, ly, lr in lobes:
+        lx += rng.randint(-max(1, rx // 9), max(1, rx // 9))
+        ly += rng.randint(-max(1, ry // 8), max(1, ry // 8))
+        lr = max(2, lr + rng.randint(-max(1, rx // 12), max(1, rx // 12)))
         disc = ls._disc_bands(lx, ly, lr, ls._L2, (-0.17, -0.2, 0.88), (-0.2, -0.2, 1.0))
         for p, b in disc.items():
             # Keep brighter band if already covered by an upper lobe, or overwrite from upper lobes
@@ -121,8 +132,14 @@ def draw_broadleaf(canvas: Canvas, x: int, y: int, palette: dict[str, RGBA], op:
     off = (-1, 0, 1, 0)[frame % 4] if op.get("sway") else 0
     rx, ry = int(w * 0.36), int(h * 0.28)
     cy = max(ry + 4, int(h * 0.38))
-    bands = _crown_bands(cx + off, cy, rx, ry)
-    stamped = ls._stamp(rng, bands, cx + off, cy, reach=max(4, round(9 * w / 128)), fringe=0.55, long_from=None)
+    # Structural branches remain visible in the negative space below crown lobes.
+    for side in (-1, 1):
+        bx = cx + side * int(rx * .53)
+        by = cy + int(ry * (.58 if side < 0 else .76))
+        for thickness in range(max(1, w // 45)):
+            local.draw_line(cx + thickness, int(h * .62), bx, by - thickness, bark[2])
+    bands = _crown_bands(cx + off, cy, rx, ry, rng)
+    stamped = ls._stamp(rng, bands, cx + off, cy, reach=max(4, round(9 * w / 128)), fringe=0.30, long_from=None, step=(7, 6))
     for (px, py) in stamped:  # crown cast shadow on the trunk
         for d in (1, 2, 3, 4):
             q = (px, py + d)
@@ -134,14 +151,18 @@ def draw_broadleaf(canvas: Canvas, x: int, y: int, palette: dict[str, RGBA], op:
 
     if variant == "fruit":
         accent = parse_color(op.get("accent_color", "#d94e41"), palette)
-        r, placed = max(2, w // 40), 0
+        r, placed = max(2, w // 28), 0
+        positions: list[tuple[int, int]] = []
         for _ in range(80):
             if placed >= 7:
                 break
             fx = cx + off + rng.randint(-int(rx * 0.65), int(rx * 0.65))
             fy = cy + rng.randint(-int(ry * 0.55), int(ry * 0.55))
+            if any((fx - px) ** 2 + (fy - py) ** 2 < (2 * r + 3) ** 2 for px, py in positions):
+                continue
             if all((fx + a, fy + b) in stamped for a, b in ((0, 0), (-r, -r), (r, r), (0, -r - 1))):
                 _draw_fruit(local, fx, fy, r, accent, brighten(accent, 1.32), darken(accent, 0.68), colors[2])
+                positions.append((fx, fy))
                 placed += 1
     elif variant == "sakura":
         # Bright blossom flecks break up the pink crown without dark internal linework.

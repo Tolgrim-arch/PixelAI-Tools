@@ -52,3 +52,9 @@ Use the following design choices to interpret the brief. Use sensible defaults f
   ]
 }
 ```
+
+## Four-direction acceptance
+- Default to a complete down/up/left/right set unless the user requests one view. One operation produces one direction; explicitly generate all four.
+- Inspect the contact sheet: front and back must differ; left and right must preserve the requested facing in every action, including jump/surprised.
+- Create fresh specs. Do not use discarded sheets as a new source. Check body proportions and animation contacts at native resolution before delivery.
+- Built-in species are only chicken and cow. Other names raise an error; create an original primitive-based creature spec for unsupported species. Do not substitute a chicken.
