@@ -398,6 +398,12 @@ class Canvas:
         pattern: str = "noise",
     ) -> None:
         """Apply a deterministic procedural texture within (x, y, w, h)."""
+        from pixelai.materials import PATTERNS, material_accent
+
+        if pattern not in PATTERNS | {"noise", "brick", "shingle", "cobble", "wood", "grass"}:
+            raise ValueError(f"Unknown material pattern: {pattern!r}")
+        if not 0 <= density <= 1:
+            raise ValueError("scatter density must be between 0 and 1")
         rng = random.Random(seed)
         for py in range(y, y + h):
             for px in range(x, x + w):
@@ -405,7 +411,10 @@ class Canvas:
                     continue
                 if target_color is not None and self.get_pixel(px, py) != target_color:
                     continue
-                if pattern == "brick":
+                if pattern in PATTERNS:
+                    if material_accent(pattern, px - x, py - y, seed, density):
+                        self.set_pixel(px, py, color)
+                elif pattern == "brick":
                     row = (py - y) // 3
                     offset = 3 if row % 2 == 1 else 0
                     col = (px - x + offset) // 6
@@ -436,7 +445,7 @@ class Canvas:
                         if (ty == 3 and 2 <= tx <= 6) or (ty in (1, 2) and tx == 1):
                             self.set_pixel(px, py, color)
                 elif pattern == "wood":
-                    if (px - x) % 3 == 0 or ((py - y + (px - x) * 2) % 7 == 0 and rng.random() < 0.5):
+                    if rng.random() < density and ((px - x) % 3 == 0 or (py - y + (px - x) * 2) % 7 == 0):
                         self.set_pixel(px, py, color)
                 elif pattern == "grass":
                     if rng.random() < density:

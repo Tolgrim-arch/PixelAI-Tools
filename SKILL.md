@@ -5,6 +5,14 @@ description: Generate deterministic pixel art sprites, isometric buildings, 16-t
 
 # pixelai-tools Skill
 
+## Fresh generation and acceptance
+- For a new asset, write a new spec with `"fresh": true`; validate and render with `--fresh`. Do not import an old PNG, inherit an old spec, or copy a rejected design into a new deliverable. Existing files are references only unless the user requests editing an accepted asset.
+- Use a new explicit seed for a requested variation and compare silhouettes, not just colors. Keep rejected work separate and never present it as a new result.
+- Render UI at its final native `w`/`h`; preserve corner and border pixel thickness. A small panel stretched across a large container is a failed result.
+- For top-down humans and creatures, generate and inspect all four views (down/up/left/right), including action poses. A mirrored side view does not supply a front or back view.
+- Inspect actual pixels at native size and integer zoom. Tests verify contracts, not artistic excellence. Check material readability, silhouette, anatomy, clipping, transparent shadows, and fruit detail before claiming success.
+- This is a deterministic renderer, not a trained image model. Improve generators and regression tests when outputs fail; never imply that changing code trains model weights.
+
 ## Quick Start for AI Agents
 1. Run `python -m pixelai.cli guide` to view the full JSON DSL and palette keys (`cozy24`, `endesga32`, `sweetie16`, `pico8`, `gameboy`).
 2. Render a sprite or animation in a single CLI call via stdin (`-`):

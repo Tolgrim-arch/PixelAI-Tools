@@ -3,7 +3,7 @@
 from typing import Any
 from pixelai import broadleaf, conifer, leafstudy, undergrowth
 from pixelai.canvas import Canvas
-from pixelai.color import RGBA, brighten, darken, parse_color
+from pixelai.color import RGBA, brighten, darken, ground_shadow_color, parse_color
 
 
 def _draw_ground_patch(
@@ -43,7 +43,16 @@ def draw_nature_rig(
     """Render parametric nature assets: organic clustered trees, faceted rocks, and 4-stage crops."""
     _ = total_frames
     kind = str(op.get("kind", "tree")).lower()
-    variant = str(op.get("variant", "oak")).lower()
+    variants = {
+        "tree": ("oak", "pine", "fruit", "sakura"),
+        "rock": ("boulder", "mossy", "ore"),
+        "crop": ("wheat", "berry", "carrot"),
+    }
+    if kind not in ("tree", "leafstudy", "bush", "grass", "rock", "flower", "crop"):
+        raise ValueError(f"Unknown nature kind: {kind!r}")
+    variant = str(op.get("variant", variants.get(kind, ("oak",))[0])).lower()
+    if kind in variants and variant not in variants[kind]:
+        raise ValueError(f"Unknown {kind} variant: {variant!r}; choose {', '.join(variants[kind])}")
     stage = max(0, min(3, int(op.get("stage", 3))))
     sway = bool(op.get("sway", False))
     draw_shadow = bool(op.get("shadow", True))
@@ -81,6 +90,7 @@ def draw_nature_rig(
     stone_d = darken(stone, 0.68)
     accent = p("accent_color", "roof" if kind == "tree" else "wheat", "#e6b84c")
     shadow_col = p("shadow_color", "shadow", "#33293a")
+    shadow_col = ground_shadow_color(shadow_col)
 
     _draw_ground_patch(local, cx, h - 3, max(4, w // 3), 2, ground_base, palette)
 
@@ -119,8 +129,15 @@ def draw_nature_rig(
             (cx, ry - r // 2),
             (cx - r + 2, ry - r // 3),
         ], stone_l, filled=True)
-        # Crack bevel
-        local.draw_line(cx + 1, ry - r // 2, cx + r - 2, ry - 2, darken(stone_d, 0.78))
+        # Broad fracture planes and sparse mineral grain; no internal ink line.
+        local.draw_polygon([(cx + 1, ry - r // 2), (cx + r - 1, ry - r + 3),
+                            (cx + r - 2, ry - 2), (cx + 2, ry - 3)], stone_d, filled=True)
+        for gy in range(ry - r + 2, ry - 1, 3):
+            for gx in range(cx - r + 2, cx + r - 1, 4):
+                if local.get_pixel(gx, gy) == stone:
+                    local.set_pixel(gx, gy, brighten(stone, 1.10))
+                    if local.get_pixel(gx + 1, gy) == stone:
+                        local.set_pixel(gx + 1, gy, darken(stone, 0.90))
         if variant == "mossy":
             _draw_leaf_cluster(local, cx - 1, ry - r, max(3, r // 2), 2, foliage, foliage_l, foliage_d)
         elif variant == "ore":

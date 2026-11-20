@@ -65,10 +65,23 @@ def draw_building(
         prev_sh, prev_no = canvas.mark_shadow, canvas.mark_no_outline
         canvas.mark_shadow = True
         canvas.mark_no_outline = True
-        sh_rx = bw // 2 + max(2, overhang)
-        sh_ry = max(3, bh // 14)
-        canvas.draw_ellipse(bx + bw // 2, found_y + found_h - 1, sh_rx, sh_ry, c_shadow, filled=True)
-        canvas.mark_shadow, canvas.mark_no_outline = prev_sh, prev_no
+        try:
+            opacity = float(op.get("shadow_opacity", 0.22))
+            if not 0.0 <= opacity <= 1.0:
+                raise ValueError("shadow_opacity must be between 0 and 1")
+            shadow = (*c_shadow[:3], round(c_shadow[3] * opacity))
+            # A building casts a straight-edged footprint, never a tree-like oval.
+            dx = int(op.get("shadow_dx", max(3, bw // 10)))
+            dy = int(op.get("shadow_dy", max(2, bh // 16)))
+            foot_y = found_y + found_h - 1
+            canvas.draw_polygon(
+                [(found_x, found_y), (found_x + found_w - 1, found_y),
+                 (found_x + found_w - 1 + dx, foot_y + dy),
+                 (found_x + dx, foot_y + dy)],
+                shadow, filled=True,
+            )
+        finally:
+            canvas.mark_shadow, canvas.mark_no_outline = prev_sh, prev_no
 
     # 2.Stone Foundation
     canvas.draw_rect(found_x, found_y, found_w, found_h, c_stone, filled=True)

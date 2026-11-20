@@ -1,0 +1,136 @@
+{
+  "width": 256,
+  "ops": [
+    {
+      "y": 0,
+      "dir": "down",
+      "shadow": false,
+      "x": 0,
+      "op": "char_rig",
+      "size": 64
+    },
+    {
+      "shadow": false,
+      "frame": 1,
+      "op": "animal_rig",
+      "emotes": false,
+      "x": 16,
+      "dir": "down",
+      "pose": "surprised",
+      "species": "cow",
+      "y": 70
+    },
+    {
+      "shadow": false,
+      "frame": 1,
+      "op": "animal_rig",
+      "emotes": false,
+      "x": 20,
+      "dir": "down",
+      "pose": "jump",
+      "species": "chicken",
+      "y": 110
+    },
+    {
+      "y": 0,
+      "dir": "up",
+      "shadow": false,
+      "x": 64,
+      "op": "char_rig",
+      "size": 64
+    },
+    {
+      "shadow": false,
+      "frame": 1,
+      "op": "animal_rig",
+      "emotes": false,
+      "x": 80,
+      "dir": "up",
+      "pose": "surprised",
+      "species": "cow",
+      "y": 70
+    },
+    {
+      "shadow": false,
+      "frame": 1,
+      "op": "animal_rig",
+      "emotes": false,
+      "x": 84,
+      "dir": "up",
+      "pose": "jump",
+      "species": "chicken",
+      "y": 110
+    },
+    {
+      "y": 0,
+      "dir": "left",
+      "shadow": false,
+      "x": 128,
+      "op": "char_rig",
+      "size": 64
+    },
+    {
+      "shadow": false,
+      "frame": 1,
+      "op": "animal_rig",
+      "emotes": false,
+      "x": 144,
+      "dir": "left",
+      "pose": "surprised",
+      "species": "cow",
+      "y": 70
+    },
+    {
+      "shadow": false,
+      "frame": 1,
+      "op": "animal_rig",
+      "emotes": false,
+      "x": 148,
+      "dir": "left",
+      "pose": "jump",
+      "species": "chicken",
+      "y": 110
+    },
+    {
+      "y": 0,
+      "dir": "right",
+      "shadow": false,
+      "x": 192,
+      "op": "char_rig",
+      "size": 64
+    },
+    {
+      "shadow": false,
+      "frame": 1,
+      "op": "animal_rig",
+      "emotes": false,
+      "x": 208,
+      "dir": "right",
+      "pose": "surprised",
+      "species": "cow",
+      "y": 70
+    },
+    {
+      "shadow": false,
+      "frame": 1,
+      "op": "animal_rig",
+      "emotes": false,
+      "x": 212,
+      "dir": "right",
+      "pose": "jump",
+      "species": "chicken",
+      "y": 110
+    },
+    {
+      "op": "item_rig",
+      "y": 145,
+      "size": 48,
+      "kind": "apple",
+      "x": 8
+    }
+  ],
+  "palette": "cozy24",
+  "style": "ext_outline",
+  "frame_count": 1,
+  "height": 200
+}

@@ -10,7 +10,7 @@ import random
 from dataclasses import dataclass
 from typing import Any
 from pixelai.canvas import Canvas
-from pixelai.color import RGBA, parse_color
+from pixelai.color import RGBA, ground_shadow_color, parse_color
 
 Mask = dict[tuple[int, int], tuple[float, float]]
 
@@ -182,6 +182,7 @@ def paint(local: Canvas, tones: dict[tuple[int, int], int], ramp: Ramp) -> None:
 
 
 def draw_ground_shadow(local: Canvas, cx: int, foot: int, w: int, color: RGBA) -> None:
+    color = ground_shadow_color(color)
     local.mark_shadow = local.mark_no_outline = True
     for dy in range(-3, 4):
         half = int((w // 3) * math.sqrt(max(0.0, 1 - (dy / 3.5) ** 2)))
@@ -192,15 +193,19 @@ def draw_ground_shadow(local: Canvas, cx: int, foot: int, w: int, color: RGBA) -
 
 def draw_trunk(local: Canvas, rng: random.Random, cx: int, top: int, foot: int, tw: int, bark: list[RGBA]) -> None:
     """Bark: left-lit 4-tone columns, vertical grain streaks, flared roots."""
+    height = max(1, foot - top)
+    bend = rng.choice((-1, 1)) * max(1, tw // 3)
+    root_depth = max(3, height // 4)
     for y in range(top, foot + 1):
-        flare = max(0, y - (foot - 12)) // 3 + (2 if y > foot - 3 else 0)
-        left, right = cx - tw // 2 - flare, cx + tw // 2 + flare
+        flare = max(0, y - (foot - root_depth)) * max(2, tw // 2) // root_depth
+        axis = cx + round(bend * (foot - y) / height)
+        left, right = axis - tw // 2 - flare, axis + tw // 2 + flare
         for x in range(left, right + 1):
             rel = (x - left) / max(1, right - left)
             local.set_pixel(x, y, bark[3 if rel < 0.22 else 2 if rel < 0.5 else 1 if rel < 0.82 else 0])
     for _ in range(tw * 2):
         sx = cx - tw // 2 + rng.randint(1, tw - 1)
-        sy = rng.randint(top, foot - 4)
+        sy = rng.randint(top, max(top, foot - 4))
         for dy in range(rng.randint(3, 9)):
             if sy + dy <= foot - 2:
                 local.set_pixel(sx, sy + dy, bark[0 if sx > cx else 1])

@@ -1,0 +1,114 @@
+{
+  "frame_count": 1,
+  "width": 360,
+  "height": 216,
+  "palette": "cozy24",
+  "style": "ext_outline",
+  "ops": [
+    {
+      "op": "item_rig",
+      "kind": "axe",
+      "size": 16,
+      "y": 4,
+      "x": 4
+    },
+    {
+      "op": "item_rig",
+      "kind": "pickaxe",
+      "size": 16,
+      "y": 4,
+      "x": 76
+    },
+    {
+      "op": "item_rig",
+      "kind": "carrot",
+      "size": 16,
+      "y": 4,
+      "x": 148
+    },
+    {
+      "op": "item_rig",
+      "kind": "bread",
+      "size": 16,
+      "y": 4,
+      "x": 220
+    },
+    {
+      "op": "item_rig",
+      "kind": "fish",
+      "size": 16,
+      "y": 4,
+      "x": 292
+    },
+    {
+      "op": "item_rig",
+      "kind": "axe",
+      "size": 32,
+      "y": 76,
+      "x": 4
+    },
+    {
+      "op": "item_rig",
+      "kind": "pickaxe",
+      "size": 32,
+      "y": 76,
+      "x": 76
+    },
+    {
+      "op": "item_rig",
+      "kind": "carrot",
+      "size": 32,
+      "y": 76,
+      "x": 148
+    },
+    {
+      "op": "item_rig",
+      "kind": "bread",
+      "size": 32,
+      "y": 76,
+      "x": 220
+    },
+    {
+      "op": "item_rig",
+      "kind": "fish",
+      "size": 32,
+      "y": 76,
+      "x": 292
+    },
+    {
+      "op": "item_rig",
+      "kind": "axe",
+      "size": 64,
+      "y": 148,
+      "x": 4
+    },
+    {
+      "op": "item_rig",
+      "kind": "pickaxe",
+      "size": 64,
+      "y": 148,
+      "x": 76
+    },
+    {
+      "op": "item_rig",
+      "kind": "carrot",
+      "size": 64,
+      "y": 148,
+      "x": 148
+    },
+    {
+      "op": "item_rig",
+      "kind": "bread",
+      "size": 64,
+      "y": 148,
+      "x": 220
+    },
+    {
+      "op": "item_rig",
+      "kind": "fish",
+      "size": 64,
+      "y": 148,
+      "x": 292
+    }
+  ]
+}

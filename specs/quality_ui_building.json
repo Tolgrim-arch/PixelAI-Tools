@@ -1,0 +1,19 @@
+{
+  "width": 660,
+  "height": 480,
+  "palette": "cozy24",
+  "style": "ext_outline",
+  "ops": [
+    {"op": "ui_rig", "kind": "panel", "theme": "wood", "x": 8, "y": 8, "w": 420, "h": 124, "frame_width": 8},
+    {"op": "ui_rig", "kind": "panel", "theme": "gold", "x": 440, "y": 8, "w": 212, "h": 124, "frame_width": 9},
+    {"op": "ui_rig", "kind": "panel", "theme": "stone", "x": 8, "y": 144, "w": 312, "h": 92, "frame_width": 7},
+    {"op": "ui_rig", "kind": "panel", "theme": "paper", "x": 332, "y": 144, "w": 320, "h": 92, "frame_width": 8},
+    {"op": "ui_rig", "kind": "panel", "theme": "dark", "x": 8, "y": 248, "w": 312, "h": 92, "frame_width": 8, "inner_fill": false},
+    {"op": "ui_rig", "kind": "button", "theme": "wood", "x": 332, "y": 248, "w": 96, "h": 28},
+    {"op": "ui_rig", "kind": "button", "theme": "wood", "x": 440, "y": 248, "w": 96, "h": 28, "state": "hover"},
+    {"op": "ui_rig", "kind": "button", "theme": "wood", "x": 548, "y": 248, "w": 96, "h": 28, "state": "pressed"},
+    {"op": "building", "x": 40, "y": 368, "w": 92, "h": 96, "chimney": false, "smoke": false},
+    {"op": "building", "x": 208, "y": 368, "w": 92, "h": 96, "roof_style": "barn", "chimney": false, "smoke": false, "shadow_opacity": 0.12},
+    {"op": "building", "x": 376, "y": 368, "w": 92, "h": 96, "roof_style": "pitched", "chimney": false, "smoke": false, "ground_shadow": false}
+  ]
+}

@@ -24,9 +24,9 @@ Use the following design choices to interpret the brief. Use sensible defaults f
 
 ## `item_rig` Reference
 - `"op": "item_rig"`
-- `"kind"`: `"potion" | "sword" | "shield" | "chest" | "gem" | "key" | "coin" | "apple"`
+- `"kind"`: `"potion" | "sword" | "shield" | "chest" | "gem" | "key" | "coin" | "apple" | "axe" | "pickaxe" | "carrot" | "bread" | "fish"`
 - `"orientation"`: `"vertical" | "diagonal"` (applies to `potion`, `sword`, `key`)
-- `"size"`: `16 | 24 | 32` (default `24`)
+- `"size"`: `16 | 24 | 32 | 64` (default `24`; drawn at native resolution)
 - `"color"`, `"secondary_color"`, `"cork_color"` (palette key or hex)
 - `"fill_level"`: `0.0..1.0` (for `potion`, default `0.78`)
 - `"state"`: `"closed" | "open"` (for `chest`)
@@ -46,3 +46,12 @@ Use the following design choices to interpret the brief. Use sensible defaults f
   ]
 }
 ```
+
+## Fresh generation and material QA
+- Generate a new spec for the requested object. Never substitute a previous discarded asset or silently relabel another item.
+- `axe`/`pickaxe`: forged metal head and wooden handle; `secondary_color` controls wood.
+- `carrot`: tapered root, scored orange skin and green foliage; `secondary_color` controls leaves.
+- `bread`: rounded crust, underside plane and diagonal pale scores; `secondary_color` controls crumb.
+- `fish`: separate tail/dorsal/pelvic fins, reflective belly, gill and eye; `secondary_color` controls fins.
+- These five types use their own silhouettes; orientation is currently fixed. Unknown kinds raise an error. For unsupported objects, build a new spec from primitives rather than passing an invented kind.
+- Inspect at 1x and nearest-neighbor magnification. Check 16/32/64 outputs for readable silhouette, material highlights and clipping before delivery.

@@ -2,7 +2,7 @@
 
 from typing import Any
 from pixelai.canvas import Canvas
-from pixelai.color import RGBA, brighten, darken, parse_color
+from pixelai.color import ground_shadow_color, RGBA, brighten, darken, parse_color
 
 
 def _sc(val: float, s: float) -> int:
@@ -253,13 +253,73 @@ def _draw_coin_or_apple(local: Canvas, size: int, kind: str, color: RGBA, stem: 
         return
 
     # Apple
-    local.draw_circle(cx, cy + px(1), _sc(6, s), color, filled=True)
+    local.draw_polygon([(px(6), px(8)), (px(9), px(6)), (px(12), px(7)),
+                        (px(15), px(6)), (px(18), px(8)), (px(19), px(12)),
+                        (px(17), px(17)), (px(14), px(19)), (px(12), px(18)),
+                        (px(10), px(19)), (px(7), px(17)), (px(5), px(12))], color, filled=True)
     local.clip_to_opaque = True
     local.draw_circle(cx + px(2), cy + px(3), _sc(5, s), darken(color, 0.75), filled=True)
     local.draw_circle(cx - px(2), cy - px(1), _sc(2, s), brighten(color, 1.2), filled=True)
+    if shine:
+        local.draw_ellipse(px(8), px(10), _sc(1, s), _sc(2, s), brighten(color, 1.55), filled=True)
+        local.set_pixel(px(9), px(8), brighten(color, 1.8))
     local.clip_to_opaque = False
     local.draw_rect(cx, cy - px(6), _sc(1, s), _sc(3, s), stem, filled=True)
     local.draw_rect(cx + _sc(1, s), cy - px(5), _sc(3, s), _sc(2, s), parse_color("grass", {"grass": (92, 168, 76, 255)}), filled=True)
+
+
+def _draw_tool_or_food(local: Canvas, size: int, kind: str, color: RGBA, secondary: RGBA, shine: bool) -> None:
+    """Native-resolution silhouettes: forged heads, tapered produce and organic food."""
+    def point(x: float, y: float) -> tuple[int, int]:
+        return round(x * size / 24), round(y * size / 24)
+
+    def polygon(points: list[tuple[float, float]], fill: RGBA) -> None:
+        local.draw_polygon([point(x, y) for x, y in points], fill, filled=True)
+
+    def line(a: tuple[float, float], b: tuple[float, float], fill: RGBA) -> None:
+        local.draw_line(*point(*a), *point(*b), fill)
+
+    light, shade = brighten(color, 1.25), darken(color, .76)
+    if kind in ("axe", "pickaxe"):
+        polygon([(11, 7), (13, 7), (13, 21), (11, 21)], secondary)
+        line((11, 10), (11, 20), brighten(secondary, 1.22))
+        for y in (13, 16, 19):
+            line((12, y), (13, y + .5), darken(secondary, .8))
+        if kind == "axe":
+            polygon([(7, 4), (13, 5), (15, 8), (12, 12), (6, 12), (4, 10), (4, 6)], color)
+            polygon([(4, 6), (6, 5), (6, 11), (4, 10)], light)
+            polygon([(7, 10), (12, 9), (14, 7), (12, 12), (6, 12)], shade)
+        else:
+            polygon([(3, 10), (6, 5), (11, 3), (16, 4), (21, 8), (17, 6), (12, 6), (7, 7)], color)
+            line((6, 5), (11, 3), light)
+            line((12, 4), (17, 5), light)
+            line((6, 7), (3, 10), shade)
+    elif kind == "carrot":
+        polygon([(8, 8), (14, 7), (17, 10), (14, 15), (8, 21), (7, 18), (6, 12)], color)
+        polygon([(13, 10), (17, 10), (14, 15), (8, 21), (10, 16)], shade)
+        line((8, 10), (7, 15), light)
+        for a, b in (((8, 12), (10, 13)), ((11, 15), (13, 15)), ((8, 17), (9, 18))):
+            line(a, b, shade)
+        polygon([(11, 8), (8, 3), (9, 2), (12, 6), (13, 1), (15, 2), (14, 6), (19, 3), (19, 5), (14, 9)], secondary)
+        line((13, 3), (12, 7), brighten(secondary, 1.25))
+    elif kind == "bread":
+        polygon([(3, 13), (5, 8), (9, 5), (15, 4), (19, 6), (21, 11), (20, 16), (15, 19), (8, 20), (4, 18)], color)
+        polygon([(3, 14), (7, 17), (15, 16), (20, 12), (20, 16), (15, 19), (8, 20), (4, 18)], shade)
+        for x, y in ((7, 9), (11, 7), (15, 6)):
+            polygon([(x, y), (x + 1, y), (x + 3, y + 5), (x + 2, y + 6)], secondary)
+            line((x, y), (x + 2, y + 4), light)
+    else:  # Fish: separate caudal fin, dorsal fin, belly plane, gill and eye.
+        polygon([(6, 10), (3, 6), (2, 7), (3, 12), (2, 17), (4, 18), (7, 14)], secondary)
+        polygon([(10, 7), (11, 4), (15, 7), (16, 9)], secondary)
+        polygon([(6, 10), (10, 7), (15, 7), (20, 10), (22, 12), (19, 15), (14, 17), (9, 16), (6, 14)], color)
+        polygon([(7, 13), (13, 14), (20, 12), (19, 15), (14, 17), (9, 16)], light)
+        polygon([(10, 15), (12, 19), (15, 16)], secondary)
+        line((17, 10), (16, 13), shade)
+        local.set_pixel(*point(19, 10), (30, 38, 54, 255))
+        if shine:
+            line((10, 9), (14, 9), brighten(color, 1.55))
+            for x, y in ((10, 12), (13, 11), (13, 13)):
+                local.set_pixel(*point(x, y), light)
 
 
 def draw_item_rig(
@@ -283,7 +343,7 @@ def draw_item_rig(
     local = Canvas(size, size)
 
     if draw_shadow:
-        sh_col = parse_color(op.get("shadow_color", "shadow" if "shadow" in palette else "#33293a"), palette)
+        sh_col = ground_shadow_color(parse_color(op.get("shadow_color", "shadow" if "shadow" in palette else "#33293a"), palette))
         local.mark_shadow = True
         local.mark_no_outline = True
         local.draw_ellipse(size // 2, size - max(2, size // 10), max(3, size // 4), max(1, size // 12), sh_col, filled=True)
@@ -316,7 +376,19 @@ def draw_item_rig(
         _draw_shield(local, size, col("color", "water_d", "#326496"), col("secondary_color", "stone_l", "#c5d1e0"))
     elif kind == "key":
         _draw_key(local, size, orientation, col("color", "wheat", "#e0ab43"))
-    else:
+    elif kind in ("axe", "pickaxe", "carrot", "bread", "fish"):
+        defaults = {"axe": ("stone_l", "wood", "#c5d1e0", "#9c603c"),
+                    "pickaxe": ("stone_l", "wood", "#c5d1e0", "#9c603c"),
+                    "carrot": ("#e98a31", "grass", "#e98a31", "#589c4c"),
+                    "bread": ("wheat", "wheat_l", "#d99445", "#f2d287"),
+                    "fish": ("water", "water_d", "#4fa4c4", "#326496")}
+        primary, secondary, primary_fallback, secondary_fallback = defaults[kind]
+        _draw_tool_or_food(local, size, kind, col("color", primary, primary_fallback),
+                           col("secondary_color", secondary, secondary_fallback), shine)
+    elif kind in ("coin", "apple"):
         _draw_coin_or_apple(local, size, kind, col("color", "wheat" if kind == "coin" else "roof", "#e0ab43"), col("secondary_color", "wood_d", "#6e422c"), shine, frame)
+
+    else:
+        raise ValueError(f"Unsupported item kind: {kind!r}; choose potion, sword, chest, gem, shield, key, coin, apple, axe, pickaxe, carrot, bread, fish")
 
     canvas.blit(local, x, y)

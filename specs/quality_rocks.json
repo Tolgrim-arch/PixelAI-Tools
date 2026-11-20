@@ -1,0 +1,11 @@
+{
+  "width": 224, "height": 64, "fresh": true, "frame_count": 1,
+  "palette": "cozy24", "style": "ext_outline",
+  "ops": [
+    {"op":"nature_rig","kind":"rock","variant":"boulder","x":8,"y":8,"w":24,"h":32},
+    {"op":"nature_rig","kind":"rock","variant":"mossy","x":40,"y":8,"w":24,"h":32},
+    {"op":"nature_rig","kind":"rock","variant":"ore","x":72,"y":8,"w":24,"h":32},
+    {"op":"nature_rig","kind":"rock","variant":"boulder","x":112,"y":4,"w":48,"h":48},
+    {"op":"nature_rig","kind":"rock","variant":"ore","x":168,"y":4,"w":48,"h":48}
+  ]
+}

@@ -23,6 +23,10 @@ description: Core CLI router, shared palettes, and base pixel primitives (pixel,
 
 ## Prompt-to-asset workflow
 
+New assets must start from a new spec with `"fresh": true` and use `validate --fresh` / `render --fresh`. This rejects `extends` and `load_png`, even inside definitions or frames. Never recycle discarded artwork. Existing asset reuse is reserved for user-requested edits of accepted work. Fresh mode cannot identify geometry copied by hand.
+
+Choose surface accents by material: `scatter.pattern` supports `rock`, `soil`, `leaves`, `bark`, `water`, `cloth`, plus `wood`, `grass`, `brick`, `cobble`, `shingle`. Use restrained color planes and `target_color` or `inside:true` to keep texture inside the surface. Seeds are deterministic; changing seed is a variation, not proof of a new design.
+
 1. Run `python -m pixelai --version`. If the runtime is missing, install the bundled project from the plugin root (two directories above this skill) using `python -m pip install "<plugin-root>"`. Use the same interpreter throughout.
 2. Choose the closest specialized skill. Use reasonable defaults for unspecified art direction and use `python -m pixelai guide` for unfamiliar operations.
 3. Write a JSON spec next to the intended assets. Run `python -m pixelai validate spec.json` and correct reported errors. Check warnings for accidental clipping.
