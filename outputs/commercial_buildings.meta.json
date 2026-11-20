@@ -1,0 +1,99 @@
+{
+  "tile_width": 238,
+  "tile_height": 120,
+  "columns": 1,
+  "rows": 1,
+  "frames": [
+    {
+      "name": "frame_0",
+      "x": 0,
+      "y": 0,
+      "w": 238,
+      "h": 120,
+      "attachments": [
+        {
+          "type": "building",
+          "name": "teal_cross_gable_cottage",
+          "origin": [
+            49,
+            105
+          ],
+          "y_sort": [
+            49,
+            105
+          ],
+          "collision": {
+            "shape": "polygon",
+            "points": [
+              [
+                11,
+                97
+              ],
+              [
+                86,
+                97
+              ],
+              [
+                110,
+                82
+              ],
+              [
+                110,
+                90
+              ],
+              [
+                11,
+                105
+              ]
+            ]
+          },
+          "entrance": [
+            33,
+            105
+          ]
+        },
+        {
+          "type": "building",
+          "name": "red_gambrel_barn",
+          "origin": [
+            168,
+            104
+          ],
+          "y_sort": [
+            168,
+            104
+          ],
+          "collision": {
+            "shape": "polygon",
+            "points": [
+              [
+                136,
+                97
+              ],
+              [
+                200,
+                97
+              ],
+              [
+                219,
+                85
+              ],
+              [
+                219,
+                92
+              ],
+              [
+                136,
+                104
+              ]
+            ]
+          },
+          "entrance": [
+            168,
+            104
+          ]
+        }
+      ]
+    }
+  ]
+}

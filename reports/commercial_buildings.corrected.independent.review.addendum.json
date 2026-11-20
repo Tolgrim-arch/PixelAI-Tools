@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "artifact": {
+    "file_sha256": "6c6cf7a015451245f3b91e1fac7dcdf415660811717baaab43083b6872ba611a",
+    "pixel_sha256": "79ea0ef3055cb9c05e23c8fd000ae7278e295976f85d3add17ed22594faa848f",
+    "content_sha256": "c658b4fdde663c8c8f179dad6b17dff10e84ee1dbd94f59ae9ef95de784574e4",
+    "silhouette_sha256": "032defdc0db7d5ada47a0e7c0e8337231a2c2d894eee8728aad4f0dc2ea27f19"
+  },
+  "generated_by": "Codex /root (corrected candidate generator)",
+  "reviewed_by": "Codex /root/independent_candidate_review",
+  "comparison_reference": {
+    "name": "Tiny Swords by Pixel Frog",
+    "url": "https://pixelfrog-assets.itch.io/tiny-swords",
+    "notes": "Named commercial reference; visual comparison is limited to the current candidate and prior review evidence, and the reference pack itself was not directly inspected in this pass."
+  },
+  "inspection": {
+    "native_resolution": true,
+    "integer_zoom": 3
+  },
+  "contract": {
+    "width": 238,
+    "height": 120,
+    "frame_count": 1,
+    "minimum_margin": 1,
+    "max_colors": 80,
+    "max_islands": 2,
+    "required_views": [],
+    "views": []
+  },
+  "criteria": {
+    "professional_quality": {
+      "decision": "fail",
+      "evidence": "The cottage and barn have readable roof forms but repeated shallow slab foundations and regular surface patterning limit architectural finish.",
+      "guidance": "Compare finish against a named professional reference; explain remaining weaknesses."
+    },
+    "readability": {
+      "decision": "pass",
+      "evidence": "At 1x the teal cottage and red barn are distinct, with recognizable doors and roof silhouettes.",
+      "guidance": "Identify each subject at native resolution from silhouette and proportions."
+    },
+    "pixel_clustering": {
+      "decision": "pass",
+      "evidence": "At 3x window and roof details form clusters; there are no detached singleton pixels.",
+      "guidance": "Inspect clusters for noise, isolated pixels, banding and accidental geometry."
+    },
+    "color_and_lighting": {
+      "decision": "pass",
+      "evidence": "Warm walls and cooler roofs separate; top roof highlights and darker side walls support depth.",
+      "guidance": "Check palette harmony, volume, light direction and controlled contrast."
+    },
+    "materials": {
+      "decision": "pass",
+      "evidence": "Window glass, timber doors and masonry foundations are distinguished by planes and color, though foundations remain repetitive.",
+      "guidance": "Explain how each material reads through its structure rather than generic pattern noise."
+    },
+    "specialized_design": {
+      "decision": "pass",
+      "evidence": "The cottage has a chimney and cross gable; the barn has double doors and a gambrel profile.",
+      "guidance": "Check anatomy, architecture and characteristic features of the subject."
+    },
+    "artistic_detail": {
+      "decision": "fail",
+      "evidence": "Window highlights and shingles add detail, but the long unvaried barn wall and repeated slab foundations remain plain.",
+      "guidance": "Assess depth, personality and finish beyond a merely acceptable primitive."
+    },
+    "originality": {
+      "decision": "fail",
+      "evidence": "The cottage and barn use different roof profiles, but the catalog reports exact artwork was previously rejected; metadata additions do not make the artwork new.",
+      "guidance": "Compare with prior and rejected work; explain new geometry and legitimate reuse."
+    },
+    "consistency": {
+      "decision": "pass",
+      "evidence": "The two buildings share perspective, outline weight, ground treatment and a coherent muted palette.",
+      "guidance": "Compare scale, perspective, style and detail density within the intended catalog."
+    },
+    "technical_integrity": {
+      "decision": "pass",
+      "evidence": "The 238 by 120 transparent sheet has two islands, no singleton pixels and at least 7 px of outer margin. Metadata names two buildings and supplies origin, y-sort, collision polygons and entrances.",
+      "guidance": "Verify dimensions, transparency, borders, directions and absence of deformation."
+    },
+    "game_readiness": {
+      "decision": "fail",
+      "evidence": "The metadata contains one whole-sheet frame with two attachments; separate extraction and collision alignment, y-sorting and placement in an engine remain untested.",
+      "guidance": "Verify complete views/states/animations and integration without manual repair."
+    }
+  }
+}

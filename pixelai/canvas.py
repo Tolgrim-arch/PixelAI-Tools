@@ -26,6 +26,7 @@ class Canvas:
         self.last_chimney: tuple[int, int] | None = None
         self.clipped_pixels: int = 0
         self.warnings: list[str] = []
+        self.attachments: list[dict] = []
 
     def copy(self) -> "Canvas":
         out = Canvas(self.width, self.height)
@@ -41,6 +42,8 @@ class Canvas:
         out.last_chimney = self.last_chimney
         out.clipped_pixels = self.clipped_pixels
         out.warnings = self.warnings.copy()
+        from copy import deepcopy
+        out.attachments = deepcopy(self.attachments)
         return out
 
     def in_bounds(self, x: int, y: int) -> bool:

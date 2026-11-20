@@ -8,13 +8,13 @@ from pixelai.color import RGBA, TRANSPARENT, parse_color
 from pixelai.exporter import extract_spec_from_png
 from pixelai.inspect_tool import load_png_as_canvas
 from pixelai.palettes import resolve_palette
-from pixelai import autotile, building, creatures, filters, iso, items, nature, rig, ui
+from pixelai import autotile, building, creatures, filters, iso, items, materials, nature, rig, ui
 
 
 _GENERATOR_OPS = frozenset({
     "animal_rig", "char_rig", "nature_rig", "item_rig",
     "building", "portrait_rig", "ui_rig", "autotile",
-    "tilemap", "iso_structure",
+    "tilemap", "iso_structure", "material",
 })
 
 
@@ -307,6 +307,8 @@ def _execute_ops_unchecked(canvas, ops, palette, defs, frame_idx, total_frames):
                 frame_idx=frame_idx,
                 total_frames=total_frames,
             )
+        elif kind == "material":
+            materials.draw_material(canvas, int(op.get("x", 0)), int(op.get("y", 0)), palette, op)
         elif kind == "ui_rig":
             ui.draw_ui_rig(
                 canvas,

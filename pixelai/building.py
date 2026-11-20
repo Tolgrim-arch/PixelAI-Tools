@@ -1,5 +1,7 @@
 """Top-down 3/4 cozy building generator (farmhouses, cottages, barns)."""
 
+from math import hypot
+from random import Random
 from typing import Any
 from pixelai.canvas import Canvas
 from pixelai.color import RGBA, brighten, darken, parse_color
@@ -12,6 +14,40 @@ def _resolve(name: str, palette: dict[str, RGBA], fallback: RGBA) -> RGBA:
         return parse_color(name, palette)
     except ValueError:
         return fallback
+
+
+def _shingle_slope(canvas, corners, color, seed, tile_width):
+    """Lay staggered, unequal shingles in the projected plane of a roof slope."""
+    ridge_l, ridge_r, eave_r, eave_l = corners
+    width = max(1, round(hypot(eave_r[0] - eave_l[0], eave_r[1] - eave_l[1])))
+    height = max(1, round(hypot(eave_l[0] - ridge_l[0], eave_l[1] - ridge_l[1])))
+    rng = Random(seed)
+    colors = (darken(color, .94), color, color, brighten(color, 1.02))
+
+    def point(x, y):
+        u, v = x / width, y / height
+        return tuple(round((a + (b - a) * u) * (1 - v) + (d + (c - d) * u) * v)
+                     for a, b, c, d in zip(ridge_l, ridge_r, eave_r, eave_l))
+
+    canvas.draw_polygon(corners, color)
+    row_h = max(3, round(tile_width * .62))
+    for i, top in enumerate(range(0, height, row_h)):
+        bottom = min(top + row_h, height)
+        left = -rng.randint(0, max(1, tile_width // 3)) - (i % 2) * (tile_width // 2)
+        while left < width:
+            right = left + rng.randint(max(3, tile_width * 2 // 3), max(4, tile_width * 4 // 3))
+            if right > 0:
+                start, end = max(0, left), min(width, right)
+                face = rng.choice(colors)
+                bevel = 1 if end - start > 4 else 0
+                bottom_l, bottom_r = point(start + bevel, bottom), point(end - bevel, bottom)
+                canvas.draw_polygon([point(start, top), point(end, top), point(end, max(top, bottom - 1)), bottom_r,
+                                     bottom_l, point(start, max(top, bottom - 1))], face)
+                if bottom - top >= 3:
+                    canvas.draw_line(*bottom_l, *bottom_r, darken(face, .87))
+                if end - start > tile_width and rng.random() < .42 and bottom - top >= 4:
+                    canvas.draw_line(*point(start + 2, top + 1), *point(end - 2, top + 1), brighten(face, 1.06))
+            left = right
 
 
 def draw_building(
@@ -51,7 +87,10 @@ def draw_building(
 
     overhang = max(2, bw // 18)
     wall_x = bx + overhang
-    wall_w = bw - overhang * 2
+    depth = min(bw // 3, max(5, int(op.get("depth", round(bw * .22)))))
+    return_rise = max(4, round(depth * .61))
+    wall_w = bw - overhang * 2 - depth
+    wall_r = wall_x + wall_w - 1
     roof_h = int(op.get("roof_h", max(14, int(bh * 0.46))))
     found_h = int(op.get("foundation_h", max(4, int(bh * 0.10))))
     wall_y = by + roof_h
@@ -59,6 +98,7 @@ def draw_building(
     found_y = wall_y + wall_h
     found_x = wall_x - max(1, overhang // 2)
     found_w = wall_w + max(1, overhang // 2) * 2
+    found_r = found_x + found_w - 1
 
     # 1. Ground shadow (marked as shadow so external outline draws cleanly over it)
     if op.get("ground_shadow", True):
@@ -75,15 +115,44 @@ def draw_building(
             dy = int(op.get("shadow_dy", max(2, bh // 16)))
             foot_y = found_y + found_h - 1
             canvas.draw_polygon(
-                [(found_x, found_y), (found_x + found_w - 1, found_y),
-                 (found_x + found_w - 1 + dx, foot_y + dy),
+                [(found_x, found_y), (found_r + depth, found_y - return_rise),
+                 (found_r + depth + dx, foot_y + dy),
                  (found_x + dx, foot_y + dy)],
                 shadow, filled=True,
             )
         finally:
             canvas.mark_shadow, canvas.mark_no_outline = prev_sh, prev_no
 
-    # 2.Stone Foundation
+    # The side uses the same floor and eave lines as the front, projected back into depth.
+    side_x = wall_r + depth
+    side_wall = darken(c_wall, .79)
+    canvas.draw_polygon([(wall_r, wall_y), (side_x, wall_y - return_rise),
+                         (side_x, found_y - return_rise), (wall_r, found_y)], side_wall)
+    side_eave = max(2, roof_h // 10)
+    canvas.draw_polygon([(wall_r, wall_y), (side_x, wall_y - return_rise),
+                         (side_x, wall_y - return_rise + side_eave), (wall_r, wall_y + side_eave)],
+                        darken(c_wall, .68))
+    canvas.draw_polygon([(found_r, found_y), (found_r + depth, found_y - return_rise),
+                         (found_r + depth, found_y + found_h - return_rise - 1),
+                         (found_r, found_y + found_h - 1)], c_stone_d)
+    canvas.draw_line(found_r, found_y, found_r + depth, found_y - return_rise, c_stone)
+    if op.get("windows", style != "barn") and depth >= 12 and wall_h >= 16:
+        side_win_x = wall_r + depth // 4
+        side_win_y = wall_y + max(5, wall_h // 3)
+        side_win_w, side_win_h = max(4, depth // 2), max(5, wall_h * 2 // 5)
+        lean = max(2, round(side_win_w * return_rise / depth))
+        canvas.draw_polygon([(side_win_x, side_win_y), (side_win_x + side_win_w, side_win_y - lean),
+                             (side_win_x + side_win_w, side_win_y + side_win_h - lean),
+                             (side_win_x, side_win_y + side_win_h)], c_wood_d)
+        canvas.draw_polygon([(side_win_x + 1, side_win_y + 1), (side_win_x + side_win_w - 1, side_win_y - lean + 2),
+                             (side_win_x + side_win_w - 1, side_win_y + side_win_h - lean - 1),
+                             (side_win_x + 1, side_win_y + side_win_h - 1)], darken(c_water, .82))
+        canvas.draw_line(side_win_x + 1, side_win_y + side_win_h // 2,
+                         side_win_x + side_win_w - 1, side_win_y + side_win_h // 2 - lean + 1, c_wood)
+        canvas.draw_line(side_win_x - 1, side_win_y + side_win_h + 1,
+                         side_win_x + side_win_w + 1, side_win_y + side_win_h - lean + 1, c_wood_l)
+
+    # 2. Stone Foundation
     canvas.draw_rect(found_x, found_y, found_w, found_h, c_stone, filled=True)
     canvas.draw_rect(found_x, found_y, found_w, max(1, found_h // 5), c_stone_l, filled=True)
     canvas.draw_rect(found_x, found_y + found_h - max(1, found_h // 4), found_w, max(1, found_h // 4), c_stone_d, filled=True)
@@ -115,6 +184,12 @@ def draw_building(
         beam_h = max(2, wall_h // 14)
         canvas.draw_rect(wall_x + post_w, beam_y, wall_w - post_w * 2, beam_h, c_wood, filled=True)
         canvas.draw_rect(wall_x + post_w, beam_y, wall_w - post_w * 2, 1, c_wood_l, filled=True)
+    elif style == "barn":
+        board_step = max(5, wall_w // 9)
+        for offset in range(board_step, wall_w, board_step):
+            face = brighten(c_wall, 1.0) if offset % (board_step * 3) == 0 else darken(c_wall, .96)
+            canvas.draw_rect(wall_x + offset, wall_y + eave_sh_h, min(wall_w - offset, max(1, board_step // 4)),
+                             wall_h - eave_sh_h, face)
 
     # 5. Door & Step
     if op.get("door", True):
@@ -140,8 +215,10 @@ def draw_building(
             canvas.draw_line(px, inner_y + 1, px, inner_y + inner_h - 1, c_wood_d)
 
         if style == "barn":
-            canvas.draw_line(inner_x + 1, inner_y + 1, inner_x + inner_w - 2, inner_y + inner_h - 2, c_cream)
-            canvas.draw_line(inner_x + inner_w - 2, inner_y + 1, inner_x + 1, inner_y + inner_h - 2, c_cream)
+            for left, right in ((inner_x + 1, inner_x + inner_w - 2), (inner_x + inner_w - 2, inner_x + 1)):
+                canvas.draw_polygon([(left, inner_y + 1), (left + 1, inner_y + 1),
+                                     (right + 1, inner_y + inner_h - 2), (right, inner_y + inner_h - 2)], c_wood_l)
+            canvas.draw_rect(inner_x + inner_w // 2, inner_y + 1, 1, inner_h - 1, c_wood_d)
         else:
             # Door handle
             hx = inner_x + inner_w - max(2, inner_w // 5)
@@ -189,90 +266,92 @@ def draw_building(
         canvas.draw_rect(win_x - 1, box_y, win_w + 2, box_h, c_wood, filled=True)
         canvas.draw_rect(win_x - 1, box_y + box_h - 1, win_w + 2, 1, c_wood_d, filled=True)
         fol_h = max(2, box_h // 2 + 1)
-        canvas.draw_rect(win_x, box_y - fol_h + 1, win_w, fol_h, c_grass, filled=True)
-        canvas.draw_rect(win_x, box_y, win_w, 1, c_grass_d, filled=True)
-        for fx_off, fcol in ((2, c_roof_l), (win_w // 2, c_wheat_l), (win_w - 3, c_cream)):
-            if 1 <= fx_off < win_w - 1:
-                canvas.set_pixel(win_x + fx_off, box_y - fol_h + 1, fcol)
+        canvas.draw_rect(win_x, box_y, win_w, 1, c_grass_d)
+        for offset, height, blossom in ((win_w // 5, fol_h, c_roof_l), (win_w // 2, fol_h + 1, c_wheat_l),
+                                        (win_w * 4 // 5, fol_h - 1, c_cream)):
+            fx = win_x + offset
+            radius = min(offset, win_w - offset - 1, max(1, win_w // 6))
+            canvas.draw_polygon([(fx - radius, box_y), (fx - radius + 1, box_y - height // 2),
+                                 (fx, box_y - height), (fx + radius - 1, box_y - height // 2),
+                                 (fx + radius, box_y)], c_grass)
+            canvas.set_pixel(fx, box_y - height, blossom)
+            if radius >= 2:
+                canvas.set_pixel(fx + 1, box_y - height + 1, blossom)
 
-    # 7. Pitched Roof + Shingle Texture + Eave Trim
-    neck = max(6, bw // 7)
-    top_l = bx + neck
-    top_r = bx + bw - 1 - neck
-    bot_l = bx
-    bot_r = bx + bw - 1
+    # 7. Front roof pitch and the visible gable end above the side wall.
+    roof_w = bw - depth
+    ridge_shift = depth if style in ("pitched", "shed") else (depth + 1) // 2
+    front_l = (bx, wall_y - 1)
+    front_r = (bx + roof_w - 1, wall_y - 1)
+    back_r = (bx + bw - 1, wall_y - 1 - return_rise)
+    ridge_l = (front_l[0] + ridge_shift, by)
+    ridge_r = (front_r[0] + ridge_shift, by)
     eave_y = wall_y - 1
-
-    canvas.draw_polygon([(top_l, by), (top_r, by), (bot_r, eave_y), (bot_l, eave_y)], c_roof, filled=True)
-    # Right-side directional roof slope shadow
-    sh_top_l = top_r - max(4, (top_r - top_l) // 4)
-    sh_bot_l = bot_r - max(6, bw // 5)
-    canvas.draw_polygon([(sh_top_l, by), (top_r, by), (bot_r, eave_y), (sh_bot_l, eave_y)], c_roof_d, filled=True)
-    # Left-side specular slope highlight
-    canvas.draw_line(top_l, by, bot_l, eave_y, c_roof_l)
-    canvas.draw_line(top_l + 1, by, bot_l + 1, eave_y, c_roof_l)
-    # Top ridge cap
-    ridge_h = max(2, roof_h // 10)
-    canvas.draw_rect(top_l, by, top_r - top_l + 1, ridge_h, c_roof_l, filled=True)
-    canvas.draw_rect(top_l, by + ridge_h, top_r - top_l + 1, 1, c_roof_d, filled=True)
-
-    # Shingle texture on main roof and shaded slope
-    canvas.scatter(
-        bx + 2,
-        by + ridge_h + 1,
-        bw - 4,
-        max(4, roof_h - ridge_h - 3),
-        c_roof_d,
-        density=0.65,
-        seed=seed,
-        target_color=c_roof,
-        pattern="shingle",
-    )
-    canvas.scatter(
-        sh_top_l,
-        by + ridge_h + 1,
-        bot_r - sh_top_l,
-        max(4, roof_h - ridge_h - 3),
-        darken(c_roof_d, 0.82),
-        density=0.55,
-        seed=seed + 3,
-        target_color=c_roof_d,
-        pattern="shingle",
-    )
-
-    # Horizontal wooden eave fascia beam (flush with bot_l..bot_r so zero 1px overhang spur!)
     fascia_h = max(2, roof_h // 11)
-    canvas.draw_rect(bot_l, eave_y - fascia_h + 1, bw, fascia_h, c_wood, filled=True)
-    canvas.draw_rect(bot_l, eave_y - fascia_h + 1, bw, 1, c_wood_l, filled=True)
-    canvas.draw_rect(bot_l, eave_y, bw, 1, c_wood_d, filled=True)
+    tile_width = max(5, bw // 11)
+    if style == "barn":
+        break_shift = max(1, ridge_shift // 3)
+        break_y = by + roof_h * 45 // 100
+        break_l = (front_l[0] + break_shift, break_y)
+        break_r = (front_r[0] + break_shift, break_y)
+        rear_break = (back_r[0] - break_shift, break_y - return_rise // 2)
+        canvas.draw_polygon([front_r, break_r, ridge_r, rear_break, back_r], side_wall)
+        _shingle_slope(canvas, [ridge_l, ridge_r, break_r, break_l], c_roof_l, seed, tile_width)
+        _shingle_slope(canvas, [break_l, break_r, front_r, front_l], c_roof, seed + 1, tile_width)
+        right_rake = [front_r, break_r, ridge_r, rear_break, back_r]
+    else:
+        canvas.draw_polygon([front_r, ridge_r, back_r], side_wall)
+        _shingle_slope(canvas, [ridge_l, ridge_r, front_r, front_l], c_roof, seed, tile_width)
+        right_rake = [front_r, ridge_r, back_r]
+    # A beam lip on the rake casts shade down the side gable and along the back eave.
+    for start, end in zip(right_rake, right_rake[1:]):
+        canvas.draw_polygon([start, end, (end[0], end[1] + fascia_h),
+                             (start[0], start[1] + fascia_h)], c_wood_d)
+        canvas.draw_line(*start, *end, c_roof_d)
+    if style in ("gable", "farmhouse", "barn") and depth >= 17 and roof_h >= 26:
+        vx = ridge_r[0] - 1
+        vy = by + roof_h * 48 // 100
+        vw = max(4, depth // 4)
+        vh = max(5, roof_h // 5)
+        canvas.draw_polygon([(vx, vy), (vx + vw, vy - 3), (vx + vw, vy + vh - 3), (vx, vy + vh)], c_wood)
+        for slat in range(vy + 2, vy + vh - 1, 2):
+            canvas.draw_line(vx + 1, slat, vx + vw - 1, slat - 2, darken(c_wall, .59))
+    canvas.draw_line(*ridge_l, *ridge_r, c_roof_l)
+    canvas.draw_line(*front_l, *ridge_l, c_roof_l)
+    canvas.draw_rect(bx, eave_y - fascia_h + 1, roof_w, fascia_h, c_wood)
+    canvas.draw_rect(bx, eave_y - fascia_h + 1, roof_w, 1, c_wood_l)
+    canvas.draw_rect(bx, eave_y, roof_w, 1, c_wood_d)
 
-    # 8. Front Gable Dormer / Peak (for "gable" or "barn")
-    if style in ("gable", "farmhouse", "barn"):
-        g_half_w = max(8, bw // 5)
-        cx_mid = bx + bw // 2
-        g_peak_y = by + max(4, roof_h // 5)
-        g_base_y = eave_y
-        # Gable wall triangle
-        canvas.draw_polygon(
-            [(cx_mid, g_peak_y), (cx_mid + g_half_w, g_base_y), (cx_mid - g_half_w, g_base_y)],
-            c_wall,
-            filled=True,
-        )
-        # Under-gable eave shadow
-        for dx in range(-g_half_w + 2, g_half_w - 1):
-            gy_edge = g_peak_y + int(abs(dx) * (g_base_y - g_peak_y) / max(1, g_half_w))
-            for sy in range(gy_edge + 1, min(g_base_y, gy_edge + 3)):
-                canvas.set_pixel(cx_mid + dx, sy, darken(c_wall, 0.78))
-        # Gable wooden bargeboards (thick pitched rafters terminating flush with eave fascia)
-        rafter_t = max(2, fascia_h)
-        for t_off in range(rafter_t):
-            y_end = min(eave_y, g_base_y - (rafter_t - 1 - t_off))
-            canvas.draw_line(cx_mid, g_peak_y + t_off, cx_mid - g_half_w, y_end, c_wood_l if t_off == 0 else c_wood)
-            canvas.draw_line(cx_mid, g_peak_y + t_off, cx_mid + g_half_w, y_end, c_wood_l if t_off == 0 else c_wood_d)
+    # 8. Cross-gable: the short ridge and both roof returns meet the main pitch uphill.
+    if op.get("dormer", style in ("gable", "farmhouse", "barn")) and roof_w >= 27 and roof_h >= 14:
+        g_half_w = max(7, roof_w * (22 if style == "barn" else 20) // 100)
+        rng = Random(seed + 79)
+        cx_mid = bx + (roof_w // 2 if style == "barn" else roof_w * 41 // 100 + rng.randint(-2, 2))
+        g_base_y = eave_y + 1
+        g_peak_y = eave_y - max(9, roof_h * (55 if style == "barn" else 61) // 100)
+        left = (cx_mid - g_half_w, g_base_y)
+        peak = (cx_mid, g_peak_y)
+        right = (cx_mid + g_half_w, g_base_y)
+        uphill = max(5, (g_peak_y - by) * 3 // 4)
+        skew = max(2, ridge_shift * uphill // max(1, roof_h))
+        rear_peak = (cx_mid + skew, g_peak_y - uphill)
+        left_valley = (cx_mid - g_half_w + skew + max(1, g_half_w // 5), g_base_y - uphill)
+        right_valley = (cx_mid + g_half_w + skew, g_base_y - uphill - max(2, roof_h // 10))
+        canvas.draw_polygon([right, right_valley, (right_valley[0] + 4, right_valley[1] + 4),
+                             (right[0] + 4, right[1] - 2)], c_roof_d)
+        _shingle_slope(canvas, [rear_peak, peak, left, left_valley], c_roof_d, seed + 61, max(4, tile_width - 1))
+        _shingle_slope(canvas, [peak, rear_peak, right_valley, right], brighten(c_roof, 1.09), seed + 63,
+                       max(4, tile_width - 1))
+        canvas.draw_polygon([left, peak, right], c_wall)
+        canvas.draw_line(*peak, *rear_peak, c_roof_l)
+        for start, end, trim in ((peak, left, c_wood_l), (peak, right, c_wood)):
+            canvas.draw_polygon([start, end, (end[0], end[1] + fascia_h),
+                                 (start[0], start[1] + fascia_h)], trim)
+        canvas.draw_rect(left[0] + 1, g_base_y, g_half_w * 2 - 1, 1, c_wood)
 
-        # Attic round window or barn hayloft opening inside the gable
-        attic_r = max(3, min(g_half_w // 3, (g_base_y - g_peak_y) // 4))
-        attic_cy = g_peak_y + (g_base_y - g_peak_y) * 2 // 3 - 1
+        # Attic round window or barn hayloft opening inside the gable.
+        attic_r = max(2, min(g_half_w // 3, (g_base_y - g_peak_y) // 5))
+        attic_cy = g_peak_y + (g_base_y - g_peak_y) * 7 // 10 - 1
         if style == "barn":
             lw = attic_r * 2
             lh = attic_r * 2
@@ -290,18 +369,30 @@ def draw_building(
         cw = max(6, bw // 8)
         ch = max(10, roof_h // 3 + 5)
         cx = wall_x + wall_w - cw - max(6, wall_w // 6)
-        min_cy = max(9, cw // 2 + 4) if op.get("smoke", True) else 2
-        cy = max(min_cy, by - max(5, ch // 3))
-        # Roof flashing shadow at chimney base
-        canvas.draw_rect(cx - 1, cy + ch, cw + 2, 2, darken(c_roof_d, 0.78), filled=True)
-        canvas.draw_rect(cx, cy, cw, ch, c_stone, filled=True)
-        canvas.draw_rect(cx, cy, max(1, cw // 5), ch, c_stone_l, filled=True)
-        canvas.draw_rect(cx + cw - max(1, cw // 5), cy, max(1, cw // 5), ch, c_stone_d, filled=True)
-        canvas.scatter(cx + 1, cy + 3, max(2, cw - 2), max(4, ch - 4), c_stone_d, density=0.55, seed=seed + 7, target_color=c_stone, pattern="brick")
+        cheek = max(3, cw // 3)
+        lift = max(2, cheek // 2)
+        min_cy = max(9, cw // 2 + 4) if op.get("smoke", True) else lift + 1
+        cy = max(min_cy, by - max(4, ch // 4))
+        cr = cx + cw - 1
+        canvas.draw_polygon([(cx - 2, cy + ch - 1), (cr + cheek + 3, cy + ch - lift - 1),
+                             (cr + cheek + 5, cy + ch), (cx, cy + ch + 1)], c_roof_d)
+        canvas.draw_rect(cx, cy, cw, ch, c_stone)
+        canvas.draw_rect(cx, cy, 1, ch, c_stone_l)
+        canvas.draw_polygon([(cr, cy), (cr + cheek, cy - lift), (cr + cheek, cy + ch - lift - 1),
+                             (cr, cy + ch - 1)], c_stone_d)
+        for course in range(4, ch - 2, max(3, cw // 3)):
+            mortar = cy + course
+            canvas.draw_line(cx + 1, mortar, cr - 1, mortar, darken(c_stone, .88))
+            joint = cx + cw * (1 if course % 2 else 2) // 3
+            canvas.draw_line(joint, mortar, joint, mortar - 2, darken(c_stone, .9))
         cap_h = max(2, ch // 6)
-        canvas.draw_rect(cx - 1, cy, cw + 2, cap_h, c_stone_d, filled=True)
-        canvas.draw_rect(cx - 1, cy, cw + 2, 1, c_stone_l, filled=True)
-        canvas.last_chimney = (cx + cw // 2, cy)
+        canvas.draw_rect(cx - 1, cy, cw + 2, cap_h, c_stone_l)
+        canvas.draw_polygon([(cr + 1, cy), (cr + cheek + 1, cy - lift),
+                             (cr + cheek + 1, cy - lift + cap_h), (cr + 1, cy + cap_h)], darken(c_stone, .88))
+        canvas.draw_polygon([(cx - 1, cy), (cx + cheek - 1, cy - lift),
+                             (cr + cheek + 1, cy - lift), (cr + 1, cy)], c_stone_l)
+        canvas.draw_line(cx + cheek, cy - 1, cr - 1, cy - 1, c_stone_d)
+        canvas.last_chimney = (cx + cw // 2, cy - lift)
 
         if op.get("smoke", True):
             prev_no = canvas.mark_no_outline
@@ -315,3 +406,21 @@ def draw_building(
             canvas.draw_circle(smoke_cx + (phase % 2), y1, r1, c_cream, filled=True)
             canvas.draw_circle(smoke_cx + 3 + ((phase + 1) % 2), y2, r2, c_cream, filled=True)
             canvas.mark_no_outline = prev_no
+
+    canvas.attachments.append({
+        "type": "building",
+        "name": str(op.get("name", f"{style}_building")),
+        "origin": [found_x + found_w // 2, found_y + found_h - 1],
+        "y_sort": [found_x + found_w // 2, found_y + found_h - 1],
+        "collision": {
+            "shape": "polygon",
+            "points": [
+                [found_x, found_y],
+                [found_r, found_y],
+                [found_r + depth, found_y - return_rise],
+                [found_r + depth, found_y + found_h - return_rise - 1],
+                [found_x, found_y + found_h - 1],
+            ],
+        },
+        "entrance": [door_x + door_w // 2, found_y + found_h - 1],
+    })

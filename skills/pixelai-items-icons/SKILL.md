@@ -24,7 +24,7 @@ Use the following design choices to interpret the brief. Use sensible defaults f
 
 ## `item_rig` Reference
 - `"op": "item_rig"`
-- `"kind"`: `"potion" | "sword" | "shield" | "chest" | "gem" | "key" | "coin" | "apple" | "axe" | "pickaxe" | "carrot" | "bread" | "fish"`
+- `"kind"`: `"potion" | "sword" | "shield" | "chest" | "gem" | "key" | "coin" | "apple" | "axe" | "pickaxe" | "carrot" | "bread" | "fish" | "lantern"`
 - `"orientation"`: `"vertical" | "diagonal"` (applies to `potion`, `sword`, `key`)
 - `"size"`: `16 | 24 | 32 | 64` (default `24`; drawn at native resolution)
 - `"color"`, `"secondary_color"`, `"cork_color"` (palette key or hex)
@@ -53,5 +53,6 @@ Use the following design choices to interpret the brief. Use sensible defaults f
 - `carrot`: tapered root, scored orange skin and green foliage; `secondary_color` controls leaves.
 - `bread`: rounded crust, underside plane and diagonal pale scores; `secondary_color` controls crumb.
 - `fish`: separate tail/dorsal/pelvic fins, reflective belly, gill and eye; `secondary_color` controls fins.
+- `lantern`: fitted metal handle and uprights, cool glass chamber and animated fantasy flame; `color` controls metal, `secondary_color` glass, and `flame_color` the light source. `frame:0..3` changes flame geometry.
 - These five types use their own silhouettes; orientation is currently fixed. Unknown kinds raise an error. For unsupported objects, build a new spec from primitives rather than passing an invented kind.
 - Inspect at 1x and nearest-neighbor magnification. Check 16/32/64 outputs for readable silhouette, material highlights and clipping before delivery.

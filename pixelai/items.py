@@ -322,6 +322,40 @@ def _draw_tool_or_food(local: Canvas, size: int, kind: str, color: RGBA, seconda
                 local.set_pixel(*point(x, y), light)
 
 
+def _draw_lantern(local: Canvas, size: int, metal: RGBA, glass: RGBA,
+                  flame: RGBA, shine: bool, frame: int) -> None:
+    """Draw a fitted fantasy lantern with handle, glass chamber and living flame."""
+    def point(x: float, y: float) -> tuple[int, int]:
+        return round(x * size / 24), round(y * size / 24)
+
+    def polygon(points, color):
+        local.draw_polygon([point(x, y) for x, y in points], color, filled=True)
+
+    metal_l, metal_d = brighten(metal, 1.28), darken(metal, .72)
+    glass_l, glass_d = brighten(glass, 1.25), darken(glass, .66)
+    flame_l, flame_d = brighten(flame, 1.35), darken(flame, .76)
+    polygon([(9, 6), (9, 4), (10.5, 2.5), (13.5, 2.5), (15, 4), (15, 7),
+             (13.5, 7), (13.5, 4.5), (13, 4), (11, 4), (10.5, 5), (10.5, 6)], metal_d)
+    polygon([(9.5, 4), (11, 2.5), (13.5, 2.5), (14, 3.5), (11.25, 3), (10, 4.5)], metal_l)
+    polygon([(8.5, 6), (15, 6), (18, 9), (17, 10.5), (7, 10.5), (6, 9)], metal)
+    polygon([(8.5, 6), (15, 6), (17, 8.75), (13.5, 8.25), (11.5, 7), (9, 7), (7, 9), (6, 9)], metal_l)
+    polygon([(7.5, 10), (16.5, 10), (16.5, 16), (14.5, 19), (9.5, 19), (7.5, 16.5)], glass)
+    polygon([(8.5, 11), (15.5, 11), (15.5, 16), (13.5, 18), (10, 18), (8.5, 16)], glass_d)
+    polygon([(9, 11), (14.5, 11), (13.5, 14), (13.5, 17), (12, 18), (10, 16.5), (9, 15)], glass_l)
+    polygon([(7, 10), (8.5, 10), (8.5, 16), (10, 18.5), (9.5, 19.5), (7.5, 17), (7, 16)], metal_l)
+    polygon([(15.5, 10), (17, 10), (17, 16), (15, 19), (14, 19), (15.5, 16)], metal_d)
+    sway = (-.6, .2, .8, -.1)[frame % 4]
+    polygon([(11, 17), (10, 14.5), (10.7, 13.2), (11.7, 14),
+             (13.2 + sway, 11.8), (13.7, 14.5), (13, 16.5), (12, 17.5)], flame_d)
+    polygon([(11.4, 16.5), (11, 14.6), (11.6, 13.7), (12.2 + sway / 2, 14.5),
+             (13, 13.1), (13, 15.2), (12.2, 16.8)], flame)
+    if shine:
+        polygon([(11.7, 15.7), (11.9, 14.8), (12.5, 14), (12.4, 15.5)], flame_l)
+        local.set_pixel(*point(9.3, 12), brighten(glass_l, 1.2))
+    polygon([(9.5, 18), (14.5, 18), (17, 19.5), (15.5, 21), (8, 21), (7, 19.5)], metal_d)
+    polygon([(9.5, 18), (14, 18), (15, 18.6), (9.5, 19), (8, 20), (7.5, 19.5)], metal_l)
+
+
 def draw_item_rig(
     canvas: Canvas,
     x: int,
@@ -387,8 +421,12 @@ def draw_item_rig(
                            col("secondary_color", secondary, secondary_fallback), shine)
     elif kind in ("coin", "apple"):
         _draw_coin_or_apple(local, size, kind, col("color", "wheat" if kind == "coin" else "roof", "#e0ab43"), col("secondary_color", "wood_d", "#6e422c"), shine, frame)
+    elif kind == "lantern":
+        _draw_lantern(local, size, col("color", "wood", "#946349"),
+                      col("secondary_color", "water_d", "#3b7980"),
+                      col("flame_color", "grass_l", "#a8edac"), shine, frame)
 
     else:
-        raise ValueError(f"Unsupported item kind: {kind!r}; choose potion, sword, chest, gem, shield, key, coin, apple, axe, pickaxe, carrot, bread, fish")
+        raise ValueError(f"Unsupported item kind: {kind!r}; choose potion, sword, chest, gem, shield, key, coin, apple, axe, pickaxe, carrot, bread, fish, lantern")
 
     canvas.blit(local, x, y)

@@ -1,5 +1,7 @@
 """Post-processing filters for pixel art canvases."""
 
+from copy import deepcopy
+
 from pixelai.canvas import Canvas
 from pixelai.color import RGBA, brighten, darken
 
@@ -7,6 +9,18 @@ from pixelai.color import RGBA, brighten, darken
 def _copy_meta(src: Canvas, dst: Canvas) -> None:
     dst.clipped_pixels = src.clipped_pixels
     dst.warnings = src.warnings.copy()
+    dst.attachments = deepcopy(src.attachments)
+
+
+def _transform_attachment_points(value, factor: int = 1, dx: int = 0, dy: int = 0):
+    """Transform coordinate pairs in runtime attachment metadata."""
+    if isinstance(value, dict):
+        return {key: _transform_attachment_points(item, factor, dx, dy) for key, item in value.items()}
+    if isinstance(value, list):
+        if len(value) == 2 and all(isinstance(item, int) for item in value):
+            return [value[0] * factor + dx, value[1] * factor + dy]
+        return [_transform_attachment_points(item, factor, dx, dy) for item in value]
+    return value
 
 
 def pad(canvas: Canvas, size: int = 1) -> Canvas:
@@ -15,6 +29,7 @@ def pad(canvas: Canvas, size: int = 1) -> Canvas:
         return canvas
     out = Canvas(canvas.width + size * 2, canvas.height + size * 2)
     _copy_meta(canvas, out)
+    out.attachments = _transform_attachment_points(out.attachments, dx=size, dy=size)
     out.blit(canvas, size, size)
     return out
 
@@ -80,6 +95,7 @@ def scale(canvas: Canvas, factor: int) -> Canvas:
         return canvas
     out = Canvas(canvas.width * factor, canvas.height * factor)
     _copy_meta(canvas, out)
+    out.attachments = _transform_attachment_points(out.attachments, factor=factor)
     for y in range(canvas.height):
         for x in range(canvas.width):
             c = canvas.get_pixel(x, y)

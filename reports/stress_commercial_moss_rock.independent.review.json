@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "artifact": {
+    "file_sha256": "3d48f9a71e7f11913d1d8a1c378fa4fb69438e707131319001dadd005ac27843",
+    "pixel_sha256": "54dbe87e78e84950adc6d87ba5fc5488898e92a774ebe44f1679d7b43977663f",
+    "content_sha256": "1c2c1fbae39e85986e51b1118bf7c9566ed0816519cf13161f400227cfa86a1f",
+    "silhouette_sha256": "42cb843e8d8060a383cfdbfa865d588ea95bb6178a3efa8cc3920d885c082718"
+  },
+  "generated_by": "pixelai-tools; generating agent not independently established",
+  "reviewed_by": "Codex /root/independent_candidate_review",
+  "comparison_reference": {
+    "name": "Sprout Lands Asset Pack by Cup Nooble",
+    "url": "https://cupnooble.itch.io/sprout-lands-asset-pack",
+    "notes": "Published farming asset pack describes simple character animations and, in its premium pack, six animation types in four directions; comparison is limited to published description, not a direct visual inspection of its downloadable sprites."
+  },
+  "inspection": {
+    "native_resolution": true,
+    "integer_zoom": 3
+  },
+  "contract": {
+    "width": 60,
+    "height": 46,
+    "frame_count": 1,
+    "minimum_margin": 1,
+    "max_colors": 10,
+    "max_islands": 1,
+    "required_views": [],
+    "views": []
+  },
+  "criteria": {
+    "professional_quality": {
+      "decision": "fail",
+      "evidence": "The green cap improves identification, but the compact slab and shallow moss layer remain visually basic.",
+      "guidance": "Compare finish against a named professional reference; explain remaining weaknesses."
+    },
+    "readability": {
+      "decision": "pass",
+      "evidence": "At 1x the subject reads as a small rock with green vegetation across its top.",
+      "guidance": "Identify each subject at native resolution from silhouette and proportions."
+    },
+    "pixel_clustering": {
+      "decision": "pass",
+      "evidence": "The moss forms connected horizontal clusters; the rock uses broad facets with a clean silhouette at 3x.",
+      "guidance": "Inspect clusters for noise, isolated pixels, banding and accidental geometry."
+    },
+    "color_and_lighting": {
+      "decision": "pass",
+      "evidence": "Green contrasts against slate and the upper planes are lighter than the lower faces.",
+      "guidance": "Check palette harmony, volume, light direction and controlled contrast."
+    },
+    "materials": {
+      "decision": "pass",
+      "evidence": "Green foliage and gray stone separate by color, although the moss texture is a thin stripe.",
+      "guidance": "Explain how each material reads through its structure rather than generic pattern noise."
+    },
+    "specialized_design": {
+      "decision": "pass",
+      "evidence": "The moss follows the upper surface, but its narrow regular band gives little organic growth.",
+      "guidance": "Check anatomy, architecture and characteristic features of the subject."
+    },
+    "artistic_detail": {
+      "decision": "pass",
+      "evidence": "A few bright green marks and stone facets add depth, but the moss has limited volume.",
+      "guidance": "Assess depth, personality and finish beyond a merely acceptable primitive."
+    },
+    "originality": {
+      "decision": "fail",
+      "evidence": "The visible cap differs from the ore rock, though both keep a similar low boulder profile.",
+      "guidance": "Compare with prior and rejected work; explain new geometry and legitimate reuse."
+    },
+    "consistency": {
+      "decision": "pass",
+      "evidence": "The slate ramp and ground shadow fit the ore rock in the same set.",
+      "guidance": "Compare scale, perspective, style and detail density within the intended catalog."
+    },
+    "technical_integrity": {
+      "decision": "pass",
+      "evidence": "The 60 by 46 transparent PNG has one island, 10 colors, no singleton pixels and a 2 px minimum margin.",
+      "guidance": "Verify dimensions, transparency, borders, directions and absence of deformation."
+    },
+    "game_readiness": {
+      "decision": "fail",
+      "evidence": "Tile placement, pivot, collision and any interaction or depletion states were not verified in a game.",
+      "guidance": "Verify complete views/states/animations and integration without manual repair."
+    }
+  }
+}

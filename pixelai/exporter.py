@@ -112,7 +112,10 @@ def export_spritesheet(
             if frame_names and idx < len(frame_names)
             else f"frame_{idx}"
         )
-        meta_frames.append({"name": name, "x": x, "y": y, "w": fw, "h": fh})
+        frame_meta = {"name": name, "x": x, "y": y, "w": fw, "h": fh}
+        if frame.attachments:
+            frame_meta["attachments"] = frame.attachments
+        meta_frames.append(frame_meta)
 
     out_path = Path(path)
     out_path.parent.mkdir(parents=True, exist_ok=True)

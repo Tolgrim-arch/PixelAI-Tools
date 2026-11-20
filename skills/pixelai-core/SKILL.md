@@ -27,10 +27,13 @@ New assets must start from a new spec with `"fresh": true` and use `validate --f
 
 Choose surface accents by material: `scatter.pattern` supports `rock`, `soil`, `leaves`, `bark`, `water`, `cloth`, plus `wood`, `grass`, `brick`, `cobble`, `shingle`. Use restrained color planes and `target_color` or `inside:true` to keep texture inside the surface. Seeds are deterministic; changing seed is a variation, not proof of a new design.
 
+For complete material planes, use `{"op":"material","kind":"rock|cobble|soil|leaves|bark|grass|water|cloth|wood|roof","w":64,"h":48,"seed":42}`. `inside:true` paints only an existing opaque silhouette and preserves its alpha and marked ground shadows. `color` builds a five-plane ramp from a base tint; `colors` accepts exactly five shadow-to-highlight colors. `trunk` aliases bark and `shingle` aliases roof. This creates bounded native surfaces, not seamless autotiles.
+
 1. Run `python -m pixelai --version`. If the runtime is missing, install the bundled project from the plugin root (two directories above this skill) using `python -m pip install "<plugin-root>"`. Use the same interpreter throughout.
 2. Choose the closest specialized skill. Use reasonable defaults for unspecified art direction and use `python -m pixelai guide` for unfamiliar operations.
-3. Write a JSON spec next to the intended assets. Run `python -m pixelai validate spec.json` and correct reported errors. Check warnings for accidental clipping.
-4. Run `python -m pixelai render spec.json -o output.png --json`. Use the returned artifact paths and `inspect` to check the result. Review the actual image when the host can display it.
+3. Write a JSON spec next to the intended assets. Run `python -m pixelai validate spec.json --fresh` and correct reported errors. Check warnings for accidental clipping.
+4. Run `python -m pixelai render spec.json -o output.png --fresh --json`. Use the returned artifact paths and `inspect` to check the result. Review the actual image at native size and integer zoom.
+5. For commercial approval, follow `pixelai-export-qa`: `pixelai qa` fails closed until a separate reviewer supplies evidence for all eleven criteria. Tests and metrics never certify aesthetics.
 
 ## Aesthetic Standard (Mandatory)
 - **Default (`"style": "ext_outline"`):** Lineless Interior + 1px External Outline. Pure color planes, specular bevels (`"bevel": true`), recessed cavities (`"recessed": true`), ZERO dark internal lines.

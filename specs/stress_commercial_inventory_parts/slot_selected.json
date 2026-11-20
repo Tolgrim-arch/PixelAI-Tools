@@ -1,0 +1,19 @@
+{
+  "ops": [
+    {
+      "state": "selected",
+      "h": 28,
+      "op": "ui_rig",
+      "kind": "slot",
+      "x": 2,
+      "y": 2,
+      "w": 28,
+      "theme": "gold"
+    }
+  ],
+  "palette": "cozy24",
+  "fresh": true,
+  "width": 32,
+  "height": 32,
+  "style": "ext_outline"
+}

@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "artifact": {
+    "file_sha256": "7f9bb324d6454d70dc8791fed6961b79adc13121ec8f25abfdd048ac0be9b846",
+    "pixel_sha256": "0a4ab7aab99fae0a8dab9fabba5c221461a8d2e447ddf67377e83ae0b5667a61",
+    "content_sha256": "e76d7740edd2a50a37f80a00d851bfd5968b51b6a1c62b88bc8a5eaab74488a3",
+    "silhouette_sha256": "7bc2efbbe2e302cb74de3ece0538e484213d99eda343f769cfae17a7b1729255"
+  },
+  "generated_by": "pixelai-tools; generating agent not independently established",
+  "reviewed_by": "Codex /root/independent_candidate_review",
+  "comparison_reference": {
+    "name": "Sprout Lands Asset Pack by Cup Nooble",
+    "url": "https://cupnooble.itch.io/sprout-lands-asset-pack",
+    "notes": "Published farming asset pack describes simple character animations and, in its premium pack, six animation types in four directions; comparison is limited to published description, not a direct visual inspection of its downloadable sprites."
+  },
+  "inspection": {
+    "native_resolution": true,
+    "integer_zoom": 3
+  },
+  "contract": {
+    "width": 60,
+    "height": 46,
+    "frame_count": 1,
+    "minimum_margin": 1,
+    "max_colors": 11,
+    "max_islands": 1,
+    "required_views": [],
+    "views": []
+  },
+  "criteria": {
+    "professional_quality": {
+      "decision": "fail",
+      "evidence": "The warm central deposit is recognizable, but its small decorative cluster has limited material specificity.",
+      "guidance": "Compare finish against a named professional reference; explain remaining weaknesses."
+    },
+    "readability": {
+      "decision": "pass",
+      "evidence": "At 1x the orange patch reads as a resource embedded in stone; the mineral type remains ambiguous.",
+      "guidance": "Identify each subject at native resolution from silhouette and proportions."
+    },
+    "pixel_clustering": {
+      "decision": "pass",
+      "evidence": "At 3x the ore forms a connected cluster bounded by broad stone planes with no isolated single pixels.",
+      "guidance": "Inspect clusters for noise, isolated pixels, banding and accidental geometry."
+    },
+    "color_and_lighting": {
+      "decision": "pass",
+      "evidence": "Warm ore stands out against cool slate, and brighter upper faces imply top lighting.",
+      "guidance": "Check palette harmony, volume, light direction and controlled contrast."
+    },
+    "materials": {
+      "decision": "pass",
+      "evidence": "The gray faces read as stone; orange facets suggest a mineral but do not establish a particular ore.",
+      "guidance": "Explain how each material reads through its structure rather than generic pattern noise."
+    },
+    "specialized_design": {
+      "decision": "pass",
+      "evidence": "An inset resource patch and surrounding rock indicate a mineable node, but no depleted state is present.",
+      "guidance": "Check anatomy, architecture and characteristic features of the subject."
+    },
+    "artistic_detail": {
+      "decision": "pass",
+      "evidence": "Overlapping facets provide depth, while the small deposit has limited variation.",
+      "guidance": "Assess depth, personality and finish beyond a merely acceptable primitive."
+    },
+    "originality": {
+      "decision": "fail",
+      "evidence": "The ore marking differs from the green moss rock, though the two silhouettes remain closely related.",
+      "guidance": "Compare with prior and rejected work; explain new geometry and legitimate reuse."
+    },
+    "consistency": {
+      "decision": "pass",
+      "evidence": "Scale, slate palette and bottom shadow align with the moss rock.",
+      "guidance": "Compare scale, perspective, style and detail density within the intended catalog."
+    },
+    "technical_integrity": {
+      "decision": "pass",
+      "evidence": "The 60 by 46 transparent PNG has one island, 11 colors, no singleton pixels and a 2 px minimum margin.",
+      "guidance": "Verify dimensions, transparency, borders, directions and absence of deformation."
+    },
+    "game_readiness": {
+      "decision": "fail",
+      "evidence": "Tile placement, pivot, collision and depletion behavior were not verified in a game.",
+      "guidance": "Verify complete views/states/animations and integration without manual repair."
+    }
+  }
+}

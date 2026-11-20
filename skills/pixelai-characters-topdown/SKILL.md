@@ -25,6 +25,7 @@ Use the following design choices to interpret the brief. Use sensible defaults f
 - `"pose"`: `"idle" | "walk" | "run" | "work"` (`frame`: `0..3`)
 - `"shadow"`: `true | false` (default `true`)
 - **Colors:** `skin`, `hair`, `eye`, `shirt`, `pants`, `shoes`, `hat` (optional), `tool`, `handle`, `shadow_color`.
+- **Native rig at 32 px and above:** `hair_style` accepts `swept` (default), `crop`, or `ponytail`. `outfit` accepts `overalls` (default), `coat`, or `apron`. `trim` sets the accents and apron color. At 16 px, the compact rig uses the original overalls and hairstyle.
 - **Custom Overlays:** Layer hats, scarves, or backpacks after `char_rig` using `"inside": true` (for shading/patterns) or normal ops on the same canvas.
 
 ## JSON Example (32x32 Farmer 4-Frame Walk Right, No Shadow)
@@ -48,4 +49,6 @@ Use the following design choices to interpret the brief. Use sensible defaults f
 - Default to a complete down/up/left/right set unless the user requests one view. One operation produces one direction; explicitly generate all four.
 - Inspect the contact sheet: front and back must differ; left and right must preserve the requested facing in every action, including jump/surprised.
 - Create fresh specs. Do not use discarded sheets as a new source. Check body proportions and animation contacts at native resolution before delivery.
-- The built-in rig has chibi proportions and overalls. It is not a general anatomy model; use a fresh primitive-based spec for a different body or costume rather than claiming the preset satisfies it.
+- At 32 px and above, check that boots alternate through all four walk frames, the tool stays gripped through all four work frames, and the coat or apron remains readable from the back and both sides.
+- The native rig uses stylized RPG proportions and three built-in costumes. For anatomy or garments outside these presets, inspect the requested silhouette and use a primitive-based spec when the preset cannot express it.
+- Render `specs/commercial_humans.json` to review 32px and 64px examples. Each size has three rows per character (idle, walk, work). Across each row, the four-frame groups run down, up, left, then right.

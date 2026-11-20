@@ -24,6 +24,36 @@ _HEART_ROWS = (
 )
 
 
+def _metal_rails(local: Canvas, frame: int, base: RGBA, light: RGBA, dark: RGBA) -> None:
+    """Layer a chased gold rail with structural ribs and sparse, varied inlays."""
+    for vertical, length in ((False, local.width), (True, local.height)):
+        across = local.width if vertical else local.height
+        for far in (False, True):
+            def point(along, depth):
+                depth = across - 1 - depth if far else depth
+                return (depth, along) if vertical else (along, depth)
+
+            def line(start, end, depth, color):
+                local.draw_line(*point(start, depth), *point(end, depth), color)
+
+            # A raised spine, dark undercut, and narrow light-catching flutes
+            # give the metal volume before ornament is added.
+            for depth, tone in ((1, dark), (2, base), (3, light),
+                                (4, base), (5, base), (frame - 2, dark)):
+                if 0 <= depth < frame:
+                    line(frame + 2, length - frame - 3, depth,
+                         dark if far and depth in (2, 3) else tone)
+            # Fine chased grooves, divided into long panels by raised collars.
+            span = length - 2 * (frame + 5)
+            if span > 18:
+                for fraction in (.32, .68):
+                    at = round(frame + 5 + span * fraction)
+                    mid = frame // 2
+                    for delta in (-1, 0, 1):
+                        line(at + delta, at + delta, mid + (delta == 1),
+                             darken(base, .72) if delta == 0 else brighten(base, 1.2))
+
+
 def _draw_panel(local: Canvas, theme: str, colors: tuple[RGBA, RGBA, RGBA, RGBA],
                 frame: int, filled: bool) -> None:
     """Build material framing at final resolution; details never scale with width."""
@@ -42,6 +72,8 @@ def _draw_panel(local: Canvas, theme: str, colors: tuple[RGBA, RGBA, RGBA, RGBA]
                     brighten(base, 1.1), filled=True)
     local.draw_rect(frame, frame, w - 2 * frame, h - 2 * frame,
                     inner if filled else (0, 0, 0, 0), filled=True)
+    if theme == "gold" and frame >= 6:
+        _metal_rails(local, frame, base, light, dark)
     pitch = {"wood": 17, "stone": 16, "gold": 14, "paper": 21, "dark": 18}[theme]
     mid = max(1, frame // 2)
     for tx in range(frame + 4, w - frame - 4, pitch):
@@ -55,6 +87,8 @@ def _draw_panel(local: Canvas, theme: str, colors: tuple[RGBA, RGBA, RGBA, RGBA]
                                 tx, frame - 2 if ty == mid else h - 2, brighten(base, 1.16))
                 local.set_pixel(tx + 3, ty, light)
             elif theme == "gold":
+                if frame >= 6:
+                    continue
                 local.draw_line(tx - 1, ty, tx, ty - 1, light)
                 local.draw_line(tx, ty - 1, tx + 1, ty, light)
                 local.set_pixel(tx, ty + 1, brighten(base, 1.13))
@@ -73,10 +107,20 @@ def _draw_panel(local: Canvas, theme: str, colors: tuple[RGBA, RGBA, RGBA, RGBA]
                 local.set_pixel(cx + 1, cy, brighten(base, 1.18))
                 local.set_pixel(cx, cy - 1, (245, 227, 183, 255))
         elif theme == "gold":
-            radius = max(1, (frame - 2) // 2)
-            local.draw_polygon([(cx, cy - radius), (cx + radius, cy),
-                                (cx, cy + radius), (cx - radius, cy)], light, filled=True)
-            local.set_pixel(cx, cy, (91, 158, 156, 255))
+            # Corner fittings read as layered brackets around a faceted inset,
+            # rather than four identical flat diamond badges.
+            inward_x = 1 if cx < w // 2 else -1
+            inward_y = 1 if cy < h // 2 else -1
+            reach = max(2, frame - 3)
+            local.draw_line(cx, cy, cx + inward_x * reach, cy, light)
+            local.draw_line(cx, cy, cx, cy + inward_y * reach, dark)
+            local.draw_line(cx + inward_x, cy + inward_y,
+                            cx + inward_x * max(1, reach - 1), cy + inward_y,
+                            light)
+            # Small dark socket and a single clipped glint make the fitting
+            # read as recessed metalwork; jewel color is reserved for a hero.
+            local.draw_rect(cx - 1, cy - 1, 2, 2, dark, filled=True)
+            local.set_pixel(cx - 1, cy - 1, light)
         elif theme == "paper":
             inward_x = 1 if cx < w // 2 else -1
             inward_y = 1 if cy < h // 2 else -1
@@ -170,13 +214,25 @@ def draw_ui_rig(
 
     elif kind == "button":
         dy = 1 if state == "pressed" else 0
-        col = brighten(base, 1.18) if state == "hover" else (dark if state == "pressed" else base)
-        local.draw_rect(0, dy, w, max(4, h - dy), col, filled=True, bevel=(state != "pressed"), recessed=(state == "pressed"))
-        fill_mid = brighten(light, 1.1) if state == "hover" else (dark if state == "pressed" else base)
-        local.draw_rect(2, 2 + dy, max(2, w - 4), max(2, h - 5), fill_mid, filled=True)
-        # Clean centered button gloss / glyph bar
+        col = light if state == "hover" else (dark if state == "pressed" else base)
+        local.draw_rect(0, dy, w, max(4, h - dy), col, filled=True,
+                        bevel=(state != "pressed"), recessed=(state == "pressed") )
+        fill_mid = light if state == "hover" else (dark if state == "pressed" else base)
+        # Beveled inset face surrounded by a distinct narrow metal ferrule.
+        trim = (61, 123, 124, 255) if state == "hover" else darken(base, .52)
+        local.draw_rect(2, 2 + dy, max(2, w - 4), max(2, h - 5), trim, filled=True)
+        local.draw_rect(3, 3 + dy, max(2, w - 6), max(2, h - 7), fill_mid,
+                        filled=True, bevel=(state != "pressed"),
+                        recessed=(state == "pressed"))
         if w >= 16 and h >= 10:
-            local.draw_line(4, 2 + dy, w - 5, 2 + dy, brighten(fill_mid, 1.25))
+            # Tapered center crest plus paired end catches; controls now have
+            # a built face, not a generic gloss stripe.
+            mid = w // 2
+            crest = light if state != "pressed" else dark
+            local.draw_polygon([(mid - 3, 4 + dy), (mid, 3 + dy),
+                                (mid + 3, 4 + dy), (mid, 5 + dy)], crest, filled=True)
+            for ax in (4, w - 5):
+                local.set_pixel(ax, h // 2 + dy, light if state != "pressed" else dark)
 
     elif kind == "bar":
         fill_ratio = max(0.0, min(1.0, float(op.get("fill", op.get("value", 0.75)))))

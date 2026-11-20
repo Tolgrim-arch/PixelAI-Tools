@@ -24,6 +24,7 @@ Use the following design choices to interpret the brief. Use sensible defaults f
 - Render panels directly at the final `w`/`h`. Never stretch a small panel PNG across a large container: corners, nails, bevels and runes must remain native pixels.
 - For large containers, use `frame_width: 6..12`; compact panels default to 3. Keep `2 * frame_width < min(w, h)` and reserve the central content rectangle for text/icons.
 - Themes have native material details: wood grain/nails, stone joints, gold corner inlays, paper folds and dark illuminated runes. `inner_fill:false` leaves content fully transparent while retaining the decorated frame.
+- Wide gold frames distribute fitted inlays across horizontal and vertical rails; they do not repeat one tiny diamond at a fixed pitch. Hover states raise value modestly so labels and selected slots retain the highest contrast.
 - Inspect a fresh render at 1x and integer zoom. Compare different sizes to confirm border thickness changes only when explicitly requested.
 
 ## `ui_rig` Reference

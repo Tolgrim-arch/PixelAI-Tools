@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "artifact": {
+    "file_sha256": "0b0003de0199bd4a4193c5213ad066503c86a8a2401a25ca0d411f650fab81a3",
+    "pixel_sha256": "4a8ad74a20fee1ef8f482ed4a71e90891497151be05a4d7202e9b94af988c725",
+    "content_sha256": "ba6367cc0198fa908d9a10e1d83bb236456a3e23f10258722c7547febefc1c51",
+    "silhouette_sha256": "d2ba1011a6695576b3d8969d3efca4faf6473d2e549f6cb06aa46c4b52d4a2d7"
+  },
+  "generated_by": "Codex /root (corrected candidate generator)",
+  "reviewed_by": "Codex /root/independent_candidate_review",
+  "comparison_reference": {
+    "name": "Fantasy UI Pack by Catau Games",
+    "url": "https://catau-games.itch.io/fantasy-ui-pack-ornate-pixel-art-gui-hud",
+    "notes": "Named commercial reference; visual comparison is limited to the current candidate and prior review evidence, and the reference pack itself was not directly inspected in this pass."
+  },
+  "inspection": {
+    "native_resolution": true,
+    "integer_zoom": 3
+  },
+  "contract": {
+    "width": 192,
+    "height": 132,
+    "frame_count": 1,
+    "minimum_margin": 1,
+    "max_colors": 26,
+    "max_islands": 1,
+    "required_views": [],
+    "views": []
+  },
+  "criteria": {
+    "professional_quality": {
+      "decision": "fail",
+      "evidence": "The wide rails and repeated small ornament read as a clean generic gold frame rather than richly ornate inventory art.",
+      "guidance": "Compare finish against a named professional reference; explain remaining weaknesses."
+    },
+    "readability": {
+      "decision": "pass",
+      "evidence": "Twelve slots, selected slot and three button states are distinguishable at native resolution.",
+      "guidance": "Identify each subject at native resolution from silhouette and proportions."
+    },
+    "pixel_clustering": {
+      "decision": "pass",
+      "evidence": "At 3x the beveled rails, slot frames and buttons use contiguous clusters and consistent edges.",
+      "guidance": "Inspect clusters for noise, isolated pixels, banding and accidental geometry."
+    },
+    "color_and_lighting": {
+      "decision": "pass",
+      "evidence": "Gold upper highlights and dark inner borders provide hierarchy; teal accents contrast with the warm frame.",
+      "guidance": "Check palette harmony, volume, light direction and controlled contrast."
+    },
+    "materials": {
+      "decision": "fail",
+      "evidence": "The bevel suggests metal, but the broad flat rails and sparse specks do not convey elaborate metalwork.",
+      "guidance": "Explain how each material reads through its structure rather than generic pattern noise."
+    },
+    "specialized_design": {
+      "decision": "pass",
+      "evidence": "Separate normal, selected, hover and pressed components correspond to a usable inventory interaction vocabulary.",
+      "guidance": "Check anatomy, architecture and characteristic features of the subject."
+    },
+    "artistic_detail": {
+      "decision": "fail",
+      "evidence": "The revised frame adds mitered corners and small glints, but the wide rails remain mostly empty and repeated.",
+      "guidance": "Assess depth, personality and finish beyond a merely acceptable primitive."
+    },
+    "originality": {
+      "decision": "pass",
+      "evidence": "The current pixels differ from the recorded prior rejection; the design retains a common panel and button vocabulary.",
+      "guidance": "Compare with prior and rejected work; explain new geometry and legitimate reuse."
+    },
+    "consistency": {
+      "decision": "pass",
+      "evidence": "The six exported components use consistent gold framing, outline and palette; button states remain visually related.",
+      "guidance": "Compare scale, perspective, style and detail density within the intended catalog."
+    },
+    "technical_integrity": {
+      "decision": "pass",
+      "evidence": "The 192 by 132 transparent preview has one island, 26 colors and a 3 px margin. Six separate PNGs were inspected; each has one island and at least 1 px margin.",
+      "guidance": "Verify dimensions, transparency, borders, directions and absence of deformation."
+    },
+    "game_readiness": {
+      "decision": "fail",
+      "evidence": "Separate panel, slot and button PNGs and specs exist; the panel spec declares 12 px nine-slice margins, but actual resizing, state wiring and engine import have not been tested.",
+      "guidance": "Verify complete views/states/animations and integration without manual repair."
+    }
+  }
+}

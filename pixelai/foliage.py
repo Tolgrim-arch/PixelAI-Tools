@@ -212,3 +212,39 @@ def draw_trunk(local: Canvas, rng: random.Random, cx: int, top: int, foot: int, 
     for side in (-1, 1):
         for i in range(4):
             local.set_pixel(cx + side * (tw // 2 + 3 + i), foot - (1 if i < 3 else 0), bark[0 if side > 0 else 2])
+
+
+def draw_broadleaf_trunk(
+    local: Canvas, rng: random.Random, cx: int, cy: int,
+    rx: int, ry: int, foot: int, bark: list[RGBA],
+) -> None:
+    """Build a tapered bend and uneven limbs around a stable ground anchor."""
+    direction = rng.choice((-1, 1))
+    lean = direction * max(2, round(rx * rng.uniform(.24, .39)))
+    fork_x, fork_y = cx + lean, cy + round(ry * rng.uniform(.91, 1.17))
+    knee_x, knee_y = cx + lean // 3, (fork_y + foot) // 2
+    half = max(2, local.width // 20)
+    for side in (-1, 1):
+        end_x = cx + side * round(rx * rng.uniform(.35, .61))
+        end_y = cy + round(ry * rng.uniform(.40, .67))
+        join_y = fork_y + (max(2, ry // 4) if side != direction else 0)
+        width = max(2, half + (side == direction))
+        local.draw_polygon(
+            [(fork_x - width, join_y + width), (fork_x + width, join_y + width),
+             (end_x + side, end_y + 2), (end_x, end_y)],
+            bark[1], filled=True,
+        )
+        local.draw_line(fork_x - 1, join_y, end_x, end_y, bark[2])
+    root = max(2, half + (1 if direction < 0 else 0))
+    heel = max(2, half + (1 if direction > 0 else 0))
+    left = [(fork_x - half, fork_y), (knee_x - half, knee_y),
+            (cx - half - 1, foot - 3), (cx - half - root + 1, foot - 1),
+            (cx - half - root, foot)]
+    right = [(cx + half + heel, foot), (cx + half, foot - 3),
+             (knee_x + half, knee_y), (fork_x + half, fork_y)]
+    local.draw_polygon(left + right, bark[1], filled=True)
+    local.draw_polygon(left + [(cx - 1, foot), (knee_x, knee_y), (fork_x, fork_y)],
+                       bark[2], filled=True)
+    local.draw_line(knee_x - half + 1, knee_y + 2, cx - half, foot - 3, bark[3])
+    local.draw_line(cx - half, foot - 3, cx - half - root + 1, foot - 1, bark[3])
+    local.draw_line(fork_x + half, fork_y + 2, knee_x + half - 1, knee_y, bark[0])

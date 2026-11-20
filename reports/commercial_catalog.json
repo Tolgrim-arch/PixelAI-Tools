@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "path": "C:\\Users\\jelys\\3D Objects\\antigravity-projects\\pixelai-tools\\outputs\\commercial_materials.png",
+      "status": "rejected",
+      "file_sha256": "a558ae7089a7a7a172322384f2e65ba5bea1f7669ba3a35187cef4ec970d91ae",
+      "pixel_sha256": "558edd85dcb0e2b3db8d784e671dd4c0a6771dcf29f691aae7e23f25a064415c",
+      "content_sha256": "558edd85dcb0e2b3db8d784e671dd4c0a6771dcf29f691aae7e23f25a064415c",
+      "silhouette_sha256": "ab008aa08ac5067e43c47bc49c4d529124b4e5013a2d8b1e5bc275662139f384",
+      "failures": [
+        "professional_quality: Cobble, wood and shingles have useful structure. Flat soil spots and abstract rock and cloth leave the overall swatch set uneven beside a finished environment pack.",
+        "readability: At native size cobble, bark, water, boards and shingles are recognizable. The mauve diagonal swatch also reads as a mineral striation, and soil competes with an irregular spotted fabric reading.",
+        "materials: Wood has knots and end-to-end grain, yet the three long cloth planes provide no weave or identifiable softness. The soil islands lack convincing compacted or granular structure.",
+        "artistic_detail: Roof and cobble show clear close-up structure. The comparatively vacant soil and broad striped cloth leave detail uneven across the swatch set.",
+        "consistency: Cobble and roof introduce regular construction detail while soil and fabric are mostly broad color blocks. The different implied scales and detail densities lack a common game-context check.",
+        "game_readiness: The delivered file is an opaque preview of twenty material patches. It includes no isolated runtime tiles or adjacency metadata, and wrapping behavior remains unverified."
+      ]
+    },
+    {
+      "path": "C:\\Users\\jelys\\3D Objects\\antigravity-projects\\pixelai-tools\\outputs\\commercial_buildings.png",
+      "status": "rejected",
+      "file_sha256": "d2b8816c27cba17c23609fa967c1fb9a348dca3af6b32bd0b72eb9d6db646a39",
+      "pixel_sha256": "79ea0ef3055cb9c05e23c8fd000ae7278e295976f85d3add17ed22594faa848f",
+      "content_sha256": "c658b4fdde663c8c8f179dad6b17dff10e84ee1dbd94f59ae9ef95de784574e4",
+      "silhouette_sha256": "032defdc0db7d5ada47a0e7c0e8337231a2c2d894eee8728aad4f0dc2ea27f19",
+      "failures": [
+        "professional_quality: Both forms gain usable volume from visible side planes. Their shared platform and similar centered dormers make the pair look like one building template with two wall treatments.",
+        "materials: Cottage glazing and barn planks read. The diagonal roof joins have large angular highlights, and the identical slab treatment makes foundations read as a repeated UI-like plinth.",
+        "specialized_design: The barn shows a double-slope wall profile and crossed doors, yet a centered house-like dormer and narrow entry visually dominate its working agricultural form.",
+        "artistic_detail: The round cottage window and planter provide useful personality. Empty side expanses and repeated rectangular footings leave the finish close to a composed blockout.",
+        "game_readiness: Only a composed comparison sheet is delivered. Per-building placement origins, collision footprints and Y-sort alignment remain unverified for map integration."
+      ]
+    },
+    {
+      "path": "C:\\Users\\jelys\\3D Objects\\antigravity-projects\\pixelai-tools\\outputs\\stress_commercial_inventory.png",
+      "status": "rejected",
+      "file_sha256": "805fe1fd866c3d4f54656e99730f3f526a26a1129d33c2696bad06c602c6803e",
+      "pixel_sha256": "ec75610fc5f0fe710af23a38fec45f652b6d7779941c0fb0245ed6d2cdccc090",
+      "content_sha256": "5990e5502579f0307c6679736c6cb969ab8280846a8ce75bf4fc2f3e671085fc",
+      "silhouette_sha256": "d2ba1011a6695576b3d8969d3efca4faf6473d2e549f6cb06aa46c4b52d4a2d7",
+      "failures": [
+        "professional_quality: The added teal gems and mitered corners improve the frame. The corners and rail motifs still repeat the same diamond geometry, and wide controls look generic beside an ornate UI brief.",
+        "materials: Bevel contrast suggests metal, but the main rail remains a flat gold strip. Gem diamonds show a few highlight pixels without sufficient faceting to distinguish glass from painted badges.",
+        "artistic_detail: The new edge accents are crisp, but the isolated diamonds and plain corner blocks provide little filigree or depth at 3x. The interior remains a broad flat brown plane.",
+        "game_readiness: This export is a flattened inventory mockup. Its panel, slot and button states lack standalone transparent exports, nine-slice margins and verified live interaction."
+      ]
+    },
+    {
+      "path": "C:\\Users\\jelys\\3D Objects\\antigravity-projects\\pixelai-tools\\outputs\\commercial_humans.png",
+      "status": "rejected",
+      "file_sha256": "002534c6b893af372e684fb8ec34a20e12afc8bcf67ed39562dc1ecac801033e",
+      "pixel_sha256": "bb73d955d3f05a0863cd4554d03138ec4d5f6fa150703e76b8bc799c6f741e74",
+      "content_sha256": "78868ebc850971e98bf4492a522db534506b08425f66dc48f0405c3e465c7011",
+      "silhouette_sha256": "b8d7697d23494408e6ee5ff549bb3b890d6daf2faa1019bfbdf259c1851cdd22",
+      "failures": [
+        "professional_quality: Two character designs have clear outfits, but repeated poses and tiny tool shapes lack the finish of a complete commercial character pack.",
+        "originality: The two outfits and hair silhouettes differ, but independence from prior character work is not established.",
+        "game_readiness: A static atlas depicts poses, but frame timing, sequences, pivots, extraction and runtime behavior have not been verified."
+      ]
+    },
+    {
+      "path": "C:\\Users\\jelys\\3D Objects\\antigravity-projects\\pixelai-tools\\outputs\\commercial_lanterns.png",
+      "status": "rejected",
+      "file_sha256": "2b152e8fee319522cfd56c2f013dfb28dcd2c61bf6a9fe88a5319bbc8a2a68ba",
+      "pixel_sha256": "bb751b5163934ab3d8e8ca605ea6389fa3500ef0fd0d2525a0a9d7f88a0dad4c",
+      "content_sha256": "c983288fba1ae3f61cf4d59043dcd6961f2e42d07eb3dc4dfa48aa831d95b154",
+      "silhouette_sha256": "29bd7bf6051f64875fd2c5e1d03a8a5b35aa804347a4fffb7e2af9940072b112",
+      "failures": [
+        "professional_quality: The four small lanterns repeat one form and the larger purple version has sparse surface detail.",
+        "originality: Four small lanterns visibly repeat the same silhouette; provenance versus earlier rejected art is unverified.",
+        "consistency: The large lantern uses a different purple palette and larger scale than the four orange examples.",
+        "game_readiness: The five objects are packed together with no verified frame regions, pivot information or in-engine import."
+      ]
+    },
+    {
+      "path": "C:\\Users\\jelys\\3D Objects\\antigravity-projects\\pixelai-tools\\outputs\\stress_commercial_moss_rock.png",
+      "status": "rejected",
+      "file_sha256": "3d48f9a71e7f11913d1d8a1c378fa4fb69438e707131319001dadd005ac27843",
+      "pixel_sha256": "54dbe87e78e84950adc6d87ba5fc5488898e92a774ebe44f1679d7b43977663f",
+      "content_sha256": "1c2c1fbae39e85986e51b1118bf7c9566ed0816519cf13161f400227cfa86a1f",
+      "silhouette_sha256": "42cb843e8d8060a383cfdbfa865d588ea95bb6178a3efa8cc3920d885c082718",
+      "failures": [
+        "professional_quality: The green cap improves identification, but the compact slab and shallow moss layer remain visually basic.",
+        "originality: The visible cap differs from the ore rock, though both keep a similar low boulder profile.",
+        "game_readiness: Tile placement, pivot, collision and any interaction or depletion states were not verified in a game."
+      ]
+    },
+    {
+      "path": "C:\\Users\\jelys\\3D Objects\\antigravity-projects\\pixelai-tools\\outputs\\stress_commercial_ore_rock.png",
+      "status": "rejected",
+      "file_sha256": "7f9bb324d6454d70dc8791fed6961b79adc13121ec8f25abfdd048ac0be9b846",
+      "pixel_sha256": "0a4ab7aab99fae0a8dab9fabba5c221461a8d2e447ddf67377e83ae0b5667a61",
+      "content_sha256": "e76d7740edd2a50a37f80a00d851bfd5968b51b6a1c62b88bc8a5eaab74488a3",
+      "silhouette_sha256": "7bc2efbbe2e302cb74de3ece0538e484213d99eda343f769cfae17a7b1729255",
+      "failures": [
+        "professional_quality: The warm central deposit is recognizable, but its small decorative cluster has limited material specificity.",
+        "originality: The ore marking differs from the green moss rock, though the two silhouettes remain closely related.",
+        "game_readiness: Tile placement, pivot, collision and depletion behavior were not verified in a game."
+      ]
+    },
+    {
+      "path": "C:\\Users\\jelys\\3D Objects\\antigravity-projects\\pixelai-tools\\outputs\\stress_commercial_orchard.png",
+      "status": "rejected",
+      "file_sha256": "d15fc02efc4552e84a0cf81efe541648a3c5e539a87421117a81d0a9069022e3",
+      "pixel_sha256": "cc3fea4ea5ceff265626e1e600bfd8ae2428430b15afa0533b4e22a787e87385",
+      "content_sha256": "5b1ceae7ef18ccefc661dec9d28bf1876529c1bf0fa489f894fd0d69bcb41e17",
+      "silhouette_sha256": "bb4e6648d28a6f61f3021799bd34cfd74656a326b5a8f7b980320bd461e4808e",
+      "failures": [
+        "professional_quality: The pair has readable canopies and fruit, but repeating trunk language and crowded patches limit polish.",
+        "originality: Different crown outlines and fruit colors differentiate the pair; comparison with earlier rejected geometry is not fully established.",
+        "game_readiness: Individual sprites, harvest states, sorting anchors and in-engine placement have not been verified."
+      ]
+    },
+    {
+      "path": "C:\\Users\\jelys\\3D Objects\\antigravity-projects\\pixelai-tools\\outputs\\commercial_materials.png",
+      "status": "rejected",
+      "file_sha256": "478decd44f5ca3bd1241ea3bdffba8ed1cb4c29364047b4cdc50582c04c656fe",
+      "pixel_sha256": "110466891757fdbfd6392f5599a89f74cb5f9866697f0eb296c8f724274d73c8",
+      "content_sha256": "110466891757fdbfd6392f5599a89f74cb5f9866697f0eb296c8f724274d73c8",
+      "silhouette_sha256": "ab008aa08ac5067e43c47bc49c4d529124b4e5013a2d8b1e5bc275662139f384",
+      "failures": [
+        "professional_quality: The cloth sample reads as a vertically striped panel and the soil is sparsely speckled; the sheet is a useful texture study but not a finished, verified asset pack.",
+        "materials: Horizontal wood boards and overlapping shingles read as material, while cloth looks rigid and mottled rather than woven or folded fabric.",
+        "artistic_detail: Rock planes and roof rows show structure, but soil dots and cloth striping feel generic compared with the stronger cobble clusters.",
+        "game_readiness: The specs locate samples but no exported individual textures, seam tests or game import were verified; this sheet alone does not establish tileability."
+      ]
+    },
+    {
+      "path": "C:\\Users\\jelys\\3D Objects\\antigravity-projects\\pixelai-tools\\outputs\\commercial_buildings.png",
+      "status": "rejected",
+      "file_sha256": "6c6cf7a015451245f3b91e1fac7dcdf415660811717baaab43083b6872ba611a",
+      "pixel_sha256": "79ea0ef3055cb9c05e23c8fd000ae7278e295976f85d3add17ed22594faa848f",
+      "content_sha256": "c658b4fdde663c8c8f179dad6b17dff10e84ee1dbd94f59ae9ef95de784574e4",
+      "silhouette_sha256": "032defdc0db7d5ada47a0e7c0e8337231a2c2d894eee8728aad4f0dc2ea27f19",
+      "failures": [
+        "Exact artwork was previously rejected (metadata/filename changes do not make it new)",
+        "professional_quality: The cottage and barn have readable roof forms but repeated shallow slab foundations and regular surface patterning limit architectural finish.",
+        "artistic_detail: Window highlights and shingles add detail, but the long unvaried barn wall and repeated slab foundations remain plain.",
+        "game_readiness: The metadata contains one whole-sheet frame with two attachments; separate extraction and collision alignment, y-sorting and placement in an engine remain untested."
+      ]
+    },
+    {
+      "path": "C:\\Users\\jelys\\3D Objects\\antigravity-projects\\pixelai-tools\\outputs\\stress_commercial_inventory.png",
+      "status": "rejected",
+      "file_sha256": "0b0003de0199bd4a4193c5213ad066503c86a8a2401a25ca0d411f650fab81a3",
+      "pixel_sha256": "4a8ad74a20fee1ef8f482ed4a71e90891497151be05a4d7202e9b94af988c725",
+      "content_sha256": "ba6367cc0198fa908d9a10e1d83bb236456a3e23f10258722c7547febefc1c51",
+      "silhouette_sha256": "d2ba1011a6695576b3d8969d3efca4faf6473d2e549f6cb06aa46c4b52d4a2d7",
+      "failures": [
+        "professional_quality: The wide rails and repeated small ornament read as a clean generic gold frame rather than richly ornate inventory art.",
+        "materials: The bevel suggests metal, but the broad flat rails and sparse specks do not convey elaborate metalwork.",
+        "artistic_detail: The revised frame adds mitered corners and small glints, but the wide rails remain mostly empty and repeated.",
+        "game_readiness: Separate panel, slot and button PNGs and specs exist; the panel spec declares 12 px nine-slice margins, but actual resizing, state wiring and engine import have not been tested."
+      ]
+    },
+    {
+      "path": "C:\\Users\\jelys\\3D Objects\\antigravity-projects\\pixelai-tools\\outputs\\commercial_buildings.png",
+      "status": "rejected",
+      "file_sha256": "6c6cf7a015451245f3b91e1fac7dcdf415660811717baaab43083b6872ba611a",
+      "pixel_sha256": "79ea0ef3055cb9c05e23c8fd000ae7278e295976f85d3add17ed22594faa848f",
+      "content_sha256": "c658b4fdde663c8c8f179dad6b17dff10e84ee1dbd94f59ae9ef95de784574e4",
+      "silhouette_sha256": "032defdc0db7d5ada47a0e7c0e8337231a2c2d894eee8728aad4f0dc2ea27f19",
+      "failures": [
+        "Exact artwork was previously rejected (metadata/filename changes do not make it new)",
+        "Exact artwork was previously rejected (metadata/filename changes do not make it new)",
+        "professional_quality: The cottage and barn have readable roof forms but repeated shallow slab foundations and regular surface patterning limit architectural finish.",
+        "artistic_detail: Window highlights and shingles add detail, but the long unvaried barn wall and repeated slab foundations remain plain.",
+        "originality: The cottage and barn use different roof profiles, but the catalog reports exact artwork was previously rejected; metadata additions do not make the artwork new.",
+        "game_readiness: The metadata contains one whole-sheet frame with two attachments; separate extraction and collision alignment, y-sorting and placement in an engine remain untested."
+      ]
+    }
+  ]
+}

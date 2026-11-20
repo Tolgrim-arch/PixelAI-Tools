@@ -26,14 +26,40 @@ def _draw_fruit(local: Canvas, fx: int, fy: int, r: int, base: RGBA, hi: RGBA, s
         local.set_pixel(fx - 1, fy - 1, (255, 225, 175, 255))
 
 
-def _draw_sakura(local: Canvas, palette: dict[str, RGBA], op: dict[str, Any], frame: int) -> None:
+def _draw_orchard_fruit(
+    local: Canvas, fx: int, fy: int, r: int, base: RGBA, leaf: RGBA, kind: str,
+) -> None:
+    highlight, shade = brighten(base, 1.28), darken(base, .66)
+    if kind == "apple" and r == 2:
+        _draw_fruit(local, fx, fy, r, base, highlight, shade, leaf)
+        return
+    if kind == "pear":
+        points = [(0, -r - 1), (1, -r), (1, -1), (r, 1), (r, r - 1),
+                  (r - 1, r), (1 - r, r), (-r, r - 1), (-r, 1), (-1, -1), (-1, -r)]
+        patch = [(0, -r), (0, -1), (1, 1), (0, r - 1), (1 - r, r - 1), (-r, 1), (-1, 0)]
+    else:
+        points = [(-r, -1), (1 - r, 1 - r), (-1, -r), (0, 1 - r),
+                  (1, -r), (r, -1), (r, 1), (r - 1, r),
+                  (0, r - 1), (1 - r, r), (-r, 1)]
+        patch = [(-r, -1), (1 - r, 1 - r), (-1, -r), (1, -1), (0, 1), (1 - r, 1)]
+    local.draw_polygon([(fx + x, fy + y) for x, y in points], shade, filled=True)
+    local.draw_polygon([(fx + x, fy + y) for x, y in patch], base, filled=True)
+    local.draw_line(fx - 1, fy - 1, fx - 1, fy + (kind == "pear"), highlight)
+    stem_y = fy - r - (2 if kind == "pear" else 1)
+    local.set_pixel(fx, stem_y, (112, 75, 44, 255))
+    local.draw_line(fx + 1, stem_y, fx + 2, stem_y - 1, brighten(leaf, 1.4))
+
+
+def _draw_sakura(
+    local: Canvas, palette: dict[str, RGBA], op: dict[str, Any], frame: int,
+    blossom: list[RGBA],
+) -> None:
     """Draw an open, branch-led cherry tree rather than a solid recolored broadleaf crown."""
     w, h = local.width, local.height
     rng = random.Random(int(op.get("seed", 29)))
     cx, foot = w // 2, h - max(7, h // 14)
     sway = (-1, 0, 1, 0)[frame % 4] if op.get("sway") else 0
     bark = [parse_color(c, palette) for c in op.get("bark_ramp", fo.BARK)]
-    blossom = [parse_color(c, palette) for c in SAKURA_BANDS]
     shadow = parse_color(op.get("shadow_color", fo.SHADOW), palette)
 
     if op.get("shadow", True):
@@ -115,29 +141,28 @@ def draw_broadleaf(canvas: Canvas, x: int, y: int, palette: dict[str, RGBA], op:
         r = op["ramp"]
         raw_bands = [r[-2], r[-3], r[1], r[0]] if len(r) >= 6 else [r[3], r[2], r[1], r[0]]
     default_bands = SAKURA_BANDS if variant == "sakura" else ls.BAND
-    colors = [parse_color(c, palette) for c in (raw_bands or default_bands)]
+    if not raw_bands and "color" in op:
+        base = parse_color(op["color"], palette)
+        colors = [brighten(base, 1.3), base, darken(base, .72), darken(base, .47)]
+    else:
+        colors = [parse_color(c, palette) for c in (raw_bands or default_bands)]
     bark = fo.get_bark(op, palette)
-    rng = random.Random(int(op.get("seed", 11 if variant == "oak" else 17)))
+    seed = int(op.get("seed", 11 if variant == "oak" else 17))
+    rng = random.Random(seed)
     local = Canvas(w, h)
     if variant == "sakura":
-        _draw_sakura(local, palette, op, frame)
+        _draw_sakura(local, palette, op, frame, colors)
         canvas.blit(local, x, y)
         return
     # Reserve enough bottom margin for the 7px-tall ground shadow and its outline.
     cx, foot = w // 2, h - max(7, h // 14)
     if op.get("shadow", True):
         fo.draw_ground_shadow(local, cx, foot, w, parse_color(op.get("shadow_color", fo.SHADOW), palette))
-    fo.draw_trunk(local, rng, cx, int(h * 0.44), foot, max(4, w // 9), bark)
 
     off = (-1, 0, 1, 0)[frame % 4] if op.get("sway") else 0
     rx, ry = int(w * 0.36), int(h * 0.28)
     cy = max(ry + 4, int(h * 0.38))
-    # Structural branches remain visible in the negative space below crown lobes.
-    for side in (-1, 1):
-        bx = cx + side * int(rx * .53)
-        by = cy + int(ry * (.58 if side < 0 else .76))
-        for thickness in range(max(1, w // 45)):
-            local.draw_line(cx + thickness, int(h * .62), bx, by - thickness, bark[2])
+    fo.draw_broadleaf_trunk(local, random.Random(seed ^ 0xACE), cx, cy, rx, ry, foot, bark)
     bands = _crown_bands(cx + off, cy, rx, ry, rng)
     stamped = ls._stamp(rng, bands, cx + off, cy, reach=max(4, round(9 * w / 128)), fringe=0.30, long_from=None, step=(7, 6))
     for (px, py) in stamped:  # crown cast shadow on the trunk
@@ -151,19 +176,25 @@ def draw_broadleaf(canvas: Canvas, x: int, y: int, palette: dict[str, RGBA], op:
 
     if variant == "fruit":
         accent = parse_color(op.get("accent_color", "#d94e41"), palette)
-        r, placed = max(2, w // 28), 0
+        fruit = str(op.get("fruit", "apple")).lower()
+        if fruit not in {"apple", "pear"}:
+            raise ValueError(f"Unknown tree fruit: {fruit!r}; choose apple or pear")
+        r = max(2, w // 20)
+        limit = 5 if w < 96 else 7
         positions: list[tuple[int, int]] = []
-        for _ in range(80):
-            if placed >= 7:
+        local.clip_to_opaque = True
+        for _ in range(120):
+            if len(positions) >= limit:
                 break
             fx = cx + off + rng.randint(-int(rx * 0.65), int(rx * 0.65))
             fy = cy + rng.randint(-int(ry * 0.55), int(ry * 0.55))
             if any((fx - px) ** 2 + (fy - py) ** 2 < (2 * r + 3) ** 2 for px, py in positions):
                 continue
-            if all((fx + a, fy + b) in stamped for a, b in ((0, 0), (-r, -r), (r, r), (0, -r - 1))):
-                _draw_fruit(local, fx, fy, r, accent, brighten(accent, 1.32), darken(accent, 0.68), colors[2])
+            if all((fx + a, fy + b) in stamped for a, b in
+                   ((-r, 1), (r, 1), (-r + 1, r), (r - 1, r), (0, -r), (2, -r - 3))):
+                _draw_orchard_fruit(local, fx, fy, r, accent, colors[2], fruit)
                 positions.append((fx, fy))
-                placed += 1
+        local.clip_to_opaque = False
     elif variant == "sakura":
         # Bright blossom flecks break up the pink crown without dark internal linework.
         for _ in range(max(8, w // 5)):

@@ -12,6 +12,8 @@ description: Generate deterministic pixel art sprites, isometric buildings, 16-t
 - For top-down humans and creatures, generate and inspect all four views (down/up/left/right), including action poses. A mirrored side view does not supply a front or back view.
 - Inspect actual pixels at native size and integer zoom. Tests verify contracts, not artistic excellence. Check material readability, silhouette, anatomy, clipping, transparent shadows, and fruit detail before claiming success.
 - This is a deterministic renderer, not a trained image model. Improve generators and regression tests when outputs fail; never imply that changing code trains model weights.
+- `pixelai inspect` is diagnostic only. Commercial claims require `pixelai qa <image> --template <review.json>`, inspection at 1x and integer zoom by a reviewer other than the generator, a named professional comparison source, explicit delivery contract, and evidence for all eleven criteria. Record the result with `--catalog <catalog.json> --record`. Exit codes are 0 approved, 1 rejected, 2 needs review.
+- Any failed criterion rejects the candidate. Preserve rejected specs/images for root-cause comparison and improve the shared engine before rerendering; a rename, metadata edit, or transparent padding cannot turn rejected pixels into a new asset.
 
 ## Quick Start for AI Agents
 1. Run `python -m pixelai.cli guide` to view the full JSON DSL and palette keys (`cozy24`, `endesga32`, `sweetie16`, `pico8`, `gameboy`).

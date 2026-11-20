@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "artifact": {
+    "file_sha256": "d2b8816c27cba17c23609fa967c1fb9a348dca3af6b32bd0b72eb9d6db646a39",
+    "pixel_sha256": "79ea0ef3055cb9c05e23c8fd000ae7278e295976f85d3add17ed22594faa848f",
+    "content_sha256": "c658b4fdde663c8c8f179dad6b17dff10e84ee1dbd94f59ae9ef95de784574e4",
+    "silhouette_sha256": "032defdc0db7d5ada47a0e7c0e8337231a2c2d894eee8728aad4f0dc2ea27f19"
+  },
+  "generated_by": "Codex /root/materials_commercial",
+  "reviewed_by": "Codex /root/human_commercial",
+  "comparison_reference": {
+    "name": "Tiny Swords by Pixel Frog",
+    "url": "https://pixelfrog-assets.itch.io/tiny-swords",
+    "notes": "The published medieval building set provides a comparison for distinct silhouettes, readable building functions and architecture that belongs to a shared top-down map."
+  },
+  "inspection": {
+    "native_resolution": true,
+    "integer_zoom": 3
+  },
+  "contract": {
+    "width": 238,
+    "height": 120,
+    "frame_count": 1,
+    "minimum_margin": 1,
+    "max_colors": 96,
+    "max_islands": 2,
+    "required_views": [
+      "cottage_3q",
+      "barn_3q"
+    ],
+    "views": [
+      {
+        "name": "cottage_3q",
+        "x": 4,
+        "y": 4,
+        "w": 115,
+        "h": 112
+      },
+      {
+        "name": "barn_3q",
+        "x": 121,
+        "y": 4,
+        "w": 115,
+        "h": 112
+      }
+    ]
+  },
+  "criteria": {
+    "professional_quality": {
+      "decision": "fail",
+      "evidence": "Both forms gain usable volume from visible side planes. Their shared platform and similar centered dormers make the pair look like one building template with two wall treatments.",
+      "guidance": "Compare finish against a named professional reference; explain remaining weaknesses."
+    },
+    "readability": {
+      "decision": "pass",
+      "evidence": "At 1x the chimney, circular attic window and blue glazing distinguish the cottage. Red plank frontage and X-braced doors distinguish the barn.",
+      "guidance": "Identify each subject at native resolution from silhouette and proportions."
+    },
+    "pixel_clustering": {
+      "decision": "pass",
+      "evidence": "At 3x the roof courses, timber, glazing and wall planes stay grouped in coherent pixel clusters. Cliff-like stepping on the roof edges remains confined to the intended silhouette.",
+      "guidance": "Inspect clusters for noise, isolated pixels, banding and accidental geometry."
+    },
+    "color_and_lighting": {
+      "decision": "pass",
+      "evidence": "Upper-left facing roof planes and pale masonry separate from the cooler/darker side walls. Teal and terracotta distinguish the two without changing lighting direction.",
+      "guidance": "Check palette harmony, volume, light direction and controlled contrast."
+    },
+    "materials": {
+      "decision": "fail",
+      "evidence": "Cottage glazing and barn planks read. The diagonal roof joins have large angular highlights, and the identical slab treatment makes foundations read as a repeated UI-like plinth.",
+      "guidance": "Explain how each material reads through its structure rather than generic pattern noise."
+    },
+    "specialized_design": {
+      "decision": "fail",
+      "evidence": "The barn shows a double-slope wall profile and crossed doors, yet a centered house-like dormer and narrow entry visually dominate its working agricultural form.",
+      "guidance": "Check anatomy, architecture and characteristic features of the subject."
+    },
+    "artistic_detail": {
+      "decision": "fail",
+      "evidence": "The round cottage window and planter provide useful personality. Empty side expanses and repeated rectangular footings leave the finish close to a composed blockout.",
+      "guidance": "Assess depth, personality and finish beyond a merely acceptable primitive."
+    },
+    "originality": {
+      "decision": "pass",
+      "evidence": "Both side walls and multi-plane roof returns add actual geometry compared with the baseline front elevation. The two roof types, doors and siding show separate authored cues.",
+      "guidance": "Compare with prior and rejected work; explain new geometry and legitimate reuse."
+    },
+    "consistency": {
+      "decision": "pass",
+      "evidence": "Both roofs show a similar top-down camera and right side depth, grounded in restrained palettes and the same one-pixel exterior outline treatment.",
+      "guidance": "Compare scale, perspective, style and detail density within the intended catalog."
+    },
+    "technical_integrity": {
+      "decision": "pass",
+      "evidence": "The 238 by 120 PNG has two expected components, zero singletons, 80 colors and 7 px or more edge clearance. Both buildings are fully visible.",
+      "guidance": "Verify dimensions, transparency, borders, directions and absence of deformation."
+    },
+    "game_readiness": {
+      "decision": "fail",
+      "evidence": "Only a composed comparison sheet is delivered. Per-building placement origins, collision footprints and Y-sort alignment remain unverified for map integration.",
+      "guidance": "Verify complete views/states/animations and integration without manual repair."
+    }
+  }
+}
