@@ -66,7 +66,7 @@ AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 - `{"op": "portrait_rig", "x": 0, "y": 0, "width": 64, "height": 80, "face_dir": "front|three_quarter_left|three_quarter_right", "gesture": "idle|wave|hip", "hair_style": "layered|spiky", "headband": false, "cheek_marks": 0, "eye_color": "#2b1b2b", "skin": "#f2c38f", "hair": "#6b3f35", "shirt": "#d9e5d2", "garment": "#704b3b"}` (Bust portrait with optional forehead protector and cheek markings, expressive gesture, ears, cheek planes, hair locks, clothing planes, and clean external silhouette)
 - `{"op": "portrait_rig", "style": "mistria", "preset": "samurai|farmer", "x": 1, "y": 1, "width": 120, "height": 160, "face_dir": "three_quarter_left|three_quarter_right", "hat": false, "scar": true}` (Fields of Mistria style waist-up portrait engine with 90s-anime facial proportions, cel-shading, and samurai or farmer attire)
 - `{"op": "portrait_rig", "preset": "field_farmer", "x": 0, "y": 0, "hat": true, "expression": "smile|neutral", "face_dir": "three_quarter_left|three_quarter_right"}` (Native 116 x 144 field farmer bust, with overridable material colors such as skin, hair, denim and straw.)
-- `{"op": "animal_rig", "x": 0, "y": 0, "species": "chicken|cow", "dir": "down|up|left|right|se|sw|ne|nw", "pose": "idle|walk|run|peck|graze|nest|lie|sleep|jump|fall|surprised|happy|sad|angry|sick", "perspective": "topdown|platformer|iso", "shadow": true, "emotes": true, "ground_prop": "auto|grass|seeds|none", "nest_prop": false, "frame": 0}` (Cozy farm creature rig with auto-looping frames, hip-pivot peck, optional props/shadows/emotes)
+- `{"op": "animal_rig", "x": 0, "y": 0, "species": "chicken|cow|pig|sheep", "dir": "down|up|left|right|se|sw|ne|nw", "pose": "idle|walk|run|peck|graze|nest|lie|sleep|jump|fall|surprised|happy|sad|angry|sick", "perspective": "topdown|platformer|iso", "shadow": true, "emotes": true, "ground_prop": "auto|grass|seeds|none", "nest_prop": false, "frame": 0}` (Cozy farm creature rig with auto-looping frames, hip-pivot peck, optional props/shadows/emotes)
 - `{"op": "item_rig", "x": 0, "y": 0, "kind": "potion|sword|shield|chest|gem|key|coin|apple|axe|pickaxe|carrot|bread|fish|lantern", "orientation": "vertical|diagonal", "size": 24, "fill_level": 0.78, "state": "closed|open", "shine": true, "shadow": false}` (Parametric RPG items, weapons, food and special loot. Lantern supports `flame_color` and four flame frames.)
 - `{"op": "nature_rig", "x": 0, "y": 0, "kind": "tree|bush|rock|flower|crop", "variant": "oak|pine|fruit|sakura|boulder|mossy|ore|wheat|berry|carrot", "stage": 3, "sway": false, "shadow": true, "ground_base": "none|grass|soil"}` (Trees, rocks, flowers, and 4-stage crops)
 - `{"op": "ui_rig", "x": 0, "y": 0, "kind": "panel|bar|button|heart|slot", "theme": "wood|stone|gold|paper|dark", "state": "normal|hover|pressed|full|half|empty|selected", "fill": 0.75, "w": 48, "h": 12}` (Native pixel UI; panels support frame_width 3..12, theme-specific details and inner_fill:false for a transparent center. Render at final dimensions.)
@@ -250,17 +250,19 @@ def _cmd_pack(args: argparse.Namespace) -> int:
     raw_var = args.variant
     if species == "cow" and raw_var == "white":
         raw_var = "holstein"
+    elif species == "pig" and raw_var == "white":
+        raw_var = "pink"
     variants = [v.strip() for v in raw_var.split(",") if v.strip()]
-    is_cow = species == "cow"
-    w, h = (32, 32) if is_cow else (24, 24)
+    is_large = species in ("cow", "pig", "sheep")
+    w, h = (32, 32) if is_large else (24, 24)
     jobs = [
         ("walk_down", "down", "walk", 4, 8),
         ("walk_up", "up", "walk", 4, 8),
         ("walk_left", "left", "walk", 4, 8),
         ("walk_right", "right", "walk", 4, 8),
-        ("graze_left" if is_cow else "peck_left", "left", "graze" if is_cow else "peck", 6, 8 if is_cow else 10),
-        ("graze_right" if is_cow else "peck_right", "right", "graze" if is_cow else "peck", 6, 8 if is_cow else 10),
-        ("lie_right" if is_cow else "nest_right", "right", "lie" if is_cow else "nest", 4, 4),
+        ("graze_left" if is_large else "peck_left", "left", "graze" if is_large else "peck", 6, 8 if is_large else 10),
+        ("graze_right" if is_large else "peck_right", "right", "graze" if is_large else "peck", 6, 8 if is_large else 10),
+        ("lie_right" if is_large else "nest_right", "right", "lie" if is_large else "nest", 4, 4),
         ("sleep_right", "right", "sleep", 4, 4),
         ("surprised", "down", "surprised", 4, 8),
         ("sick", "right", "sick", 4, 5),
