@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "artifact": {
+    "file_sha256": "7e28a6e569b3a9841cf4d2b298aa70fecaabd18033ef47fcb0c2150493cd0060",
+    "pixel_sha256": "a1f768830b39736164f4a07522863e33ce6e3520f5eeb0b850d3ad70dea51b2c",
+    "content_sha256": "29da221b0530f2630f6181574128848dbbeb620291eb1eab60111b343fdc693a",
+    "silhouette_sha256": "d2ba1011a6695576b3d8969d3efca4faf6473d2e549f6cb06aa46c4b52d4a2d7"
+  },
+  "generated_by": "",
+  "reviewed_by": "",
+  "comparison_reference": {
+    "name": "",
+    "url": "",
+    "notes": ""
+  },
+  "inspection": {
+    "native_resolution": false,
+    "integer_zoom": 0
+  },
+  "contract": {
+    "width": 192,
+    "height": 132,
+    "frame_count": 1,
+    "minimum_margin": 1,
+    "max_colors": 32,
+    "max_islands": 1,
+    "required_views": [],
+    "views": []
+  },
+  "criteria": {
+    "professional_quality": {
+      "decision": "unverified",
+      "evidence": "",
+      "guidance": "Compare finish against a named professional reference; explain remaining weaknesses."
+    },
+    "readability": {
+      "decision": "unverified",
+      "evidence": "",
+      "guidance": "Identify each subject at native resolution from silhouette and proportions."
+    },
+    "pixel_clustering": {
+      "decision": "unverified",
+      "evidence": "",
+      "guidance": "Inspect clusters for noise, isolated pixels, banding and accidental geometry."
+    },
+    "color_and_lighting": {
+      "decision": "unverified",
+      "evidence": "",
+      "guidance": "Check palette harmony, volume, light direction and controlled contrast."
+    },
+    "materials": {
+      "decision": "unverified",
+      "evidence": "",
+      "guidance": "Explain how each material reads through its structure rather than generic pattern noise."
+    },
+    "specialized_design": {
+      "decision": "unverified",
+      "evidence": "",
+      "guidance": "Check anatomy, architecture and characteristic features of the subject."
+    },
+    "artistic_detail": {
+      "decision": "unverified",
+      "evidence": "",
+      "guidance": "Assess depth, personality and finish beyond a merely acceptable primitive."
+    },
+    "originality": {
+      "decision": "unverified",
+      "evidence": "",
+      "guidance": "Compare with prior and rejected work; explain new geometry and legitimate reuse."
+    },
+    "consistency": {
+      "decision": "unverified",
+      "evidence": "",
+      "guidance": "Compare scale, perspective, style and detail density within the intended catalog."
+    },
+    "technical_integrity": {
+      "decision": "unverified",
+      "evidence": "",
+      "guidance": "Verify dimensions, transparency, borders, directions and absence of deformation."
+    },
+    "game_readiness": {
+      "decision": "unverified",
+      "evidence": "",
+      "guidance": "Verify complete views/states/animations and integration without manual repair."
+    }
+  }
+}

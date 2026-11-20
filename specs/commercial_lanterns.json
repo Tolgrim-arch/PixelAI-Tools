@@ -1,0 +1,15 @@
+{
+  "width": 224,
+  "height": 80,
+  "fresh": true,
+  "frame_count": 1,
+  "palette": "cozy24",
+  "style": "ext_outline",
+  "ops": [
+    {"op":"item_rig","kind":"lantern","x":8,"y":8,"size":32,"frame":0,"color":"#946349","secondary_color":"#3b7980","flame_color":"#a8edac"},
+    {"op":"item_rig","kind":"lantern","x":48,"y":8,"size":32,"frame":1,"color":"#946349","secondary_color":"#3b7980","flame_color":"#a8edac"},
+    {"op":"item_rig","kind":"lantern","x":88,"y":8,"size":32,"frame":2,"color":"#946349","secondary_color":"#3b7980","flame_color":"#a8edac"},
+    {"op":"item_rig","kind":"lantern","x":128,"y":8,"size":32,"frame":3,"color":"#946349","secondary_color":"#3b7980","flame_color":"#a8edac"},
+    {"op":"item_rig","kind":"lantern","x":160,"y":8,"size":64,"frame":0,"color":"#655678","secondary_color":"#2f6078","flame_color":"#f0bd65"}
+  ]
+}

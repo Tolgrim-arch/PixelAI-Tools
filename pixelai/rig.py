@@ -38,6 +38,11 @@ def draw_char_rig(
     draw_shadow = bool(op.get("shadow", True))
 
     is_iso = perspective == "iso" or raw_dir in ("se", "sw", "ne", "nw")
+    if perspective == "topdown" and not is_iso and size >= 32:
+        from pixelai.human import draw_topdown_human
+
+        draw_topdown_human(canvas, x, y, size, raw_dir, pose, frame, palette, op)
+        return
     iso_dir = raw_dir
     if raw_dir in ("se", "sw", "ne", "nw"):
         direction = {"se": "right", "sw": "left", "ne": "up", "nw": "up"}[raw_dir]

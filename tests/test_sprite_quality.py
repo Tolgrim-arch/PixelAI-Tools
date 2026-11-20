@@ -72,3 +72,15 @@ class SpriteQualityTests(unittest.TestCase):
         self.assertEqual(canvas.get_pixel(21, 12)[3], 0)
         self.assertGreater(canvas.get_pixel(18, 12)[3], 0)
         self.assertGreater(len(set(p for p in canvas.pixels if p[3])), 5)
+
+    def test_special_lantern_has_glass_metal_flame_and_four_frames(self):
+        for size in (16, 32, 64):
+            frames = []
+            for frame in range(4):
+                canvas = sprite({"op": "item_rig", "kind": "lantern", "size": size,
+                                 "frame": frame, "shadow": False}, size)
+                self.assertEqual(canvas.clipped_pixels, 0)
+                self.assertGreater(len({p for p in canvas.pixels if p[3]}), 7)
+                self.assertGreater(sum(p[3] for p in canvas.pixels), size * 255)
+                frames.append(tuple(canvas.pixels))
+            self.assertGreaterEqual(len(set(frames)), {16: 2, 32: 3, 64: 4}[size])

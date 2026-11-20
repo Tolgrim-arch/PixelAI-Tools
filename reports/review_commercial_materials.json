@@ -1,0 +1,259 @@
+{
+  "schema_version": 1,
+  "artifact": {
+    "file_sha256": "a558ae7089a7a7a172322384f2e65ba5bea1f7669ba3a35187cef4ec970d91ae",
+    "pixel_sha256": "558edd85dcb0e2b3db8d784e671dd4c0a6771dcf29f691aae7e23f25a064415c",
+    "content_sha256": "558edd85dcb0e2b3db8d784e671dd4c0a6771dcf29f691aae7e23f25a064415c",
+    "silhouette_sha256": "ab008aa08ac5067e43c47bc49c4d529124b4e5013a2d8b1e5bc275662139f384"
+  },
+  "generated_by": "Codex /root",
+  "reviewed_by": "Codex /root/human_commercial",
+  "comparison_reference": {
+    "name": "Serene Village Revamped by LimeZu",
+    "url": "https://limezu.itch.io/serenevillagerevamped",
+    "notes": "The published terrain set and Construct 3 autotiles set a comparison for crisp terrain groups and map adjacency. The broader swatches here were assessed as material chips and tile delivery."
+  },
+  "inspection": {
+    "native_resolution": true,
+    "integer_zoom": 3
+  },
+  "contract": {
+    "width": 368,
+    "height": 232,
+    "frame_count": 1,
+    "minimum_margin": 0,
+    "max_colors": 50,
+    "max_islands": 1,
+    "required_views": [
+      "rock",
+      "cobble",
+      "soil",
+      "leaves",
+      "bark",
+      "grass",
+      "water",
+      "cloth",
+      "wood",
+      "roof"
+    ],
+    "views": [
+      {
+        "group": "seed_group_1",
+        "name": "rock",
+        "x": 8,
+        "y": 8,
+        "w": 64,
+        "h": 48
+      },
+      {
+        "group": "seed_group_1",
+        "name": "cobble",
+        "x": 80,
+        "y": 8,
+        "w": 64,
+        "h": 48
+      },
+      {
+        "group": "seed_group_1",
+        "name": "soil",
+        "x": 152,
+        "y": 8,
+        "w": 64,
+        "h": 48
+      },
+      {
+        "group": "seed_group_1",
+        "name": "leaves",
+        "x": 224,
+        "y": 8,
+        "w": 64,
+        "h": 48
+      },
+      {
+        "group": "seed_group_1",
+        "name": "bark",
+        "x": 296,
+        "y": 8,
+        "w": 64,
+        "h": 48
+      },
+      {
+        "group": "seed_group_1",
+        "name": "grass",
+        "x": 8,
+        "y": 64,
+        "w": 64,
+        "h": 48
+      },
+      {
+        "group": "seed_group_1",
+        "name": "water",
+        "x": 80,
+        "y": 64,
+        "w": 64,
+        "h": 48
+      },
+      {
+        "group": "seed_group_1",
+        "name": "cloth",
+        "x": 152,
+        "y": 64,
+        "w": 64,
+        "h": 48
+      },
+      {
+        "group": "seed_group_1",
+        "name": "wood",
+        "x": 224,
+        "y": 64,
+        "w": 64,
+        "h": 48
+      },
+      {
+        "group": "seed_group_1",
+        "name": "roof",
+        "x": 296,
+        "y": 64,
+        "w": 64,
+        "h": 48
+      },
+      {
+        "group": "seed_group_2",
+        "name": "rock",
+        "x": 8,
+        "y": 120,
+        "w": 64,
+        "h": 48
+      },
+      {
+        "group": "seed_group_2",
+        "name": "cobble",
+        "x": 80,
+        "y": 120,
+        "w": 64,
+        "h": 48
+      },
+      {
+        "group": "seed_group_2",
+        "name": "soil",
+        "x": 152,
+        "y": 120,
+        "w": 64,
+        "h": 48
+      },
+      {
+        "group": "seed_group_2",
+        "name": "leaves",
+        "x": 224,
+        "y": 120,
+        "w": 64,
+        "h": 48
+      },
+      {
+        "group": "seed_group_2",
+        "name": "bark",
+        "x": 296,
+        "y": 120,
+        "w": 64,
+        "h": 48
+      },
+      {
+        "group": "seed_group_2",
+        "name": "grass",
+        "x": 8,
+        "y": 176,
+        "w": 64,
+        "h": 48
+      },
+      {
+        "group": "seed_group_2",
+        "name": "water",
+        "x": 80,
+        "y": 176,
+        "w": 64,
+        "h": 48
+      },
+      {
+        "group": "seed_group_2",
+        "name": "cloth",
+        "x": 152,
+        "y": 176,
+        "w": 64,
+        "h": 48
+      },
+      {
+        "group": "seed_group_2",
+        "name": "wood",
+        "x": 224,
+        "y": 176,
+        "w": 64,
+        "h": 48
+      },
+      {
+        "group": "seed_group_2",
+        "name": "roof",
+        "x": 296,
+        "y": 176,
+        "w": 64,
+        "h": 48
+      }
+    ]
+  },
+  "criteria": {
+    "professional_quality": {
+      "decision": "fail",
+      "evidence": "Cobble, wood and shingles have useful structure. Flat soil spots and abstract rock and cloth leave the overall swatch set uneven beside a finished environment pack.",
+      "guidance": "Compare finish against a named professional reference; explain remaining weaknesses."
+    },
+    "readability": {
+      "decision": "fail",
+      "evidence": "At native size cobble, bark, water, boards and shingles are recognizable. The mauve diagonal swatch also reads as a mineral striation, and soil competes with an irregular spotted fabric reading.",
+      "guidance": "Identify each subject at native resolution from silhouette and proportions."
+    },
+    "pixel_clustering": {
+      "decision": "pass",
+      "evidence": "Broad patches and repeated shingle and cobble rows stay connected. The few soil chips and bark flecks are anchored in larger value fields rather than floating.",
+      "guidance": "Inspect clusters for noise, isolated pixels, banding and accidental geometry."
+    },
+    "color_and_lighting": {
+      "decision": "pass",
+      "evidence": "Each chip uses controlled hue families. Cool water highlights, warm wood grain and alternating slate facets remain separable at native scale.",
+      "guidance": "Check palette harmony, volume, light direction and controlled contrast."
+    },
+    "materials": {
+      "decision": "fail",
+      "evidence": "Wood has knots and end-to-end grain, yet the three long cloth planes provide no weave or identifiable softness. The soil islands lack convincing compacted or granular structure.",
+      "guidance": "Explain how each material reads through its structure rather than generic pattern noise."
+    },
+    "specialized_design": {
+      "decision": "pass",
+      "evidence": "Compared with the shared texture primitive, roof courses, cobble joints, bark channels and wood knots carry distinct generator geometry.",
+      "guidance": "Check anatomy, architecture and characteristic features of the subject."
+    },
+    "artistic_detail": {
+      "decision": "fail",
+      "evidence": "Roof and cobble show clear close-up structure. The comparatively vacant soil and broad striped cloth leave detail uneven across the swatch set.",
+      "guidance": "Assess depth, personality and finish beyond a merely acceptable primitive."
+    },
+    "originality": {
+      "decision": "pass",
+      "evidence": "Across the two seed groups the soil spots, leaf clusters, bark streaks, water breaks and stone placements visibly shift. Kind-specific shapes are present beyond palette changes.",
+      "guidance": "Compare with prior and rejected work; explain new geometry and legitimate reuse."
+    },
+    "consistency": {
+      "decision": "fail",
+      "evidence": "Cobble and roof introduce regular construction detail while soil and fabric are mostly broad color blocks. The different implied scales and detail densities lack a common game-context check.",
+      "guidance": "Compare scale, perspective, style and detail density within the intended catalog."
+    },
+    "technical_integrity": {
+      "decision": "pass",
+      "evidence": "The 368 by 232 opaque preview has the intended full-bleed background, 48 colors, one combined component, zero singletons and twenty in-bounds 64 by 48 rectangles.",
+      "guidance": "Verify dimensions, transparency, borders, directions and absence of deformation."
+    },
+    "game_readiness": {
+      "decision": "fail",
+      "evidence": "The delivered file is an opaque preview of twenty material patches. It includes no isolated runtime tiles or adjacency metadata, and wrapping behavior remains unverified.",
+      "guidance": "Verify complete views/states/animations and integration without manual repair."
+    }
+  }
+}

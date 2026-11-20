@@ -103,6 +103,30 @@ pixelai render ./specs/bush_64.json -o ./bush.png --json
 `validate` runs the renderer in memory and reports the first error or a JSON
 summary with warnings. `render --json` writes one JSON result to stdout with
 absolute artifact paths, frame dimensions, frame count, and warnings.
+
+## Commercial review gate
+
+`inspect` reports measurable raster facts; it does not judge whether art is
+professional. Commercial candidates use a fail-closed independent review:
+
+```powershell
+pixelai qa output.png --template reviews/output.review.json
+# Complete the template after viewing 1x and integer zoom with a named reference.
+pixelai qa output.png --review reviews/output.review.json --catalog reviews/catalog.json --record
+```
+
+The eleven required decisions cover professional quality, native readability,
+pixel clustering, color and lighting, materials, specialized design, detail,
+originality, catalog consistency, technical integrity, and game readiness. Every
+pass requires written evidence. The generator cannot approve its own output.
+Exit code `0` is approved, `1` rejected, and `2` awaiting evidence. Rejected
+pixel content remains rejected after renaming, metadata changes, or transparent
+padding; its entry stays in the append-only catalog.
+
+Procedural material planes are available through `material` for rock, cobble,
+soil, leaves, bark, grass, water, cloth, wood, and roof. They use structured
+shade planes and seeded geometry. They are bounded surfaces, not seamless
+autotiles.
 Errors go to stderr and return a nonzero exit code.
 
 Relative `extends` and `load_png` input paths resolve from the spec file's

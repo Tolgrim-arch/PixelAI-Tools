@@ -1,0 +1,31 @@
+{
+  "fresh": true,
+  "width": 192,
+  "height": 132,
+  "palette": "cozy24",
+  "style": "ext_outline",
+  "ops": [
+    {"op": "ui_rig", "kind": "panel", "x": 4, "y": 4, "w": 184, "h": 124, "theme": "gold", "frame_width": 12, "inner_fill": true},
+    {"op": "polygon", "color": "#324d4b", "points": [[24,20],[168,20],[160,30],[32,30]], "filled": true},
+    {"op": "polygon", "color": "#69a298", "points": [[70,25],[88,25],[96,20],[104,25],[122,25],[104,26],[96,30],[88,26]], "filled": true},
+    {"op": "polygon", "color": "#b7dfce", "points": [[90,24],[96,21],[102,24],[98,25],[94,25]], "filled": true},
+    {"op": "polygon", "color": "#27605e", "points": [[94,26],[96,29],[98,26],[96,27]], "filled": true},
+    {"op": "line", "x0": 84, "y0": 25, "x1": 89, "y1": 25, "color": "#b7dfce"},
+    {"op": "line", "x0": 103, "y0": 25, "x1": 108, "y1": 25, "color": "#b7dfce"},
+    {"op": "ui_rig", "kind": "slot", "x": 25, "y": 37, "w": 22, "h": 22, "theme": "gold"},
+    {"op": "ui_rig", "kind": "slot", "x": 49, "y": 37, "w": 22, "h": 22, "theme": "gold"},
+    {"op": "ui_rig", "kind": "slot", "x": 73, "y": 37, "w": 22, "h": 22, "theme": "gold", "state": "selected"},
+    {"op": "ui_rig", "kind": "slot", "x": 97, "y": 37, "w": 22, "h": 22, "theme": "gold"},
+    {"op": "ui_rig", "kind": "slot", "x": 121, "y": 37, "w": 22, "h": 22, "theme": "gold"},
+    {"op": "ui_rig", "kind": "slot", "x": 145, "y": 37, "w": 22, "h": 22, "theme": "gold"},
+    {"op": "ui_rig", "kind": "slot", "x": 25, "y": 61, "w": 22, "h": 22, "theme": "gold"},
+    {"op": "ui_rig", "kind": "slot", "x": 49, "y": 61, "w": 22, "h": 22, "theme": "gold"},
+    {"op": "ui_rig", "kind": "slot", "x": 73, "y": 61, "w": 22, "h": 22, "theme": "gold"},
+    {"op": "ui_rig", "kind": "slot", "x": 97, "y": 61, "w": 22, "h": 22, "theme": "gold"},
+    {"op": "ui_rig", "kind": "slot", "x": 121, "y": 61, "w": 22, "h": 22, "theme": "gold"},
+    {"op": "ui_rig", "kind": "slot", "x": 145, "y": 61, "w": 22, "h": 22, "theme": "gold"},
+    {"op": "ui_rig", "kind": "button", "x": 25, "y": 92, "w": 44, "h": 17, "theme": "gold", "state": "normal"},
+    {"op": "ui_rig", "kind": "button", "x": 73, "y": 92, "w": 44, "h": 17, "theme": "gold", "state": "hover"},
+    {"op": "ui_rig", "kind": "button", "x": 121, "y": 92, "w": 44, "h": 17, "theme": "gold", "state": "pressed"}
+  ]
+}

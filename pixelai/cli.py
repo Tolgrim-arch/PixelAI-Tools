@@ -18,6 +18,7 @@ from pixelai.exporter import (
 from pixelai.inspect_tool import analyze_image_file, render_ascii
 from pixelai.palettes import list_palettes
 from pixelai.runner import resolve_spec_paths, run_frames, run_layers
+from pixelai.quality import assess_artifact, record_assessment, review_template
 
 AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 
@@ -36,6 +37,8 @@ AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 - Spritesheet + Metadata + Godot 4 `.tres`:
   `pixelai render spec.json -o sheet.png --sheet --columns 4 --meta sheet.json --godot sheet.tres`
 - Terminal Inspection (Metrics + ASCII): `pixelai inspect out.png --ascii`
+- Commercial QA Template: `pixelai qa out.png --template reviews/out.review.json`
+- Commercial QA Decision: `pixelai qa out.png --review reviews/out.review.json --catalog reviews/catalog.json --record` (0 approved, 1 rejected, 2 needs review; metrics alone never approve)
 - Extract Embedded Spec from PNG: `pixelai extract out.png`
 
 ## Drawing Operations (`ops`)
@@ -51,6 +54,7 @@ AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 - `{"op": "grid", "x": 0, "y": 0, "rows": ["..oo..", ".oggo."]}` (`.` and ` ` = transparent)
 - `{"op": "dither", "x": 0, "y": 0, "w": 8, "h": 8, "color_a": "grass", "color_b": "grass_d"}`
 - `{"op": "scatter", "x": 0, "y": 0, "w": 32, "h": 32, "color": "grass_l", "target_color": "grass", "pattern": "noise|brick|shingle|cobble|wood|grass|rock|soil|leaves|bark|water|cloth", "density": 0.2, "seed": 42}` (Use material accents clipped to the surface; avoid random noise as a substitute for material planes.)
+- `{"op": "material", "kind": "rock|cobble|soil|leaves|bark|grass|water|cloth|wood|roof", "x": 0, "y": 0, "w": 64, "h": 48, "seed": 42, "inside": false}` (Structured native material planes; optional `color` base tint or five-entry `colors` ramp. `trunk` aliases bark, `shingle` aliases roof.)
 - `{"op": "building", "x": 12, "y": 14, "w": 104, "h": 98, "roof_style": "gable|pitched|barn", "wall_color": "cream", "roof_color": "roof", "timber_frame": true, "chimney": true, "smoke": true, "shadow_opacity": 0.22}` (Top-down 3/4 architecture; straight projected ground shadow, optional shadow_dx/shadow_dy; PNG preserves partial alpha.)
 - `{"op": "stamp", "def": "sub_sprite", "x": 4, "y": 4, "flip_x": false, "flip_y": false, "angle": 45, "pivot": [4, 4], "remap": {"wood": "stone"}}`
 - `{"op": "load_png", "path": "base.png", "x": 0, "y": 0, "crop": [0, 0, 16, 16]}`
@@ -61,7 +65,7 @@ AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 - `{"op": "portrait_rig", "style": "mistria", "preset": "samurai|farmer", "x": 1, "y": 1, "width": 120, "height": 160, "face_dir": "three_quarter_left|three_quarter_right", "hat": false, "scar": true}` (Fields of Mistria style waist-up portrait engine with 90s-anime facial proportions, cel-shading, and samurai or farmer attire)
 - `{"op": "portrait_rig", "preset": "field_farmer", "x": 0, "y": 0, "hat": true, "expression": "smile|neutral", "face_dir": "three_quarter_left|three_quarter_right"}` (Native 116 x 144 field farmer bust, with overridable material colors such as skin, hair, denim and straw.)
 - `{"op": "animal_rig", "x": 0, "y": 0, "species": "chicken|cow", "dir": "down|up|left|right|se|sw|ne|nw", "pose": "idle|walk|run|peck|graze|nest|lie|sleep|jump|fall|surprised|happy|sad|angry|sick", "perspective": "topdown|platformer|iso", "shadow": true, "emotes": true, "ground_prop": "auto|grass|seeds|none", "nest_prop": false, "frame": 0}` (Cozy farm creature rig with auto-looping frames, hip-pivot peck, optional props/shadows/emotes)
-- `{"op": "item_rig", "x": 0, "y": 0, "kind": "potion|sword|shield|chest|gem|key|coin|apple|axe|pickaxe|carrot|bread|fish", "orientation": "vertical|diagonal", "size": 24, "fill_level": 0.78, "state": "closed|open", "shine": true, "shadow": false}` (Parametric RPG items, weapons, and inventory/world loot icons)
+- `{"op": "item_rig", "x": 0, "y": 0, "kind": "potion|sword|shield|chest|gem|key|coin|apple|axe|pickaxe|carrot|bread|fish|lantern", "orientation": "vertical|diagonal", "size": 24, "fill_level": 0.78, "state": "closed|open", "shine": true, "shadow": false}` (Parametric RPG items, weapons, food and special loot. Lantern supports `flame_color` and four flame frames.)
 - `{"op": "nature_rig", "x": 0, "y": 0, "kind": "tree|bush|rock|flower|crop", "variant": "oak|pine|fruit|sakura|boulder|mossy|ore|wheat|berry|carrot", "stage": 3, "sway": false, "shadow": true, "ground_base": "none|grass|soil"}` (Trees, rocks, flowers, and 4-stage crops)
 - `{"op": "ui_rig", "x": 0, "y": 0, "kind": "panel|bar|button|heart|slot", "theme": "wood|stone|gold|paper|dark", "state": "normal|hover|pressed|full|half|empty|selected", "fill": 0.75, "w": 48, "h": 12}` (Native pixel UI; panels support frame_width 3..12, theme-specific details and inner_fill:false for a transparent center. Render at final dimensions.)
 - `{"op": "emote", "x": 18, "y": 2, "kind": "heart|angry|sweat|zzz|exclamation|sick", "frame": 0, "outline": false}`
@@ -183,6 +187,8 @@ def _cmd_render(args: argparse.Namespace) -> int:
         "frame_count": len(frames),
         "warnings": warnings,
     }
+    if any(frame.attachments for frame in frames):
+        result["attachments"] = [frame.attachments for frame in frames]
     if args.ascii:
         result["ascii"] = render_ascii(frames[0])
         report(result["ascii"])
@@ -290,6 +296,27 @@ def _cmd_guide(_args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_qa(args: argparse.Namespace) -> int:
+    if args.template:
+        target = Path(args.template)
+        if target.exists():
+            raise ValueError("Review template already exists; choose a new path to preserve review evidence")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps(review_template(args.image), indent=2) + "\n", encoding="utf-8")
+    review = json.loads(Path(args.review).read_text(encoding="utf-8-sig")) if args.review else None
+    catalog_path = Path(args.catalog) if args.catalog else None
+    catalog = json.loads(catalog_path.read_text(encoding="utf-8-sig")) if catalog_path and catalog_path.exists() else None
+    if catalog is not None and not isinstance(catalog, dict):
+        raise ValueError("catalog must be a JSON object")
+    if args.record and catalog_path is None:
+        raise ValueError("--record requires --catalog")
+    result = assess_artifact(args.image, review, catalog)
+    if args.record:
+        record_assessment(catalog_path, args.image, result)
+    print(json.dumps(result, indent=2))
+    return {"approved": 0, "rejected": 1, "needs_review": 2}[result["status"]]
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="pixelai",
@@ -385,6 +412,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Print ASCII preview for every frame of a GIF.",
     )
     inspect_p.set_defaults(func=_cmd_inspect)
+
+    qa_p = sub.add_parser("qa", help="Assess commercial readiness against eleven evidenced review criteria; metrics alone never approve art.")
+    qa_p.add_argument("image", help="PNG or GIF artifact to assess.")
+    review_args = qa_p.add_mutually_exclusive_group()
+    review_args.add_argument("--template", help="Write a new unverified review template bound to this artifact; never overwrites a review.")
+    review_args.add_argument("--review", help="Review JSON with independent reviewer, native/zoom inspection, delivery contract and all eleven criteria.")
+    qa_p.add_argument("--catalog", help="JSON approval/rejection ledger; exact previously rejected pixels cannot be approved.")
+    qa_p.add_argument("--record", action="store_true", help="Append this assessment to --catalog. Exit codes: 0 approved, 1 rejected, 2 needs review.")
+    qa_p.set_defaults(func=_cmd_qa)
 
     showcase_p = sub.add_parser(
         "showcase",

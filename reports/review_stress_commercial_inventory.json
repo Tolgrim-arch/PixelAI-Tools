@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "artifact": {
+    "file_sha256": "805fe1fd866c3d4f54656e99730f3f526a26a1129d33c2696bad06c602c6803e",
+    "pixel_sha256": "ec75610fc5f0fe710af23a38fec45f652b6d7779941c0fb0245ed6d2cdccc090",
+    "content_sha256": "5990e5502579f0307c6679736c6cb969ab8280846a8ce75bf4fc2f3e671085fc",
+    "silhouette_sha256": "d2ba1011a6695576b3d8969d3efca4faf6473d2e549f6cb06aa46c4b52d4a2d7"
+  },
+  "generated_by": "Codex /root/independent_stress",
+  "reviewed_by": "Codex /root/human_commercial",
+  "comparison_reference": {
+    "name": "Fantasy UI Pack – Ornate Pixel Art GUI & HUD by Catau Games",
+    "url": "https://catau-games.itch.io/fantasy-ui-pack-ornate-pixel-art-gui-hud",
+    "notes": "The published pack describes layered wood and metal, gold corner filigree, independently exported button states and stretchable panels. Used as the comparison for ornament and modular delivery."
+  },
+  "inspection": {
+    "native_resolution": true,
+    "integer_zoom": 3
+  },
+  "contract": {
+    "width": 192,
+    "height": 132,
+    "frame_count": 1,
+    "minimum_margin": 1,
+    "max_colors": 32,
+    "max_islands": 1,
+    "required_views": [
+      "normal",
+      "hover",
+      "pressed"
+    ],
+    "views": [
+      {
+        "name": "normal",
+        "x": 25,
+        "y": 92,
+        "w": 44,
+        "h": 17
+      },
+      {
+        "name": "hover",
+        "x": 73,
+        "y": 92,
+        "w": 44,
+        "h": 17
+      },
+      {
+        "name": "pressed",
+        "x": 121,
+        "y": 92,
+        "w": 44,
+        "h": 17
+      }
+    ]
+  },
+  "criteria": {
+    "professional_quality": {
+      "decision": "fail",
+      "evidence": "The added teal gems and mitered corners improve the frame. The corners and rail motifs still repeat the same diamond geometry, and wide controls look generic beside an ornate UI brief.",
+      "guidance": "Compare finish against a named professional reference; explain remaining weaknesses."
+    },
+    "readability": {
+      "decision": "pass",
+      "evidence": "The twelve slots and selected third slot identify an inventory layout at 1x. The three button specimens distinguish light normal, brighter hover and darker pressed.",
+      "guidance": "Identify each subject at native resolution from silhouette and proportions."
+    },
+    "pixel_clustering": {
+      "decision": "pass",
+      "evidence": "At 3x the gems and corners form connected clusters. Slots and buttons have clean repeated edges, and the template retains clear gutters.",
+      "guidance": "Inspect clusters for noise, isolated pixels, banding and accidental geometry."
+    },
+    "color_and_lighting": {
+      "decision": "pass",
+      "evidence": "Pale upper rail highlights and dark bevels establish a coherent gold ramp. Teal accents separate from brown panel fill and selected slot maintains clear emphasis.",
+      "guidance": "Check palette harmony, volume, light direction and controlled contrast."
+    },
+    "materials": {
+      "decision": "fail",
+      "evidence": "Bevel contrast suggests metal, but the main rail remains a flat gold strip. Gem diamonds show a few highlight pixels without sufficient faceting to distinguish glass from painted badges.",
+      "guidance": "Explain how each material reads through its structure rather than generic pattern noise."
+    },
+    "specialized_design": {
+      "decision": "pass",
+      "evidence": "Two slot rows, a selected state, header treatment and a row of button states form a recognizable inventory component demonstration.",
+      "guidance": "Check anatomy, architecture and characteristic features of the subject."
+    },
+    "artistic_detail": {
+      "decision": "fail",
+      "evidence": "The new edge accents are crisp, but the isolated diamonds and plain corner blocks provide little filigree or depth at 3x. The interior remains a broad flat brown plane.",
+      "guidance": "Assess depth, personality and finish beyond a merely acceptable primitive."
+    },
+    "originality": {
+      "decision": "pass",
+      "evidence": "Compared with the baseline rail the revision adds side inlays, corner planes and a dark inner groove. Layout and header are legitimate reuse with visible authored pixel changes.",
+      "guidance": "Compare with prior and rejected work; explain new geometry and legitimate reuse."
+    },
+    "consistency": {
+      "decision": "pass",
+      "evidence": "Slots and buttons share a restrained amber/brown ramp and consistent bevel direction. Teal stays reserved for the frame and header accents.",
+      "guidance": "Compare scale, perspective, style and detail density within the intended catalog."
+    },
+    "technical_integrity": {
+      "decision": "pass",
+      "evidence": "The transparent 192 by 132 PNG has one expected component, zero singletons, 30 colors, and 3 px edge clearance on all sides.",
+      "guidance": "Verify dimensions, transparency, borders, directions and absence of deformation."
+    },
+    "game_readiness": {
+      "decision": "fail",
+      "evidence": "This export is a flattened inventory mockup. Its panel, slot and button states lack standalone transparent exports, nine-slice margins and verified live interaction.",
+      "guidance": "Verify complete views/states/animations and integration without manual repair."
+    }
+  }
+}

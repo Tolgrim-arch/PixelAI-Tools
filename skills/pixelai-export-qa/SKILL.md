@@ -17,6 +17,29 @@ Check these exact invariants:
 - `duplicate_frames`: `0` on animated loops.
 - `unique_colors`: stays concise and readable (no accidental color noise).
 
+Metrics only detect technical defects. They never establish commercial quality.
+For anything described as sellable, premium, production-ready, or approved, run:
+
+```powershell
+python -m pixelai qa output.png --template reviews/output.review.json
+# A different reviewer inspects 1x and integer zoom, completes every field, then:
+python -m pixelai qa output.png --review reviews/output.review.json --catalog reviews/catalog.json --record
+```
+
+Exit code `0` means all eleven user-facing criteria have an evidence-backed pass
+and the delivery contract is satisfied. `1` is rejected; `2` needs review. The
+review must name a professional comparison source, identify generator and a
+different reviewer, record native and integer-zoom inspection, and provide
+substantive evidence for professional quality, readability, clustering, color and
+lighting, materials, specialized design, artistic detail, originality,
+consistency, technical integrity, and game readiness. A clean `inspect` result
+cannot convert `needs_review` into approval.
+
+Record every rejected commercial candidate in the catalog before iteration.
+Changing filename, metadata, or transparent padding does not make rejected pixels
+new. Preserve the failed image/spec with a `_before` suffix when it is useful for
+root-cause comparison. Never overwrite review evidence.
+
 ## Export Commands
 - **Spritesheet + JSON Metadata + Godot 4 `SpriteFrames` (`.tres`):**
   ```powershell
@@ -26,11 +49,11 @@ Check these exact invariants:
   ```powershell
   python -m pixelai showcase assets_dir/ -o showcase.png --scale 4
   ```
-- **Extract & Iterate From Existing PNG (`pixelai_spec` metadata):**
+- **Extract an explicitly approved PNG for a requested edit (`pixelai_spec` metadata):**
   ```powershell
   python -m pixelai extract sprite.png
   ```
-  Or inherit directly inside a new spec via top-level `"extends": "sprite.png"`.
+  New artwork must use `fresh:true` and `--fresh`; never inherit a rejected candidate.
 
 ## Interactive Clarification Checklist
 Confirm concisely when packaging for a game engine:

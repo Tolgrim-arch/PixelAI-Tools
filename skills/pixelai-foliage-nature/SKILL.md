@@ -55,6 +55,8 @@ Use the following design choices to interpret the brief. Use sensible defaults f
 - Fruit uses `accent_color`, e.g. `"#dc5146"`. Prefer native 64-128px trees for visible stem, leaf, cleft and reflection. Reject red dots and overlapping fruit bodies.
 - Inspect every variant at delivery size (32, 64 or 128px) and nearest-neighbor enlargement. Oak requires unequal branch crowns and silhouette notches; pine requires irregular lateral boughs and stepped gaps. Reject circular canopies or continuous triangles covered in noise.
 - Rocks require angular shade planes with restrained mineral grain; reject an oval and internal ink cracks.
+- Rock `seed` varies the silhouette and facet junctions. Set `color` for stone, `foliage_color` for the moss cap, and `accent_color` for the ore vein.
+- Broadleaf `color` supplies the crown's base tint. Explicit `band_colors` or a legacy `ramp` take precedence.
 
 ```json
 {"width":128,"height":128,"style":"ext_outline","ops":[{"op":"nature_rig","kind":"tree","variant":"fruit","w":128,"h":128,"seed":23,"accent_color":"#dc5146","shadow_color":"#29343c30"}]}

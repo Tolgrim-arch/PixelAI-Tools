@@ -1,5 +1,6 @@
 """Parametric cozy foliage, trees, faceted rocks, flowers, and detailed 4-stage crops."""
 
+import random
 from typing import Any
 from pixelai import broadleaf, conifer, leafstudy, undergrowth
 from pixelai.canvas import Canvas
@@ -22,13 +23,93 @@ def _draw_ground_patch(
     local.mark_no_outline = False
 
 
-def _draw_leaf_cluster(
-    canvas: Canvas, cx: int, cy: int, rx: int, ry: int, base: RGBA, hi: RGBA, sh: RGBA
+def _draw_rock(
+    canvas: Canvas, variant: str, seed: int,
+    stone: RGBA, moss: RGBA, ore: RGBA,
 ) -> None:
-    """Draw a textured scalloped leaf cluster with shadow rim and highlight tufts."""
-    canvas.draw_ellipse(cx, cy + 1, rx, ry, sh, filled=True)
-    canvas.draw_ellipse(cx, cy, rx, max(1, ry - 1), base, filled=True)
-    canvas.draw_ellipse(cx - 1, cy - 1, max(1, rx - 1), max(1, ry - 1), hi, filled=True)
+    rng = random.Random(seed)
+    cx, foot = canvas.width // 2, canvas.height - 4
+    radius = max(4, canvas.width // (4 if variant == "mossy" else 5))
+    height = radius if variant == "mossy" else round(radius * 1.35)
+    rise = min(height + rng.randint(0, max(2, radius // 3)), max(3, foot - 2))
+    drift = max(1, radius // 4)
+    left = (cx - radius - 2, foot - 1)
+    shoulder = (cx - radius + rng.randint(0, drift), foot - rise + max(2, rise // 3))
+    crest = (cx - radius // 2 + rng.randint(-drift, drift), foot - rise)
+    ridge = (cx + radius // 3 + rng.randint(0, drift), crest[1] + rng.randint(1, max(2, rise // 3)))
+    right = (cx + radius + rng.randint(-drift, drift), foot - max(2, rise // 3))
+    heel = (right[0] - 1, foot - 1)
+    base = (cx + radius // 4, foot)
+    join = (cx + rng.randint(-drift, drift), foot - max(1, rise // 3))
+    side = darken(stone, .72)
+
+    canvas.draw_polygon([left, shoulder, crest, ridge, right, heel, base], side, filled=True)
+    canvas.draw_polygon([left, shoulder, crest, ridge, join], stone, filled=True)
+    canvas.draw_polygon([shoulder, crest, ridge, join], brighten(stone, 1.22), filled=True)
+    canvas.draw_polygon([left, join, base], darken(stone, .86), filled=True)
+
+    # Each material follows a facet. Clip small clusters to existing rock pixels.
+    canvas.clip_to_opaque = True
+    try:
+        if variant == "mossy":
+            x, y = crest
+            tip_x = (ridge[0] + join[0]) // 2
+            spread = max(2, (ridge[0] - x) // 3)
+            canvas.draw_polygon(
+                [(x, y), ridge, (tip_x + 1, ridge[1] + 2),
+                 (tip_x - 2, ridge[1] + 3), (x + spread, y + 4),
+                 (x + 1, y + 6), (x - 2, y + 3)],
+                darken(moss, .76), filled=True,
+            )
+            canvas.draw_polygon(
+                [(x, y), ridge, (tip_x - 1, ridge[1] + 1),
+                 (x + spread, y + 2), (x + 1, y + 4), (x - 2, y + 2)],
+                moss, filled=True,
+            )
+            canvas.draw_line(x, y + 1, x + spread - 1, y + 1, brighten(moss, 1.22))
+            canvas.draw_line(x - 2, y + 4, x - 1, y + 4, moss)
+            canvas.set_pixel(x + spread - 1, y + 5, darken(moss, .86))
+        elif variant == "ore":
+            x, y = join
+            reach = max(2, radius // 2)
+            height = max(3, rise // 3)
+            canvas.draw_polygon(
+                [(x - reach - 1, y - 2), (x - reach + 1, y - height - 1),
+                 (x + 1, y - height + 1), (x + reach + 1, y - 1),
+                 (x + reach, y + 2), (x + 1, y + 4), (x - 3, y + 2)],
+                darken(stone, .59), filled=True,
+            )
+            canvas.draw_polygon(
+                [(x - reach, y - 2), (x - reach + 2, y - height),
+                 (x + 1, y - height + 1), (x + 2, y - 1),
+                 (x + reach, y - 1), (x + reach, y + 1),
+                 (x + 1, y + 3), (x - 3, y + 1)],
+                darken(ore, .68), filled=True,
+            )
+            canvas.draw_polygon(
+                [(x - reach, y - 2), (x - reach + 2, y - height),
+                 (x, y - height + 1), (x + 1, y - 2), (x - 2, y)],
+                ore, filled=True,
+            )
+            canvas.draw_polygon(
+                [(x, y + 1), (x + 2, y - 1), (x + reach, y - 1),
+                 (x + reach - 1, y + 1), (x + 1, y + 2)],
+                brighten(ore, 1.14), filled=True,
+            )
+            canvas.draw_line(x - reach + 1, y - 2, x - reach + 2, y - height, brighten(ore, 1.34))
+            # Rock shelves interrupt the deposit outline and hide its lower corners.
+            canvas.draw_polygon(
+                [(x - reach - 1, y - 1), (x - reach + 1, y - 1),
+                 (x - 1, y + 1), (x - 2, y + 2), (x - reach - 1, y + 1)],
+                stone, filled=True,
+            )
+            canvas.draw_polygon(
+                [(x + 2, y + 2), (x + reach, y), (x + reach + 1, y - 1),
+                 (x + reach + 1, y + 2), (x + 2, y + 4)],
+                side, filled=True,
+            )
+    finally:
+        canvas.clip_to_opaque = False
 
 
 def draw_nature_rig(
@@ -86,8 +167,6 @@ def draw_nature_rig(
     trunk_l = brighten(trunk, 1.18)
     trunk_d = darken(trunk, 0.70)
     stone = p("color", "stone", "#8694a8")
-    stone_l = brighten(stone, 1.24)
-    stone_d = darken(stone, 0.68)
     accent = p("accent_color", "roof" if kind == "tree" else "wheat", "#e6b84c")
     shadow_col = p("shadow_color", "shadow", "#33293a")
     shadow_col = ground_shadow_color(shadow_col)
@@ -103,50 +182,8 @@ def draw_nature_rig(
         local.mark_no_outline = False
 
     if kind == "rock":
-        # Chiseled faceted polygonal boulder (not an oval inside an oval!)
-        r = max(5, w // 4)
-        ry = h - 4
-        local.draw_polygon([
-            (cx - r - 2, ry),
-            (cx - r - 1, ry - r + 2),
-            (cx - r // 2, ry - r - 1),
-            (cx + r // 2, ry - r),
-            (cx + r + 1, ry - r + 3),
-            (cx + r + 2, ry),
-        ], stone_d, filled=True)
-        local.draw_polygon([
-            (cx - r - 1, ry - 1),
-            (cx - r, ry - r + 2),
-            (cx - r // 2, ry - r - 1),
-            (cx + r // 2 - 1, ry - r),
-            (cx + r, ry - r + 3),
-            (cx + r - 1, ry - 1),
-        ], stone, filled=True)
-        local.draw_polygon([
-            (cx - r + 1, ry - r + 2),
-            (cx - r // 2, ry - r - 1),
-            (cx + 1, ry - r),
-            (cx, ry - r // 2),
-            (cx - r + 2, ry - r // 3),
-        ], stone_l, filled=True)
-        # Broad fracture planes and sparse mineral grain; no internal ink line.
-        local.draw_polygon([(cx + 1, ry - r // 2), (cx + r - 1, ry - r + 3),
-                            (cx + r - 2, ry - 2), (cx + 2, ry - 3)], stone_d, filled=True)
-        for gy in range(ry - r + 2, ry - 1, 3):
-            for gx in range(cx - r + 2, cx + r - 1, 4):
-                if local.get_pixel(gx, gy) == stone:
-                    local.set_pixel(gx, gy, brighten(stone, 1.10))
-                    if local.get_pixel(gx + 1, gy) == stone:
-                        local.set_pixel(gx + 1, gy, darken(stone, 0.90))
-        if variant == "mossy":
-            _draw_leaf_cluster(local, cx - 1, ry - r, max(3, r // 2), 2, foliage, foliage_l, foliage_d)
-        elif variant == "ore":
-            ore_l = brighten(accent, 1.35)
-            ore_d = darken(accent, 0.72)
-            for ox, oy in ((cx - 3, ry - r // 2 - 2), (cx + 2, ry - 4), (cx - 1, ry - 3)):
-                local.draw_rect(ox, oy, 3, 2, accent, filled=True)
-                local.set_pixel(ox, oy, ore_l)
-                local.set_pixel(ox + 2, oy + 1, ore_d)
+        moss = p("foliage_color", "grass", "#589c4c")
+        _draw_rock(local, variant, int(op.get("seed", 42)), stone, moss, accent)
 
     elif kind == "flower":
         by = h - 4

@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "artifact": {
+    "file_sha256": "d15fc02efc4552e84a0cf81efe541648a3c5e539a87421117a81d0a9069022e3",
+    "pixel_sha256": "cc3fea4ea5ceff265626e1e600bfd8ae2428430b15afa0533b4e22a787e87385",
+    "content_sha256": "5b1ceae7ef18ccefc661dec9d28bf1876529c1bf0fa489f894fd0d69bcb41e17",
+    "silhouette_sha256": "bb4e6648d28a6f61f3021799bd34cfd74656a326b5a8f7b980320bd461e4808e"
+  },
+  "generated_by": "pixelai-tools; generating agent not independently established",
+  "reviewed_by": "Codex /root/independent_candidate_review",
+  "comparison_reference": {
+    "name": "Sprout Lands Asset Pack by Cup Nooble",
+    "url": "https://cupnooble.itch.io/sprout-lands-asset-pack",
+    "notes": "Published farming asset pack describes simple character animations and, in its premium pack, six animation types in four directions; comparison is limited to published description, not a direct visual inspection of its downloadable sprites."
+  },
+  "inspection": {
+    "native_resolution": true,
+    "integer_zoom": 3
+  },
+  "contract": {
+    "width": 140,
+    "height": 82,
+    "frame_count": 1,
+    "minimum_margin": 1,
+    "max_colors": 18,
+    "max_islands": 2,
+    "required_views": [],
+    "views": []
+  },
+  "criteria": {
+    "professional_quality": {
+      "decision": "fail",
+      "evidence": "The pair has readable canopies and fruit, but repeating trunk language and crowded patches limit polish.",
+      "guidance": "Compare finish against a named professional reference; explain remaining weaknesses."
+    },
+    "readability": {
+      "decision": "pass",
+      "evidence": "At 1x two fruit trees are recognizable; yellow and red fruit distinguish the pair better than species-specific details.",
+      "guidance": "Identify each subject at native resolution from silhouette and proportions."
+    },
+    "pixel_clustering": {
+      "decision": "pass",
+      "evidence": "At 3x foliage forms clustered lobes, but small patches and closely spaced fruit compete within the crowns.",
+      "guidance": "Inspect clusters for noise, isolated pixels, banding and accidental geometry."
+    },
+    "color_and_lighting": {
+      "decision": "pass",
+      "evidence": "Warm fruit contrasts with green crowns and darker right and lower planes give volume.",
+      "guidance": "Check palette harmony, volume, light direction and controlled contrast."
+    },
+    "materials": {
+      "decision": "pass",
+      "evidence": "Brown trunk planes and rounded fruit separate from leaves; foliage texture remains coarse.",
+      "guidance": "Explain how each material reads through its structure rather than generic pattern noise."
+    },
+    "specialized_design": {
+      "decision": "pass",
+      "evidence": "The yellow fruit has a tapered shape while the red fruit is rounder; both trees have similar forked trunks.",
+      "guidance": "Check anatomy, architecture and characteristic features of the subject."
+    },
+    "artistic_detail": {
+      "decision": "pass",
+      "evidence": "Fruit highlights and branch forks add character, though fine fruit details are weak at native scale.",
+      "guidance": "Assess depth, personality and finish beyond a merely acceptable primitive."
+    },
+    "originality": {
+      "decision": "fail",
+      "evidence": "Different crown outlines and fruit colors differentiate the pair; comparison with earlier rejected geometry is not fully established.",
+      "guidance": "Compare with prior and rejected work; explain new geometry and legitimate reuse."
+    },
+    "consistency": {
+      "decision": "pass",
+      "evidence": "Both trees use matching green ramps, perspective, outline weight and ground shadow.",
+      "guidance": "Compare scale, perspective, style and detail density within the intended catalog."
+    },
+    "technical_integrity": {
+      "decision": "pass",
+      "evidence": "The 140 by 82 transparent sheet contains two intended islands, 18 colors, no singleton pixels and a 3 px minimum margin.",
+      "guidance": "Verify dimensions, transparency, borders, directions and absence of deformation."
+    },
+    "game_readiness": {
+      "decision": "fail",
+      "evidence": "Individual sprites, harvest states, sorting anchors and in-engine placement have not been verified.",
+      "guidance": "Verify complete views/states/animations and integration without manual repair."
+    }
+  }
+}

@@ -11,6 +11,7 @@ description: Generate top-down 3/4 cozy pixel art buildings, cottages, farmhouse
 
 ## Fresh construction and architectural shadows
 - Start a new spec from the current brief; do not reuse discarded buildings or load rejected PNGs as new work. Render at the final native dimensions.
+- Buildings use a visible 3/4 return plane. `depth` controls its projected width; leave room to the right. A front gable must join the main roof through pitched return planes rather than appear as a flat triangle pasted over it. `dormer:false` removes the cross-gable from gable/farmhouse styles.
 - Ground shadows follow a straight architectural footprint, never a circular tree shadow. Default opacity is 0.22; use `shadow_opacity: 0.12..0.25` for a soft low-opacity ground shadow, or `ground_shadow:false` for engine lighting.
 - `shadow_dx`/`shadow_dy` set integer projection offsets; leave canvas space on the projected side. Keep eave shadows attached to the facade and foundation contacts aligned.
 - Prefer PNG when preserving partial shadow alpha. GIF only supports binary transparency; use a PNG spritesheet or omit ground shadows for an animated engine asset.
@@ -25,8 +26,8 @@ Confirm concisely with the user:
 
 ## `building` Op Reference (Top-Down 3/4)
 - `"op": "building"`
-- Position & Size: `x`, `y`, `w`, `h`, optional `roof_h`, `foundation_h`
-- Style & Details: `"roof_style": "gable|pitched|barn"`, `"timber_frame": true`, `"chimney": true`, `"smoke": true`, `"door": true`, `"ground_shadow": true`, `"seed": 42`
+- Position & Size: `x`, `y`, `w`, `h`, optional `roof_h`, `foundation_h`, `depth`
+- Style & Details: `"roof_style": "gable|pitched|barn"`, `"dormer": true`, `"timber_frame": true`, `"chimney": true`, `"smoke": true`, `"door": true`, `"ground_shadow": true`, `"seed": 42`
 - Shadow: `"shadow_opacity": 0.22` (0..1), optional `"shadow_dx"`, `"shadow_dy"`, `"shadow_color"`. Ground shadows are excluded from external outlining.
 - Customizing facades further: Add `rect` (`"bevel": true` / `"recessed": true`), `scatter` (`"pattern": "shingle|brick|cobble|wood"`), or signage props on top after `building`.
 

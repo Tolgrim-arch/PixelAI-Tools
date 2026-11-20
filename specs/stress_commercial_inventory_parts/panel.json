@@ -1,0 +1,26 @@
+{
+  "width": 96,
+  "nine_slice": {
+    "right": 12,
+    "left": 12,
+    "bottom": 12,
+    "top": 12
+  },
+  "palette": "cozy24",
+  "height": 64,
+  "ops": [
+    {
+      "h": 58,
+      "op": "ui_rig",
+      "inner_fill": false,
+      "kind": "panel",
+      "x": 3,
+      "y": 3,
+      "frame_width": 10,
+      "theme": "gold",
+      "w": 90
+    }
+  ],
+  "fresh": true,
+  "style": "ext_outline"
+}

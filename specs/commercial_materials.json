@@ -1,0 +1,29 @@
+{
+  "width": 368,
+  "height": 232,
+  "fresh": true,
+  "style": "lineless",
+  "background": "#262634",
+  "ops": [
+    {"op":"material","kind":"rock","x":8,"y":8,"w":64,"h":48,"seed":21},
+    {"op":"material","kind":"cobble","x":80,"y":8,"w":64,"h":48,"seed":48},
+    {"op":"material","kind":"soil","x":152,"y":8,"w":64,"h":48,"seed":16},
+    {"op":"material","kind":"leaves","x":224,"y":8,"w":64,"h":48,"seed":42},
+    {"op":"material","kind":"bark","x":296,"y":8,"w":64,"h":48,"seed":52},
+    {"op":"material","kind":"grass","x":8,"y":64,"w":64,"h":48,"seed":64},
+    {"op":"material","kind":"water","x":80,"y":64,"w":64,"h":48,"seed":11},
+    {"op":"material","kind":"cloth","x":152,"y":64,"w":64,"h":48,"seed":23},
+    {"op":"material","kind":"wood","x":224,"y":64,"w":64,"h":48,"seed":88},
+    {"op":"material","kind":"roof","x":296,"y":64,"w":64,"h":48,"seed":44},
+    {"op":"material","kind":"rock","x":8,"y":120,"w":64,"h":48,"seed":33},
+    {"op":"material","kind":"cobble","x":80,"y":120,"w":64,"h":48,"seed":96},
+    {"op":"material","kind":"soil","x":152,"y":120,"w":64,"h":48,"seed":84},
+    {"op":"material","kind":"leaves","x":224,"y":120,"w":64,"h":48,"seed":25},
+    {"op":"material","kind":"bark","x":296,"y":120,"w":64,"h":48,"seed":73},
+    {"op":"material","kind":"grass","x":8,"y":176,"w":64,"h":48,"seed":12},
+    {"op":"material","kind":"water","x":80,"y":176,"w":64,"h":48,"seed":72},
+    {"op":"material","kind":"cloth","x":152,"y":176,"w":64,"h":48,"seed":55},
+    {"op":"material","kind":"wood","x":224,"y":176,"w":64,"h":48,"seed":91},
+    {"op":"material","kind":"roof","x":296,"y":176,"w":64,"h":48,"seed":56}
+  ]
+}

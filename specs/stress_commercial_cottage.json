@@ -1,0 +1,10 @@
+{
+  "fresh": true,
+  "width": 112,
+  "height": 108,
+  "palette": "cozy24",
+  "style": "ext_outline",
+  "ops": [
+    {"op": "building", "x": 10, "y": 15, "w": 89, "h": 78, "roof_h": 38, "foundation_h": 8, "roof_style": "gable", "seed": 253, "roof_color": "#527778", "wall_color": "#ecd8ae", "trim_color": "#895e42", "foundation_color": "#858b9a", "timber_frame": true, "chimney": true, "smoke": false, "door": true, "windows": true, "shadow_dx": 9, "shadow_dy": 4, "shadow_opacity": 0.18}
+  ]
+}

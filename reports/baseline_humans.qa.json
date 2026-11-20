@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "status": "needs_review",
+  "commercial_ready": false,
+  "approval_basis": "independent reviewer attestation plus technical contract; not an automatic aesthetic judgment",
+  "artifact": {
+    "file_sha256": "c4df89ede78af9c84003887fea54be874139f74be91dd81eba83158511e0f9c0",
+    "pixel_sha256": "8f476c056492e45401d130e52ec5c43c08a400643206c56c692657f12075b6ce",
+    "silhouette_sha256": "3479aeaaf788794dfadfa369a9159cc8b4ab3631a582c211089bf81c15b4787f"
+  },
+  "frames": [
+    {
+      "width": 256,
+      "height": 200,
+      "opaque_pixels": 8622,
+      "unique_colors": 36,
+      "islands": 13,
+      "isolated_single_pixels": 0,
+      "bbox": {
+        "x": 13,
+        "y": 3,
+        "w": 230,
+        "h": 182
+      },
+      "margins": {
+        "top": 3,
+        "right": 13,
+        "bottom": 15,
+        "left": 13
+      }
+    }
+  ],
+  "failures": [],
+  "pending": [
+    "professional_quality",
+    "readability",
+    "pixel_clustering",
+    "color_and_lighting",
+    "materials",
+    "specialized_design",
+    "artistic_detail",
+    "originality",
+    "consistency",
+    "technical_integrity",
+    "game_readiness"
+  ],
+  "warnings": []
+}

@@ -1,0 +1,11 @@
+{
+  "width": 238,
+  "height": 120,
+  "fresh": true,
+  "palette": "cozy24",
+  "style": "ext_outline",
+  "ops": [
+    {"op": "building", "name": "teal_cross_gable_cottage", "x": 8, "y": 16, "w": 106, "h": 90, "roof_h": 44, "depth": 24, "roof_style": "gable", "seed": 273, "roof_color": "#517776", "wall_color": "#ecd6ad", "trim_color": "#976948", "foundation_color": "#88828b", "chimney": true, "smoke": false},
+    {"op": "building", "name": "red_gambrel_barn", "x": 133, "y": 23, "w": 90, "h": 82, "roof_h": 37, "depth": 19, "roof_style": "barn", "seed": 562, "roof_color": "#805058", "wall_color": "#be7760", "trim_color": "#7f564b", "foundation_color": "#897b7b", "timber_frame": false}
+  ]
+}

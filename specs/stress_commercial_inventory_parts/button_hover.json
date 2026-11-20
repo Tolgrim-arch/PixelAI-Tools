@@ -1,0 +1,19 @@
+{
+  "ops": [
+    {
+      "state": "hover",
+      "h": 20,
+      "op": "ui_rig",
+      "kind": "button",
+      "x": 2,
+      "y": 2,
+      "w": 44,
+      "theme": "gold"
+    }
+  ],
+  "palette": "cozy24",
+  "fresh": true,
+  "width": 48,
+  "height": 24,
+  "style": "ext_outline"
+}

@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "artifact": {
+    "file_sha256": "478decd44f5ca3bd1241ea3bdffba8ed1cb4c29364047b4cdc50582c04c656fe",
+    "pixel_sha256": "110466891757fdbfd6392f5599a89f74cb5f9866697f0eb296c8f724274d73c8",
+    "content_sha256": "110466891757fdbfd6392f5599a89f74cb5f9866697f0eb296c8f724274d73c8",
+    "silhouette_sha256": "ab008aa08ac5067e43c47bc49c4d529124b4e5013a2d8b1e5bc275662139f384"
+  },
+  "generated_by": "Codex /root (corrected candidate generator)",
+  "reviewed_by": "Codex /root/independent_candidate_review",
+  "comparison_reference": {
+    "name": "Serene Village Revamped by LimeZu",
+    "url": "https://limezu.itch.io/serenevillagerevamped",
+    "notes": "Named commercial reference; visual comparison is limited to the current candidate and prior review evidence, and the reference pack itself was not directly inspected in this pass."
+  },
+  "inspection": {
+    "native_resolution": true,
+    "integer_zoom": 3
+  },
+  "contract": {
+    "width": 368,
+    "height": 232,
+    "frame_count": 1,
+    "minimum_margin": 0,
+    "max_colors": 48,
+    "max_islands": 1,
+    "required_views": [],
+    "views": []
+  },
+  "criteria": {
+    "professional_quality": {
+      "decision": "fail",
+      "evidence": "The cloth sample reads as a vertically striped panel and the soil is sparsely speckled; the sheet is a useful texture study but not a finished, verified asset pack.",
+      "guidance": "Compare finish against a named professional reference; explain remaining weaknesses."
+    },
+    "readability": {
+      "decision": "pass",
+      "evidence": "Cobble, bark, boards, water and shingles are distinguishable at 1x; cloth is less immediate.",
+      "guidance": "Identify each subject at native resolution from silhouette and proportions."
+    },
+    "pixel_clustering": {
+      "decision": "pass",
+      "evidence": "At 3x cobbles and shingles form coherent clusters; soil contains scattered small marks but no isolated single pixel in the full sheet.",
+      "guidance": "Inspect clusters for noise, isolated pixels, banding and accidental geometry."
+    },
+    "color_and_lighting": {
+      "decision": "pass",
+      "evidence": "Cool rock and water contrast with warm wood and roof; each sample uses a restrained local ramp.",
+      "guidance": "Check palette harmony, volume, light direction and controlled contrast."
+    },
+    "materials": {
+      "decision": "fail",
+      "evidence": "Horizontal wood boards and overlapping shingles read as material, while cloth looks rigid and mottled rather than woven or folded fabric.",
+      "guidance": "Explain how each material reads through its structure rather than generic pattern noise."
+    },
+    "specialized_design": {
+      "decision": "pass",
+      "evidence": "Twenty 64 by 48 sample regions cover ten named materials with two seeds per material.",
+      "guidance": "Check anatomy, architecture and characteristic features of the subject."
+    },
+    "artistic_detail": {
+      "decision": "fail",
+      "evidence": "Rock planes and roof rows show structure, but soil dots and cloth striping feel generic compared with the stronger cobble clusters.",
+      "guidance": "Assess depth, personality and finish beyond a merely acceptable primitive."
+    },
+    "originality": {
+      "decision": "pass",
+      "evidence": "The second samples use the same material categories with changed seed values; current image pixels differ from the prior recorded candidate.",
+      "guidance": "Compare with prior and rejected work; explain new geometry and legitimate reuse."
+    },
+    "consistency": {
+      "decision": "pass",
+      "evidence": "All swatches share a flat presentation and use broadly compatible pixel scale, though each material has a different palette.",
+      "guidance": "Compare scale, perspective, style and detail density within the intended catalog."
+    },
+    "technical_integrity": {
+      "decision": "pass",
+      "evidence": "The 368 by 232 image is deliberately opaque with one island and 48 colors; border warnings are expected for its background.",
+      "guidance": "Verify dimensions, transparency, borders, directions and absence of deformation."
+    },
+    "game_readiness": {
+      "decision": "fail",
+      "evidence": "The specs locate samples but no exported individual textures, seam tests or game import were verified; this sheet alone does not establish tileability.",
+      "guidance": "Verify complete views/states/animations and integration without manual repair."
+    }
+  }
+}
