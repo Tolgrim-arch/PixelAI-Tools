@@ -18,7 +18,7 @@ from pixelai.exporter import (
 from pixelai.inspect_tool import analyze_image_file, load_png_as_canvas, render_ascii
 from pixelai.palettes import list_palettes
 from pixelai.runner import resolve_spec_paths, run_frames, run_layers
-from pixelai.quality import assess_artifact, record_assessment, review_template
+from pixelai.quality import assess_artifact, check_catalog_rejection, record_assessment, review_template
 
 AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 
@@ -106,12 +106,27 @@ def _read_spec(source: str) -> dict:
     return resolve_spec_paths(json.loads(path.read_text(encoding="utf-8-sig")), path.parent)
 
 
+def _enforce_fresh_catalog_gate(frames, spec: dict) -> None:
+    """In fresh mode, hard-fail if rendered frames match any rejected asset in commercial_catalog.json."""
+    if not spec.get("fresh", False):
+        return
+    repo_catalog = Path(__file__).resolve().parent.parent / "reports" / "commercial_catalog.json"
+    cwd_catalog = Path.cwd() / "reports" / "commercial_catalog.json"
+    for cat_path in dict.fromkeys((cwd_catalog, repo_catalog)):
+        if cat_path.exists():
+            catalog = json.loads(cat_path.read_text(encoding="utf-8-sig"))
+            rejections = check_catalog_rejection(frames, catalog)
+            if rejections:
+                raise ValueError("; ".join(rejections))
+
+
 def _cmd_validate(args: argparse.Namespace) -> int:
     spec = _read_spec(args.spec)
     if args.fresh:
         spec["fresh"] = True
     spec.setdefault("style", "ext_outline")
     frames, names = run_frames(spec)
+    _enforce_fresh_catalog_gate(frames, spec)
     layers = run_layers(spec) if spec.get("layers") else []
     warnings = _diagnostics(frames, names) + _diagnostics(
         [frame for _, frame in layers], [name for name, _ in layers]
@@ -129,6 +144,7 @@ def _cmd_render(args: argparse.Namespace) -> int:
     else:
         spec.setdefault("style", "ext_outline")
     frames, names = run_frames(spec)
+    _enforce_fresh_catalog_gate(frames, spec)
     layers = run_layers(spec) if args.layers_dir else []
     warnings = _diagnostics(frames, names) + _diagnostics(
         [frame for _, frame in layers], [name for name, _ in layers]
