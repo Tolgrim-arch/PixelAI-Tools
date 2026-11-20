@@ -77,6 +77,10 @@ class Human:
     def arm(self, shirt: RGBA, skin: RGBA, shoulder: Point, elbow: Point, hand: Point) -> None:
         self.link(shirt, shoulder, elbow, 1.35, 1.0)
         self.link(darken(shirt, .83), elbow, hand, 1.0, .7)
+        # Subtle sleeve cuff accent just above the hand
+        cuff_x = elbow[0] * 0.25 + hand[0] * 0.75
+        cuff_y = elbow[1] * 0.25 + hand[1] * 0.75
+        self.dot(brighten(shirt, 1.18), cuff_x, cuff_y, .72, .45)
         self.dot(skin, *hand, .8, .9)
 
     def axe(self, wood: RGBA, metal: RGBA, hand: Point, tip: Point) -> None:
@@ -267,6 +271,8 @@ def _draw_head(human: Human, back: bool, side: bool, bob: float, skin: RGBA,
         p(shadow, (15.1, 11.35), (17.45, 12.57), (20.05, 12.15),
           (18.6, 13.5), (16.4, 13.55), (14.7, 12.3))
         d(shadow, 15.3, 10.5, .65, .8)
+        blush = (min(255, skin[0]), max(0, skin[1] - 34), max(0, skin[2] - 28), skin[3])
+        d(blush, 17.6, 10.7, .55, .35)
         d(eye, 18.65, 9.2, .4, .54)
         p(hair, (10.6, 7.2), (12.0, 5.5), (14.05, 4.0), (17.4, 4.0),
           (19.65, 5.7), (20.35, 7.9), (18.2, 7.35), (16.7, 8.0),
@@ -291,6 +297,9 @@ def _draw_head(human: Human, back: bool, side: bool, bob: float, skin: RGBA,
               (12.4, 12.5), (11.35, 10.7))
             p(shadow, (15.95, 13.05), (18.2, 12.35), (19.55, 11.0),
               (19.3, 12.15), (17.4, 13.5), (14.45, 13.8), (12.95, 12.95))
+            blush = (min(255, skin[0]), max(0, skin[1] - 34), max(0, skin[2] - 28), skin[3])
+            d(blush, 12.55, 11.15, .55, .32)
+            d(blush, 18.75, 11.15, .55, .32)
             d(eye, 13.55, 9.85, .35, .52)
             d(eye, 17.82, 9.85, .35, .52)
             d(shadow, 15.65, 11.15, .35, .22)
