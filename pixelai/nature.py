@@ -51,6 +51,9 @@ def _draw_rock(
     # Each material follows a facet. Clip small clusters to existing rock pixels.
     canvas.clip_to_opaque = True
     try:
+        # Crisp chiseled ridge highlight and lower facet crevice for rock readability
+        canvas.draw_line(shoulder[0], shoulder[1], crest[0], crest[1], brighten(stone, 1.32))
+        canvas.draw_line(left[0] + 2, join[1], join[0], join[1], darken(stone, 0.64))
         if variant == "mossy":
             x, y = crest
             tip_x = (ridge[0] + join[0]) // 2
