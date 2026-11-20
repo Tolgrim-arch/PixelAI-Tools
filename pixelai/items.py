@@ -116,16 +116,45 @@ def _draw_sword(
         return
 
     cx = size // 2
-    local.draw_rect(cx - _sc(1.5, s), px(4), _sc(3, s), _sc(11, s), blade, filled=True)
-    local.draw_rect(cx - _sc(1.5, s), px(4), _sc(1, s), _sc(11, s), blade_l, filled=True)
-    local.draw_rect(cx + _sc(0.5, s), px(5), _sc(1, s), _sc(10, s), blade_d, filled=True)
-    local.set_pixel(cx, px(3), blade_l)
-    # Guard, grip & pommel
-    local.draw_rect(cx - _sc(4, s), px(15), _sc(8, s), _sc(2, s), hilt, filled=True)
-    local.draw_rect(cx - _sc(1, s), px(17), _sc(2, s), _sc(3, s), hilt_d, filled=True)
-    local.draw_rect(cx - _sc(1.5, s), px(20), _sc(3, s), _sc(1.5, s), hilt, filled=True)
+    hilt_l = brighten(hilt, 1.22)
+    grip_col = darken(hilt, 0.52)
+    # Sharp tapered medieval broadsword tip + double-beveled blade with fuller
+    local.draw_polygon(
+        [
+            (cx, px(2)),
+            (cx + _sc(1, s), px(4)),
+            (cx + _sc(1.5, s), px(6)),
+            (cx + _sc(1.5, s), px(15)),
+            (cx - _sc(1.5, s), px(15)),
+            (cx - _sc(1.5, s), px(6)),
+            (cx - _sc(1, s), px(4)),
+        ],
+        blade,
+        filled=True,
+    )
+    # Bright left cutting edge and dark right bevel
+    local.draw_line(cx - _sc(1.5, s), px(6), cx - _sc(1.5, s), px(14), blade_l)
+    local.draw_line(cx - _sc(1, s), px(4), cx, px(2), blade_l)
+    local.draw_line(cx + _sc(1.5, s), px(6), cx + _sc(1.5, s), px(14), blade_d)
+    # Central fuller groove
+    local.draw_line(cx, px(6), cx, px(13), blade_d)
+    # Winged crossguard with upturned finials
+    local.draw_rect(cx - _sc(5, s), px(15), _sc(10, s), _sc(1.5, s), hilt, filled=True)
+    local.draw_line(cx - _sc(5, s), px(15), cx + _sc(4, s), px(15), hilt_l)
+    local.set_pixel(cx - _sc(5, s), px(14), hilt_l)
+    local.set_pixel(cx + _sc(5, s), px(14), hilt)
+    # Slender wrapped leather grip
+    local.draw_rect(cx - _sc(0.8, s), px(17), _sc(1.6, s), _sc(3.5, s), grip_col, filled=True)
+    local.set_pixel(cx, px(18), hilt_d)
+    # Crisp diamond pommel
+    local.draw_polygon(
+        [(cx, px(20)), (cx + _sc(1.5, s), px(21)), (cx, px(22)), (cx - _sc(1.5, s), px(21))],
+        hilt,
+        filled=True,
+    )
+    local.set_pixel(cx, px(20), hilt_l)
     if shine:
-        local.set_pixel(cx - _sc(1, s), px(6 + (frame % 4) * 2), (255, 255, 255, 255))
+        local.set_pixel(cx - _sc(1, s), px(5 + (frame % 4) * 2), (255, 255, 255, 255))
 
 
 def _draw_chest(

@@ -22,10 +22,8 @@ CRITERIA = {
 }
 
 
-def artifact_identity(path):
-    """Ignore metadata for duplicate detection, but bind review to exact file bytes."""
-    path = Path(path)
-    frames = load_frames_as_canvases(path)
+def frames_identity(frames):
+    """Compute pixel, content-bbox, and silhouette SHA-256 hashes for in-memory frames."""
     pixels = hashlib.sha256()
     shape = hashlib.sha256()
     content = hashlib.sha256()
@@ -47,9 +45,49 @@ def artifact_identity(path):
                     content.update(bytes(p if p[3] else (0, 0, 0, 0)))
         else:
             content.update(b"empty:")
-    return {"file_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-            "pixel_sha256": pixels.hexdigest(), "content_sha256": content.hexdigest(),
-            "silhouette_sha256": shape.hexdigest()}, frames
+    return {
+        "pixel_sha256": pixels.hexdigest(),
+        "content_sha256": content.hexdigest(),
+        "silhouette_sha256": shape.hexdigest(),
+    }
+
+
+def check_catalog_rejection(frames, catalog) -> list[str]:
+    """Return hard-failure reasons if frames match any rejected pixel, content, or silhouette hash."""
+    if not catalog or not isinstance(catalog, dict):
+        return []
+    entries = catalog.get("entries", [])
+    if not isinstance(entries, list):
+        return []
+    identity = frames_identity(frames)
+    failures: list[str] = []
+    for entry in entries:
+        if not isinstance(entry, dict) or entry.get("status") != "rejected":
+            continue
+        if (
+            entry.get("pixel_sha256") == identity["pixel_sha256"]
+            or entry.get("content_sha256") == identity["content_sha256"]
+        ):
+            failures.append(
+                f"REJECTED REUSE BLOCKED: Exact pixel/content payload matches rejected asset {entry.get('path', '?')!r}."
+            )
+            break
+        if entry.get("silhouette_sha256") == identity["silhouette_sha256"]:
+            failures.append(
+                f"REJECTED REUSE BLOCKED: Silhouette matches previously rejected asset {entry.get('path', '?')!r} "
+                "(recoloring or minor shading tweaks do not make a rejected sprite new)."
+            )
+            break
+    return failures
+
+
+def artifact_identity(path):
+    """Ignore metadata for duplicate detection, but bind review to exact file bytes."""
+    path = Path(path)
+    frames = load_frames_as_canvases(path)
+    ident = frames_identity(frames)
+    ident["file_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return ident, frames
 
 
 def review_template(path):
@@ -150,9 +188,13 @@ def assess_artifact(path, review=None, catalog=None):
     for entry in entries:
         same_pixels = entry.get("pixel_sha256") == identity["pixel_sha256"]
         same_content = entry.get("content_sha256") == identity["content_sha256"]
-        if entry.get("status") == "rejected" and (same_pixels or same_content):
-            failures.append("Exact artwork was previously rejected (metadata/filename changes do not make it new)")
-        elif entry.get("silhouette_sha256") == identity["silhouette_sha256"]:
+        same_silhouette = entry.get("silhouette_sha256") == identity["silhouette_sha256"]
+        if entry.get("status") == "rejected" and (same_pixels or same_content or same_silhouette):
+            failures.append(
+                "Artwork matches previously rejected pixels or silhouette "
+                "(renaming, metadata edits, or recoloring a rejected silhouette do not make it new)"
+            )
+        elif same_silhouette:
             warnings.append(f"Existing silhouette matches catalog entry {entry.get('path', '?')}; review originality")
     if review is None:
         pending.extend(CRITERIA)
