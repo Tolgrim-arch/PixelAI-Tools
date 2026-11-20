@@ -29,23 +29,19 @@ def _draw_fruit(local: Canvas, fx: int, fy: int, r: int, base: RGBA, hi: RGBA, s
 def _draw_orchard_fruit(
     local: Canvas, fx: int, fy: int, r: int, base: RGBA, leaf: RGBA, kind: str,
 ) -> None:
-    highlight, shade = brighten(base, 1.28), darken(base, .66)
-    if kind == "apple" and r == 2:
-        _draw_fruit(local, fx, fy, r, base, highlight, shade, leaf)
+    highlight, shade = brighten(base, 1.30), darken(base, 0.65)
+    eff_r = min(4, max(2, r))
+    if kind == "apple":
+        _draw_fruit(local, fx, fy, eff_r, base, highlight, shade, leaf)
         return
-    if kind == "pear":
-        points = [(0, -r - 1), (1, -r), (1, -1), (r, 1), (r, r - 1),
-                  (r - 1, r), (1 - r, r), (-r, r - 1), (-r, 1), (-1, -1), (-1, -r)]
-        patch = [(0, -r), (0, -1), (1, 1), (0, r - 1), (1 - r, r - 1), (-r, 1), (-1, 0)]
-    else:
-        points = [(-r, -1), (1 - r, 1 - r), (-1, -r), (0, 1 - r),
-                  (1, -r), (r, -1), (r, 1), (r - 1, r),
-                  (0, r - 1), (1 - r, r), (-r, 1)]
-        patch = [(-r, -1), (1 - r, 1 - r), (-1, -r), (1, -1), (0, 1), (1 - r, 1)]
-    local.draw_polygon([(fx + x, fy + y) for x, y in points], shade, filled=True)
-    local.draw_polygon([(fx + x, fy + y) for x, y in patch], base, filled=True)
-    local.draw_line(fx - 1, fy - 1, fx - 1, fy + (kind == "pear"), highlight)
-    stem_y = fy - r - (2 if kind == "pear" else 1)
+    # Pear: rounded lower belly + narrower upper neck
+    for dy in range(-eff_r, eff_r + 1):
+        row_r = max(1, eff_r - 1) if dy < 0 else eff_r
+        for dx in range(-row_r, row_r + 1):
+            if dx * dx + dy * dy <= row_r * row_r:
+                col = highlight if dx + dy < -eff_r // 2 else (shade if dx + dy > eff_r // 2 else base)
+                local.set_pixel(fx + dx, fy + dy, col)
+    stem_y = fy - eff_r - 1
     local.set_pixel(fx, stem_y, (112, 75, 44, 255))
     local.draw_line(fx + 1, stem_y, fx + 2, stem_y - 1, brighten(leaf, 1.4))
 
