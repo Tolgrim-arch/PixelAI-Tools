@@ -72,6 +72,14 @@ def _draw_panel(local: Canvas, theme: str, colors: tuple[RGBA, RGBA, RGBA, RGBA]
                     brighten(base, 1.1), filled=True)
     local.draw_rect(frame, frame, w - 2 * frame, h - 2 * frame,
                     inner if filled else (0, 0, 0, 0), filled=True)
+    if filled and (w - 2 * frame) >= 8 and (h - 2 * frame) >= 8:
+        # Subtle 1px recessed inner shadow on top/left and warm bounce lip on bottom/right
+        recess_col = darken(inner, 0.92)
+        bounce_col = brighten(inner, 1.04)
+        local.draw_line(frame, frame, w - frame - 1, frame, recess_col)
+        local.draw_line(frame, frame, frame, h - frame - 1, recess_col)
+        local.draw_line(frame + 1, h - frame - 1, w - frame - 1, h - frame - 1, bounce_col)
+        local.draw_line(w - frame - 1, frame + 1, w - frame - 1, h - frame - 1, bounce_col)
     if theme == "gold" and frame >= 6:
         _metal_rails(local, frame, base, light, dark)
     pitch = {"wood": 17, "stone": 16, "gold": 14, "paper": 21, "dark": 18}[theme]
