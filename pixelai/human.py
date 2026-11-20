@@ -113,7 +113,12 @@ def draw_topdown_human(canvas: Canvas, x: int, y: int, size: int, direction: str
     shoes = color("shoes", "soil_d", "#4e3322")
     eye = color("eye", "ink", "#21181b")
     trim = color("trim", "cream", "#f4e8d1")
-    skin_shadow = darken(skin, .80)
+    skin_shadow = (
+        max(0, min(255, int(skin[0] * 0.86))),
+        max(0, min(255, int(skin[1] * 0.72))),
+        max(0, min(255, int(skin[2] * 0.68))),
+        skin[3],
+    )
     hair_shadow = darken(hair, .70)
     hair_light = brighten(hair, 1.25)
     shade = darken(shirt, .77)
