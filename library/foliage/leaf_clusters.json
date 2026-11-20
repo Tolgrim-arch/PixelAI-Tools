@@ -1,0 +1,33 @@
+{
+  "palette": "cozy24",
+  "defs": {
+    "leaf_cluster_sm": {
+      "width": 7,
+      "height": 6,
+      "ops": [
+        {"op": "ellipse", "cx": 3, "cy": 3, "rx": 3, "ry": 2, "color": "grass_d"},
+        {"op": "ellipse", "cx": 3, "cy": 2, "rx": 2, "ry": 1, "color": "grass"},
+        {"op": "pixel", "x": 2, "y": 1, "color": "grass_l"},
+        {"op": "pixel", "x": 3, "y": 1, "color": "grass_l"}
+      ]
+    },
+    "leaf_cluster_md": {
+      "width": 11,
+      "height": 9,
+      "ops": [
+        {"op": "ellipse", "cx": 5, "cy": 5, "rx": 5, "ry": 3, "color": "grass_d"},
+        {"op": "ellipse", "cx": 5, "cy": 4, "rx": 4, "ry": 3, "color": "grass"},
+        {"op": "ellipse", "cx": 4, "cy": 2, "rx": 3, "ry": 1, "color": "grass_l"}
+      ]
+    },
+    "leaf_tuft": {
+      "width": 5,
+      "height": 5,
+      "ops": [
+        {"op": "polygon", "points": [[2, 0], [4, 3], [2, 4], [0, 3]], "color": "grass"},
+        {"op": "pixel", "x": 2, "y": 1, "color": "grass_l"},
+        {"op": "pixel", "x": 2, "y": 4, "color": "grass_d"}
+      ]
+    }
+  }
+}

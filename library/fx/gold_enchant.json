@@ -1,0 +1,8 @@
+{
+  "material": "gold_specular",
+  "fx": [
+    {"type": "sheen_sweep", "color": "#fff7b8", "width": 3, "angle": 45, "blend": "add", "intensity": 0.78, "pause_frames": 4},
+    {"type": "sparkle_glint", "count": 3, "color": "#ffffff", "seed": 7, "on_surface": true},
+    {"type": "float_bob", "amplitude": 1}
+  ]
+}

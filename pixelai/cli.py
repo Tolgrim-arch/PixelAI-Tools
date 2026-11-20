@@ -5,7 +5,7 @@ import json
 import sys
 from pathlib import Path
 
-from pixelai import __version__
+from pixelai import __version__, filters, fx
 from pixelai.exporter import (
     export_gif,
     export_godot_tres,
@@ -15,7 +15,7 @@ from pixelai.exporter import (
     export_spritesheet,
     extract_spec_from_png,
 )
-from pixelai.inspect_tool import analyze_image_file, render_ascii
+from pixelai.inspect_tool import analyze_image_file, load_png_as_canvas, render_ascii
 from pixelai.palettes import list_palettes
 from pixelai.runner import resolve_spec_paths, run_frames, run_layers
 from pixelai.quality import assess_artifact, record_assessment, review_template
@@ -36,6 +36,8 @@ AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 - Animated GIF: `pixelai render spec.json -o anim.gif --fps 8`
 - Spritesheet + Metadata + Godot 4 `.tres`:
   `pixelai render spec.json -o sheet.png --sheet --columns 4 --meta sheet.json --godot sheet.tres`
+- Apply Reusable FX & Material Recolor to Any Finished PNG or Spec:
+  `pixelai fx sprite.png -o enchanted.gif --material gold_specular --effect sheen_sweep --effect sparkle_glint --effect float_bob`
 - Terminal Inspection (Metrics + ASCII): `pixelai inspect out.png --ascii`
 - Commercial QA Template: `pixelai qa out.png --template reviews/out.review.json`
 - Commercial QA Decision: `pixelai qa out.png --review reviews/out.review.json --catalog reviews/catalog.json --record` (0 approved, 1 rejected, 2 needs review; metrics alone never approve)
@@ -56,7 +58,7 @@ AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 - `{"op": "scatter", "x": 0, "y": 0, "w": 32, "h": 32, "color": "grass_l", "target_color": "grass", "pattern": "noise|brick|shingle|cobble|wood|grass|rock|soil|leaves|bark|water|cloth", "density": 0.2, "seed": 42}` (Use material accents clipped to the surface; avoid random noise as a substitute for material planes.)
 - `{"op": "material", "kind": "rock|cobble|soil|leaves|bark|grass|water|cloth|wood|roof", "x": 0, "y": 0, "w": 64, "h": 48, "seed": 42, "inside": false}` (Structured native material planes; optional `color` base tint or five-entry `colors` ramp. `trunk` aliases bark, `shingle` aliases roof.)
 - `{"op": "building", "x": 12, "y": 14, "w": 104, "h": 98, "roof_style": "gable|pitched|barn", "wall_color": "cream", "roof_color": "roof", "timber_frame": true, "chimney": true, "smoke": true, "shadow_opacity": 0.22}` (Top-down 3/4 architecture; straight projected ground shadow, optional shadow_dx/shadow_dy; PNG preserves partial alpha.)
-- `{"op": "stamp", "def": "sub_sprite", "x": 4, "y": 4, "flip_x": false, "flip_y": false, "angle": 45, "pivot": [4, 4], "remap": {"wood": "stone"}}`
+- `{"op": "stamp", "def": "sub_sprite", "x": 4, "y": 4, "flip_x": false, "flip_y": false, "angle": 45, "pivot": [4, 4], "ramp_shift": 0, "remap": {"wood": "stone"}}`
 - `{"op": "load_png", "path": "base.png", "x": 0, "y": 0, "crop": [0, 0, 16, 16]}`
 - `{"op": "tilemap", "mode": "ortho|iso", "tile_w": 16, "tile_h": 16, "map": {"G": "grass_tile"}, "rows": ["GGG", "GGG"]}`
 - `{"op": "autotile", "x": 0, "y": 0, "tile_size": 16, "inner": "water", "outer": "grass", "lip": "soil_d", "seed": 42}` (Generates 4x4 16-tile Wang bitmask atlas)
@@ -72,6 +74,10 @@ AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 - Universal op flags: `"inside": true` (clips shading/markings strictly inside existing opaque silhouette), `"outline": false` (excludes floating particles/emotes/shadows from external outline).
 - `{"op": "mirror_x"}` / `{"op": "mirror_y"}`
 - Top-level `"extends": "sprite.png | spec.json"` inherits palette, defs, and ops from an existing PNG or JSON!
+- Top-level `"imports": ["@foliage/leaf_clusters", "@fx/gold_enchant"]` imports reusable defs, material ramps, and FX presets from `library/`.
+- Top-level `"style_profile": "cozy_modern|16bit_cluster|crisp_retro|enchanted_hd"` configures directional selout and jaggy cleanup automatically.
+- Top-level `"material": "gold_specular|silver_chrome|bronze_aged|emerald_crystal|ruby_enchanted|amethyst_void|frost_ice|obsidian_dark"` recolors a sprite with physical reflectance curves.
+- Top-level `"fx": [{"type": "sheen_sweep|sparkle_glint|bounce|float_bob|aura_glow|hit_flash|wind_sway", ...}]` animates any static sprite or rig automatically!
 - Showcase Exporter (Itch.io Pack Banner / Contact Sheet): `pixelai showcase <dir_or_files...> -o showcase.png --scale 4`
 - Complete Creature Asset Pack (13 GIFs + Spritesheets + Showcase): `pixelai pack chicken -o chicken_pack/ --variant white`
 
@@ -317,6 +323,56 @@ def _cmd_qa(args: argparse.Namespace) -> int:
     return {"approved": 0, "rejected": 1, "needs_review": 2}[result["status"]]
 
 
+def _cmd_fx(args: argparse.Namespace) -> int:
+    src_path = Path(args.source)
+    if src_path.suffix.lower() == ".json":
+        spec = _read_spec(str(src_path))
+        spec.setdefault("style", "ext_outline")
+        frames, names = run_frames(spec)
+    else:
+        frames = [load_png_as_canvas(src_path)]
+        names = ["frame_0"]
+
+    fx_list: list[dict] = []
+    material = args.material
+    if args.preset:
+        from pixelai.runner import _resolve_import_path
+        preset_data = json.loads(_resolve_import_path(args.preset).read_text(encoding="utf-8-sig"))
+        if not material and isinstance(preset_data.get("material"), str):
+            material = preset_data["material"]
+        if isinstance(preset_data.get("fx"), list):
+            fx_list.extend(preset_data["fx"])
+
+    if material:
+        frames = [filters.recolor_material(f, material) for f in frames]
+
+    for eff_name in args.effect or []:
+        eff_spec: dict = {"type": eff_name}
+        if eff_name == "sheen_sweep":
+            eff_spec["color"] = args.sheen_color
+            eff_spec["blend"] = args.sheen_blend
+        fx_list.append(eff_spec)
+
+    if fx_list:
+        frames = fx.apply_fx_pipeline(frames, fx_list, total_frames=args.frames)
+        names = [f"frame_{i}" for i in range(len(frames))]
+
+    if args.scale and args.scale > 1:
+        frames = [filters.scale(f, args.scale) for f in frames]
+
+    out_path = Path(args.output)
+    if out_path.suffix.lower() == ".gif":
+        out = export_gif(frames, out_path, fps=args.fps)
+        print(f"Exported FX GIF ({len(frames)} frames @ {args.fps}fps) -> {out}")
+    elif len(frames) > 1 or args.sheet or args.meta:
+        out = export_spritesheet(frames, out_path, frame_names=names, meta_path=args.meta)
+        print(f"Exported FX spritesheet ({len(frames)} frames) -> {out}")
+    else:
+        out = export_png(frames[0], out_path)
+        print(f"Exported FX PNG ({frames[0].width}x{frames[0].height}) -> {out}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="pixelai",
@@ -500,6 +556,37 @@ def build_parser() -> argparse.ArgumentParser:
     )
     extract_p.add_argument("image", help="Path to PNG file.")
     extract_p.set_defaults(func=_cmd_extract)
+
+    fx_p = sub.add_parser(
+        "fx",
+        help="Apply reusable FX (sheen_sweep, bounce, sparkle_glint, float_bob, aura_glow, wind_sway) and material recoloring to any finished PNG or spec.",
+    )
+    fx_p.add_argument("source", help="Path to input .png or .json spec.")
+    fx_p.add_argument("-o", "--output", required=True, help="Output .gif or .png path.")
+    fx_p.add_argument(
+        "-e", "--effect",
+        action="append",
+        choices=["sheen_sweep", "sparkle_glint", "bounce", "float_bob", "aura_glow", "hit_flash", "wind_sway"],
+        help="Reusable FX to apply (repeatable).",
+    )
+    fx_p.add_argument(
+        "--preset",
+        default=None,
+        help="Optional library FX/material preset (e.g. '@fx/gold_enchant', '@fx/enchanted_aura').",
+    )
+    fx_p.add_argument(
+        "--material",
+        default=None,
+        help="Physical material recolor preset (e.g. gold_specular, silver_chrome, emerald_crystal, ruby_enchanted).",
+    )
+    fx_p.add_argument("--frames", type=int, default=None, help="Override frame count (default: inferred from FX).")
+    fx_p.add_argument("--fps", type=int, default=10, help="Frames per second for GIF output (default: 10).")
+    fx_p.add_argument("--scale", type=int, default=1, help="Optional integer upscale factor (default: 1).")
+    fx_p.add_argument("--sheen-color", default="#fff6b8", help="Hex color for sheen_sweep bar (default: #fff6b8).")
+    fx_p.add_argument("--sheen-blend", default="add", choices=["add", "screen", "tint"], help="Blend mode for sheen_sweep.")
+    fx_p.add_argument("--sheet", action="store_true", help="Force spritesheet export.")
+    fx_p.add_argument("--meta", default=None, help="Optional spritesheet JSON metadata output path.")
+    fx_p.set_defaults(func=_cmd_fx)
 
     guide_p = sub.add_parser(
         "guide",
