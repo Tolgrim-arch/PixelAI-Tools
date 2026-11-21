@@ -49,6 +49,18 @@ class TestFarmAnimals(unittest.TestCase):
         self.assertEqual(len(frames), 4)
         self.assertGreater(len({tuple(f.pixels) for f in frames}), 1)
 
+    def test_duck_and_rabbit_four_directions_distinct(self):
+        for sp in ("duck", "rabbit"):
+            views = [
+                tuple(run_spec(self._spec(sp, d)).pixels)
+                for d in ("down", "up", "left", "right")
+            ]
+            self.assertEqual(len(set(views)), 4, f"{sp} should have 4 distinct views")
+
+        mallard = run_spec(self._spec("duck", "right", "idle", "mallard"))
+        white_duck = run_spec(self._spec("duck", "right", "idle", "white"))
+        self.assertNotEqual(mallard.pixels, white_duck.pixels)
+
 
 if __name__ == "__main__":
     unittest.main()
