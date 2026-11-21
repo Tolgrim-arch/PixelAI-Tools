@@ -1103,10 +1103,10 @@ def draw_animal_rig(
     frame_idx: int = 0,
     total_frames: int = 4,
 ) -> None:
-    """Render a parametric cozy farm animal rig ('chicken', 'cow', 'pig', or 'sheep')."""
+    """Render a parametric cozy farm animal rig ('chicken', 'cow', 'pig', 'sheep', 'duck', or 'rabbit')."""
     species = str(op.get("species", "chicken")).lower()
-    if species not in ("chicken", "cow", "pig", "sheep"):
-        raise ValueError(f"Unsupported animal species: {species!r}; choose chicken, cow, pig, or sheep")
+    if species not in ("chicken", "cow", "pig", "sheep", "duck", "rabbit"):
+        raise ValueError(f"Unsupported animal species: {species!r}; choose chicken, cow, pig, sheep, duck, or rabbit")
     direction = op.get("dir", "right").lower()
     pose = op.get("pose", "walk").lower()
     frame = int(op.get("frame", frame_idx))
@@ -1118,9 +1118,9 @@ def draw_animal_rig(
         iso_map = {"se": "right", "sw": "left", "ne": "up", "nw": "up"}
         direction = iso_map.get(direction, direction)
 
-    if species in ("pig", "sheep"):
-        from pixelai.animals_farm import draw_pig, draw_sheep
-        fn = draw_pig if species == "pig" else draw_sheep
+    if species in ("pig", "sheep", "duck", "rabbit"):
+        from pixelai.animals_farm import draw_duck, draw_pig, draw_rabbit, draw_sheep
+        fn = {"pig": draw_pig, "sheep": draw_sheep, "duck": draw_duck, "rabbit": draw_rabbit}[species]
         fn(canvas, x, y, palette, direction, pose, frame, op)
         return
 

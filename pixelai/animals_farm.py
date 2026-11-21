@@ -325,3 +325,197 @@ def draw_sheep(
         return
 
     canvas.blit(local, x, y)
+
+
+_DUCK_PALETTES: dict[str, dict[str, str]] = {
+    "white": {
+        "body": "#f5f0e6", "body_l": "#ffffff", "body_d": "#c7c2d4",
+        "head": "#f5f0e6", "head_l": "#ffffff", "bill": "#f29d35",
+        "bill_l": "#ffcf66", "foot": "#e07b28", "eye": "#1f1419",
+    },
+    "mallard": {
+        "body": "#8f7563", "body_l": "#b89c86", "body_d": "#5e4a3d",
+        "head": "#266b4c", "head_l": "#3ea36b", "bill": "#e8b935",
+        "bill_l": "#ffe478", "foot": "#e07b28", "eye": "#1a1217",
+    },
+    "golden": {
+        "body": "#f2be4b", "body_l": "#ffe680", "body_d": "#bd7d24",
+        "head": "#f5c851", "head_l": "#fff099", "bill": "#e87a24",
+        "bill_l": "#ffb35c", "foot": "#c45a16", "eye": "#1f1419",
+    },
+}
+
+_RABBIT_PALETTES: dict[str, dict[str, str]] = {
+    "white": {
+        "body": "#f5efe6", "body_l": "#ffffff", "body_d": "#c4bdd1",
+        "ear_in": "#f2a7b0", "nose": "#eb8a98", "eye": "#24171d",
+    },
+    "brown": {
+        "body": "#a6704e", "body_l": "#cf9970", "body_d": "#704732",
+        "ear_in": "#e39b96", "nose": "#d97a7e", "eye": "#1f1417",
+    },
+    "gray": {
+        "body": "#8f96a6", "body_l": "#b8c0cf", "body_d": "#5d6475",
+        "ear_in": "#e3a1ab", "nose": "#d98492", "eye": "#1f1417",
+    },
+    "golden": {
+        "body": "#f2be4b", "body_l": "#ffe680", "body_d": "#bd7d24",
+        "ear_in": "#ffd9a6", "nose": "#e88b5a", "eye": "#24171d",
+    },
+}
+
+
+def draw_duck(
+    canvas: Canvas,
+    x: int,
+    y: int,
+    palette: dict[str, RGBA],
+    direction: str,
+    pose: str,
+    frame: int,
+    op: dict[str, Any],
+) -> None:
+    """Render a 24x24 4-direction cozy duck with flat bill, wing tuft, and webbed feet."""
+    local = Canvas(24, 24)
+    pal = _resolve_pal(_DUCK_PALETTES, str(op.get("variant", "white")))
+    body, body_l, body_d = pal["body"], pal["body_l"], pal["body_d"]
+    head, head_l = pal["head"], pal["head_l"]
+    bill, bill_l, foot, eye = pal["bill"], pal["bill_l"], pal["foot"], pal["eye"]
+
+    f = frame % 4
+    walking = pose in ("walk", "run")
+    pecking = pose in ("peck", "graze", "eat")
+    sleeping = pose in ("sleep", "lie", "nest")
+    happy = pose in ("happy", "jump")
+
+    bob = -1 if (walking and f % 2 == 1) else (-2 if (happy and f % 2 == 1) else 0)
+    if sleeping:
+        bob = 2
+    stride = (-1, 0, 1, 0)[f] if walking else 0
+
+    if op.get("shadow", True):
+        _draw_shadow(local, 12, 20, 6 if direction in ("left", "right") else 5, 2, palette)
+
+    if direction in ("down", "up"):
+        if not sleeping:
+            local.draw_rect(9, 18 + bob + (stride if f % 2 else 0), 2, 2, foot, filled=True)
+            local.draw_rect(13, 18 + bob - (stride if f % 2 else 0), 2, 2, foot, filled=True)
+        local.draw_ellipse(12, 14 + bob, 5, 4, body_d, filled=True)
+        local.draw_ellipse(12, 13 + bob, 5, 3, body, filled=True)
+        local.draw_ellipse(12, 9 + bob, 4, 3, head, filled=True)
+        local.draw_ellipse(11, 7 + bob, 2, 1, head_l, filled=True)
+        if direction == "up":
+            local.draw_polygon([(10, 15 + bob), (12, 12 + bob), (14, 15 + bob)], body_l, filled=True)
+        else:
+            hy = 9 + bob + (2 if pecking and f % 2 == 1 else 0)
+            if sleeping:
+                local.draw_line(9, hy, 10, hy, eye)
+                local.draw_line(14, hy, 15, hy, eye)
+            else:
+                local.set_pixel(10, hy, eye)
+                local.set_pixel(14, hy, eye)
+            local.draw_ellipse(12, hy + 2, 3, 1, bill, filled=True)
+            local.draw_line(11, hy + 1, 13, hy + 1, bill_l)
+    else:
+        if not sleeping:
+            local.draw_rect(9 + stride, 18 + bob, 2, 2, foot, filled=True)
+            local.draw_rect(13 - stride, 18 + bob, 2, 2, foot, filled=True)
+        local.draw_ellipse(11, 14 + bob, 5, 4, body_d, filled=True)
+        local.draw_ellipse(11, 13 + bob, 5, 3, body, filled=True)
+        local.draw_ellipse(10, 12 + bob, 3, 2, body_l, filled=True)
+        # Tail feather tip
+        local.draw_polygon([(6, 13 + bob), (4, 11 + bob), (7, 11 + bob)], body, filled=True)
+        # Head + flat duck bill facing right
+        hy = 8 + bob + (3 if pecking and f % 2 == 1 else 0)
+        hx = 15 + (1 if pecking and f % 2 == 1 else 0)
+        local.draw_ellipse(hx, hy, 3, 3, head, filled=True)
+        local.draw_line(hx - 1, hy - 2, hx + 1, hy - 2, head_l)
+        local.draw_rect(hx + 2, hy, 3, 2, bill, filled=True)
+        local.draw_line(hx + 2, hy, hx + 4, hy, bill_l)
+        if sleeping:
+            local.draw_line(hx + 1, hy - 1, hx + 2, hy - 1, eye)
+        else:
+            local.set_pixel(hx + 1, hy - 1, eye)
+            local.set_pixel(hx + 1, hy - 2, (255, 255, 255, 255))
+        canvas.blit(local, x, y, flip_x=(direction == "left"))
+        return
+
+    canvas.blit(local, x, y)
+
+
+def draw_rabbit(
+    canvas: Canvas,
+    x: int,
+    y: int,
+    palette: dict[str, RGBA],
+    direction: str,
+    pose: str,
+    frame: int,
+    op: dict[str, Any],
+) -> None:
+    """Render a 24x24 4-direction cozy rabbit with tall ears, cotton tail, and hopping walk."""
+    local = Canvas(24, 24)
+    pal = _resolve_pal(_RABBIT_PALETTES, str(op.get("variant", "white")))
+    body, body_l, body_d = pal["body"], pal["body_l"], pal["body_d"]
+    ear_in, nose, eye = pal["ear_in"], pal["nose"], pal["eye"]
+
+    f = frame % 4
+    walking = pose in ("walk", "run", "jump")
+    sleeping = pose in ("sleep", "lie", "nest")
+    happy = pose in ("happy",)
+
+    bob = -2 if (walking and f % 2 == 1) else (-2 if (happy and f % 2 == 1) else 0)
+    if sleeping:
+        bob = 2
+
+    if op.get("shadow", True):
+        _draw_shadow(local, 12, 20, 5, 2, palette)
+
+    if direction in ("down", "up"):
+        # Hind feet
+        if not sleeping:
+            local.draw_ellipse(9, 19 + bob, 2, 1, body_d, filled=True)
+            local.draw_ellipse(15, 19 + bob, 2, 1, body_d, filled=True)
+        # Round body & head
+        local.draw_ellipse(12, 15 + bob, 5, 4, body_d, filled=True)
+        local.draw_ellipse(12, 14 + bob, 5, 3, body, filled=True)
+        local.draw_ellipse(12, 11 + bob, 4, 3, body, filled=True)
+        local.draw_ellipse(11, 9 + bob, 2, 1, body_l, filled=True)
+        # Tall rabbit ears
+        local.draw_rect(9, 3 + bob, 2, 6, body, filled=True)
+        local.draw_rect(13, 3 + bob, 2, 6, body, filled=True)
+        if direction == "up":
+            local.draw_circle(12, 16 + bob, 2, body_l, filled=True)
+        else:
+            local.draw_line(10, 4 + bob, 10, 7 + bob, ear_in)
+            local.draw_line(14, 4 + bob, 14, 7 + bob, ear_in)
+            local.set_pixel(12, 12 + bob, nose)
+            if sleeping:
+                local.draw_line(9, 11 + bob, 10, 11 + bob, eye)
+                local.draw_line(14, 11 + bob, 15, 11 + bob, eye)
+            else:
+                local.set_pixel(10, 11 + bob, eye)
+                local.set_pixel(14, 11 + bob, eye)
+    else:
+        if not sleeping:
+            local.draw_ellipse(9, 19 + bob, 2, 1, body_d, filled=True)
+            local.draw_ellipse(15, 19 + bob, 2, 1, body, filled=True)
+        local.draw_ellipse(11, 15 + bob, 5, 4, body_d, filled=True)
+        local.draw_ellipse(11, 14 + bob, 5, 3, body, filled=True)
+        local.draw_ellipse(10, 12 + bob, 3, 2, body_l, filled=True)
+        # Cotton puff tail on left
+        local.draw_circle(6, 15 + bob, 2, body_l, filled=True)
+        # Head + tall ear + nose facing right
+        local.draw_ellipse(15, 11 + bob, 3, 3, body, filled=True)
+        local.draw_rect(13, 3 + bob, 2, 6, body, filled=True)
+        local.draw_line(13, 4 + bob, 13, 7 + bob, ear_in)
+        local.set_pixel(18, 12 + bob, nose)
+        if sleeping:
+            local.draw_line(16, 10 + bob, 17, 10 + bob, eye)
+        else:
+            local.set_pixel(16, 10 + bob, eye)
+            local.set_pixel(16, 9 + bob, (255, 255, 255, 255))
+        canvas.blit(local, x, y, flip_x=(direction == "left"))
+        return
+
+    canvas.blit(local, x, y)
