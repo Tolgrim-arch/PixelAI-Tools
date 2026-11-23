@@ -296,3 +296,135 @@ def drop_shadow(
             if c[3] > 0:
                 out.set_pixel(x, y, c)
     return out
+
+
+def _rgb_dist2(a: RGBA, b: RGBA) -> int:
+    dr = a[0] - b[0]
+    dg = a[1] - b[1]
+    db = a[2] - b[2]
+    return dr * dr + dg * dg + db * db
+
+
+def cleanup(canvas: Canvas, tol: float = 60.0, keep_lone: bool = False) -> Canvas:
+    """Remove isolated 1px orphan pixels and smooth low-contrast stray pixels.
+
+    Preserves intentional high-contrast 1px details (such as eyes or specular dots)
+    whose RGB distance from the surrounding majority color exceeds `tol`.
+    """
+    out = canvas.copy()
+    w, h = canvas.width, canvas.height
+    tol2 = tol * tol
+
+    for y in range(h):
+        for x in range(w):
+            idx = y * w + x
+            c = canvas.pixels[idx]
+            if c[3] == 0 or idx in canvas.shadow_pixels:
+                continue
+            n4 = [
+                canvas.get_pixel(x - 1, y),
+                canvas.get_pixel(x + 1, y),
+                canvas.get_pixel(x, y - 1),
+                canvas.get_pixel(x, y + 1),
+            ]
+            solid = [v for v in n4 if v[3] > 0]
+            if not solid:
+                if not keep_lone:
+                    out.pixels[idx] = (0, 0, 0, 0)
+                    out.no_outline.discard(idx)
+                    out.shadow_pixels.discard(idx)
+                continue
+            n8_diag = [
+                canvas.get_pixel(x - 1, y - 1),
+                canvas.get_pixel(x + 1, y - 1),
+                canvas.get_pixel(x - 1, y + 1),
+                canvas.get_pixel(x + 1, y + 1),
+            ]
+            if c in n4 or c in n8_diag:
+                continue
+            votes: dict[RGBA, int] = {}
+            for v in solid:
+                votes[v] = votes.get(v, 0) + 1
+            top = max(votes.items(), key=lambda item: item[1])[0]
+            if _rgb_dist2(c, top) <= tol2:
+                out.pixels[idx] = top
+    return out
+
+
+def pixel_perfect(canvas: Canvas) -> Canvas:
+    """Remove redundant L-step corner pixels on 1px diagonal strokes and silhouettes."""
+    out = canvas.copy()
+    w, h = canvas.width, canvas.height
+
+    def _opaque(px: int, py: int) -> bool:
+        if px < 0 or py < 0 or px >= w or py >= h:
+            return False
+        i = py * w + px
+        return out.pixels[i][3] > 0 and i not in out.shadow_pixels
+
+    for y in range(h):
+        for x in range(w):
+            if not _opaque(x, y):
+                continue
+            l = 1 if _opaque(x - 1, y) else 0
+            r = 1 if _opaque(x + 1, y) else 0
+            u = 1 if _opaque(x, y - 1) else 0
+            d = 1 if _opaque(x, y + 1) else 0
+            if l + r != 1 or u + d != 1:
+                continue
+            sx = -1 if l else 1
+            sy = -1 if u else 1
+            if not _opaque(x + sx, y + sy) and not _opaque(x - sx, y) and not _opaque(x, y - sy):
+                idx = y * w + x
+                out.pixels[idx] = (0, 0, 0, 0)
+                out.no_outline.discard(idx)
+                out.shadow_pixels.discard(idx)
+    return out
+
+
+def rim_light(
+    canvas: Canvas,
+    ramp: list[RGBA] | None = None,
+    direction: tuple[int, int] = (-1, -1),
+    steps: int = 1,
+) -> Canvas:
+    """Brighten light-facing silhouette edge pixels before outlining/selout.
+
+    When `ramp` is provided, pixels matching a color in `ramp` are shifted `steps`
+    entries lighter along `ramp`. When `ramp` is omitted, light-facing edge pixels
+    are hue-shifted brighter via `brighten()`.
+    """
+    out = canvas.copy()
+    w, h = canvas.width, canvas.height
+    dx, dy = int(direction[0]), int(direction[1])
+    step_count = max(1, int(steps))
+
+    def _solid(px: int, py: int) -> bool:
+        if px < 0 or py < 0 or px >= w or py >= h:
+            return False
+        i = py * w + px
+        return canvas.pixels[i][3] > 0 and i not in canvas.shadow_pixels and i not in canvas.no_outline
+
+    ramp_index = {c: i for i, c in enumerate(ramp)} if ramp else None
+
+    for y in range(h):
+        for x in range(w):
+            if not _solid(x, y):
+                continue
+            blocked_x = (dx == 0) or _solid(x + dx, y)
+            blocked_y = (dy == 0) or _solid(x, y + dy)
+            if blocked_x and blocked_y:
+                continue
+            idx = y * w + x
+            c = canvas.pixels[idx]
+            if ramp and ramp_index is not None:
+                pos = ramp_index.get(c)
+                if pos is not None:
+                    out.pixels[idx] = ramp[min(len(ramp) - 1, pos + step_count)]
+            else:
+                lit = c
+                for _ in range(step_count):
+                    lit = brighten(lit, 1.14)
+                out.pixels[idx] = lit
+    return out
+

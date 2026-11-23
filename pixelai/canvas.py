@@ -3,7 +3,7 @@
 from collections import deque
 import math
 import random
-from pixelai.color import RGBA, TRANSPARENT, brighten, darken
+from pixelai.color import RGBA, TRANSPARENT, bayer_threshold, brighten, darken, dither_band_index
 
 
 class Canvas:
@@ -329,12 +329,75 @@ class Canvas:
                 self.set_pixel(x + dx, y + dy, color_map[ch])
 
     def draw_dither_rect(
-        self, x: int, y: int, w: int, h: int, color_a: RGBA, color_b: RGBA
+        self,
+        x: int,
+        y: int,
+        w: int,
+        h: int,
+        color_a: RGBA,
+        color_b: RGBA,
+        mode: str = "checker",
+        ratio: float = 0.5,
     ) -> None:
-        """Fill a rectangle with a 2-color checkerboard dither pattern."""
+        """Fill a rectangle with a 2-color checkerboard or 4x4 Bayer ordered dither pattern."""
+        if w <= 0 or h <= 0:
+            return
+        use_bayer = mode.lower() in ("bayer", "bayer4", "bayer_4x4")
+        t = max(0.0, min(1.0, float(ratio)))
         for py in range(y, y + h):
             for px in range(x, x + w):
-                self.set_pixel(px, py, color_a if (px + py) % 2 == 0 else color_b)
+                if use_bayer:
+                    col = color_b if bayer_threshold(px, py) < t else color_a
+                else:
+                    col = color_a if (px + py) % 2 == 0 else color_b
+                self.set_pixel(px, py, col)
+
+    def draw_band_gradient(
+        self,
+        x: int,
+        y: int,
+        w: int,
+        h: int,
+        ramp: list[RGBA],
+        direction: str = "vertical",
+        strip: float = 1.0 / 3.0,
+    ) -> None:
+        """Fill a rectangle with flat color bands and Bayer 4x4 dithering only at band transitions."""
+        if w <= 0 or h <= 0 or not ramp:
+            return
+        n = len(ramp)
+        mode = direction.lower()
+        cx = x + (w - 1) * 0.5
+        cy = y + (h - 1) * 0.5
+        max_r = max(1.0, math.hypot(w * 0.5, h * 0.5))
+        for py in range(y, y + h):
+            for px in range(x, x + w):
+                if mode == "horizontal":
+                    v = (px - x) / max(1, w - 1)
+                elif mode == "diagonal":
+                    v = ((px - x) / max(1, w - 1) + (py - y) / max(1, h - 1)) * 0.5
+                elif mode == "radial":
+                    v = 1.0 - min(1.0, math.hypot(px - cx, py - cy) / max_r)
+                else:
+                    v = (py - y) / max(1, h - 1)
+                idx = dither_band_index(v, n, px, py, strip=strip)
+                self.set_pixel(px, py, ramp[idx])
+
+    def draw_bitmap_text(
+        self, x: int, y: int, text: str, color: RGBA, scale: int = 1
+    ) -> int:
+        """Render crisp 3x5 pixel bitmap text and return total advance width in pixels."""
+        s = max(1, int(scale))
+        cx = x
+        for ch in str(text).upper():
+            glyph = BITMAP_FONT_3X5.get(ch)
+            if glyph:
+                for row in range(5):
+                    for col in range(3):
+                        if glyph[row * 3 + col] == "1":
+                            self.draw_rect(cx + col * s, y + row * s, s, s, color, filled=True)
+            cx += 4 * s
+        return cx - x
 
     def blit(
         self,
@@ -510,3 +573,30 @@ class Canvas:
                 px = x + w // 2 + int(math.cos(angle) * dist)
                 py = y + h // 2 + int(math.sin(angle) * dist)
                 self.draw_rect(px, py, size, size, color)
+
+
+BITMAP_FONT_3X5: dict[str, str] = {
+    "A": "010101111101101", "B": "110101110101110", "C": "011100100100011",
+    "D": "110101101101110", "E": "111100110100111", "F": "111100110100100",
+    "G": "011100101101011", "H": "101101111101101", "I": "111010010010111",
+    "J": "001001001101010", "K": "101101110101101", "L": "100100100100111",
+    "M": "101111111101101", "N": "110101101101101", "O": "010101101101010",
+    "P": "110101110100100", "Q": "010101101110011", "R": "110101110101101",
+    "S": "011100010001110", "T": "111010010010010", "U": "101101101101111",
+    "V": "101101101101010", "W": "101101111111101", "X": "101101010101101",
+    "Y": "101101010010010", "Z": "111001010100111", "0": "111101101101111",
+    "1": "010110010010111", "2": "110001010100111", "3": "110001010001110",
+    "4": "101101111001001", "5": "111100110001110", "6": "011100111101111",
+    "7": "111001010010010", "8": "111101111101111", "9": "111101111001110",
+    "-": "000000111000000", ".": "000000000000010", ":": "000010000010000",
+    "/": "001001010100100", "+": "000010111010000", "(": "010100100100010",
+    ")": "010001001001010", "#": "101111101111101", "_": "000000000000111",
+}
+
+
+def bitmap_text_width(text: str, scale: int = 1) -> int:
+    """Return pixel width of `text` rendered with BITMAP_FONT_3X5 at `scale`."""
+    s = max(1, int(scale))
+    n = len(str(text))
+    return max(0, n * 4 - 1) * s
+

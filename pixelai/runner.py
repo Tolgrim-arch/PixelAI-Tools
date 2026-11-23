@@ -4,11 +4,11 @@ from pathlib import Path
 import json
 from typing import Any
 from pixelai.canvas import Canvas
-from pixelai.color import RGBA, TRANSPARENT, brighten, darken, parse_color
+from pixelai.color import RGBA, TRANSPARENT, brighten, darken, hue_ramp, parse_color
 from pixelai.exporter import extract_spec_from_png
 from pixelai.inspect_tool import load_png_as_canvas
 from pixelai.palettes import resolve_palette
-from pixelai import autotile, building, creatures, filters, fx, iso, items, materials, nature, rig, ui
+from pixelai import autotile, building, creatures, deform, filters, fx, iso, items, materials, nature, organic, rig, ui
 
 
 _GENERATOR_OPS = frozenset({
@@ -146,6 +146,8 @@ def _execute_ops_unchecked(canvas, ops, palette, defs, frame_idx, total_frames):
                 op["x"], op["y"], op["w"], op["h"],
                 parse_color(op["color_a"], palette),
                 parse_color(op["color_b"], palette),
+                mode=str(op.get("mode", "checker")),
+                ratio=float(op.get("ratio", 0.5)),
             )
         elif kind == "scatter":
             tgt = (
@@ -406,6 +408,150 @@ def _execute_ops_unchecked(canvas, ops, palette, defs, frame_idx, total_frames):
                 default_bevel=bool(op.get("bevel", True)),
                 default_ground_shadow=int(op.get("ground_shadow", 2)),
             )
+        elif kind == "band_gradient":
+            if "ramp" in op:
+                ramp = [parse_color(c, palette) for c in op["ramp"]]
+            elif "hue_ramp" in op:
+                hr = op["hue_ramp"]
+                ramp = hue_ramp(
+                    int(hr.get("n", 5)),
+                    hue=float(hr.get("hue", 110.0)),
+                    shift=float(hr.get("shift", 60.0)),
+                    sat=float(hr.get("sat", 0.55)),
+                    sat_drop=float(hr.get("sat_drop", 0.35)),
+                    light=tuple(hr.get("light", (0.12, 0.62))),
+                )
+            else:
+                base_col = parse_color(op["color"], palette)
+                ramp = [darken(base_col, 0.68), base_col, brighten(base_col, 1.18)]
+            canvas.draw_band_gradient(
+                int(op.get("x", 0)),
+                int(op.get("y", 0)),
+                int(op.get("w", canvas.width)),
+                int(op.get("h", canvas.height)),
+                ramp,
+                direction=str(op.get("direction", "vertical")),
+                strip=float(op.get("strip", 1.0 / 3.0)),
+            )
+        elif kind == "text":
+            canvas.draw_bitmap_text(
+                int(op.get("x", 0)),
+                int(op.get("y", 0)),
+                str(op["text"]),
+                parse_color(op.get("color", "#ffffff"), palette),
+                scale=int(op.get("scale", 1)),
+            )
+        elif kind == "solid":
+            if "ramp" in op:
+                ramp = [parse_color(c, palette) for c in op["ramp"]]
+            elif "hue_ramp" in op:
+                hr = op["hue_ramp"]
+                ramp = hue_ramp(
+                    int(hr.get("n", 5)),
+                    hue=float(hr.get("hue", 110.0)),
+                    shift=float(hr.get("shift", 60.0)),
+                    sat=float(hr.get("sat", 0.55)),
+                    sat_drop=float(hr.get("sat_drop", 0.35)),
+                    light=tuple(hr.get("light", (0.12, 0.62))),
+                )
+            else:
+                base_col = parse_color(op["color"], palette)
+                ramp = [darken(base_col, 0.62), darken(base_col, 0.82), base_col, brighten(base_col, 1.16)]
+            light_raw = op.get("light", (-0.55, -0.65, 0.52))
+            organic.draw_solid(
+                canvas,
+                op["primitives"],
+                ramp,
+                light=(float(light_raw[0]), float(light_raw[1]), float(light_raw[2])),
+                k=float(op.get("k", 0.8)),
+                ambient=float(op.get("ambient", 0.24)),
+                dark=float(op.get("dark", 1.0)),
+                gloss=float(op.get("gloss", 0.0)),
+                shine=float(op.get("shine", 10.0)),
+                cut=float(op.get("cut", 0.12)),
+                inflate=float(op.get("inflate", 0.0)),
+                inflate_mix=float(op.get("inflate_mix", 0.75)),
+                dither_strip=float(op.get("dither_strip", 0.0)),
+            )
+        elif kind == "flame":
+            ramp = [parse_color(c, palette) for c in op["ramp"]] if "ramp" in op else None
+            t_val = float(op["t"]) if "t" in op else (frame_idx / max(1, total_frames))
+            organic.draw_flame(
+                canvas,
+                float(op.get("x", canvas.width * 0.5)),
+                float(op.get("ground", op.get("y", canvas.height - 2))),
+                t=t_val,
+                height=float(op.get("height", 28.0)),
+                width=float(op.get("width", 9.0)),
+                ramp=ramp,
+                speed=float(op.get("speed", 3.4)),
+                rough=float(op.get("rough", 1.45)),
+                sway_amp=float(op.get("sway_amp", 5.0)),
+                dither_strip=float(op.get("dither_strip", 0.4)),
+                seed=int(op.get("seed", 9)),
+                embers=int(op.get("embers", 4)),
+            )
+        elif kind == "smoke":
+            ramp = [parse_color(c, palette) for c in op["ramp"]] if "ramp" in op else None
+            t_val = float(op["t"]) if "t" in op else (frame_idx / max(1, total_frames))
+            organic.draw_smoke(
+                canvas,
+                float(op.get("x", canvas.width * 0.5)),
+                float(op.get("ground", op.get("y", canvas.height - 2))),
+                t=t_val,
+                height=float(op.get("height", 40.0)),
+                width=float(op.get("width", 2.5)),
+                ramp=ramp,
+                speed=float(op.get("speed", 1.5)),
+                rough=float(op.get("rough", 1.3)),
+                sway_amp=float(op.get("sway_amp", 5.0)),
+                warp=float(op.get("warp", 22.0)),
+                dither_strip=float(op.get("dither_strip", 0.5)),
+                seed=int(op.get("seed", 13)),
+            )
+        elif kind == "ik_limb":
+            ramp = [parse_color(c, palette) for c in op["ramp"]] if "ramp" in op else None
+            deform.draw_ik_limb(
+                canvas,
+                op["start"],
+                op["target"],
+                float(op["l1"]),
+                float(op["l2"]),
+                parse_color(op.get("color", "#c0a080"), palette),
+                direction=int(op.get("direction", op.get("dir", 1))),
+                radius_a=float(op.get("radius_a", op.get("radius", 2.0))),
+                radius_b=float(op.get("radius_b", op.get("radius", 1.5))),
+                radius_c=float(op["radius_c"]) if "radius_c" in op else None,
+                ramp=ramp,
+            )
+        elif kind == "bend":
+            def_name = op["def"]
+            if def_name not in defs:
+                raise ValueError(f"Unknown bend def: {def_name!r}")
+            rest = op["rest"]
+            if "pose" in op:
+                pose = op["pose"]
+            elif "wave" in op:
+                wv = op["wave"]
+                t_val = float(wv["t"]) if "t" in wv else (frame_idx / max(1, total_frames))
+                pose = deform.wave_polyline(
+                    rest,
+                    t=t_val,
+                    amp=float(wv.get("amp", 3.0)),
+                    wavelength=float(wv.get("wavelength", 16.0)),
+                    anchor_from=float(wv.get("from", 0.0)),
+                )
+            else:
+                raise ValueError("bend op requires 'pose' or 'wave'")
+            deform.bend_canvas(
+                defs[def_name],
+                rest=rest,
+                pose=pose,
+                reach=float(op["reach"]) if "reach" in op else None,
+                target=canvas,
+                offset_x=int(op.get("x", 0)),
+                offset_y=int(op.get("y", 0)),
+            )
         else:
             raise ValueError(f"Unknown op: {kind!r}")
         canvas.mark_no_outline = False
@@ -554,6 +700,23 @@ def _apply_post(
                 canvas,
                 float(post.get("amount", 0.25)),
                 hue_shift=bool(post.get("hue_shift", False)),
+            )
+        elif kind == "cleanup":
+            canvas = filters.cleanup(
+                canvas,
+                tol=float(post.get("tol", 60.0)),
+                keep_lone=bool(post.get("keep_lone", False)),
+            )
+        elif kind == "pixel_perfect":
+            canvas = filters.pixel_perfect(canvas)
+        elif kind == "rim_light":
+            ramp = [parse_color(c, palette) for c in post["ramp"]] if "ramp" in post else None
+            raw_dir = post.get("dir", post.get("direction", (-1, -1)))
+            canvas = filters.rim_light(
+                canvas,
+                ramp=ramp,
+                direction=(int(raw_dir[0]), int(raw_dir[1])),
+                steps=int(post.get("steps", 1)),
             )
         elif kind == "scale":
             canvas = filters.scale(canvas, int(post["factor"]))

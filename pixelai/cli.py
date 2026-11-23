@@ -15,7 +15,7 @@ from pixelai.exporter import (
     export_spritesheet,
     extract_spec_from_png,
 )
-from pixelai.inspect_tool import analyze_image_file, load_png_as_canvas, render_ascii
+from pixelai.inspect_tool import analyze_image_file, load_png_as_canvas, render_ascii, render_ruler
 from pixelai.palettes import list_palettes
 from pixelai.runner import resolve_spec_paths, run_frames, run_layers
 from pixelai.quality import assess_artifact, check_catalog_rejection, record_assessment, review_template
@@ -38,7 +38,8 @@ AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
   `pixelai render spec.json -o sheet.png --sheet --columns 4 --meta sheet.json --godot sheet.tres`
 - Apply Reusable FX & Material Recolor to Any Finished PNG or Spec:
   `pixelai fx sprite.png -o enchanted.gif --material gold_specular --effect sheen_sweep --effect sparkle_glint --effect float_bob`
-- Terminal Inspection (Metrics + ASCII): `pixelai inspect out.png --ascii`
+- Terminal Inspection (Metrics + Edge Quality + ASCII + Coordinate Ruler):
+  `pixelai inspect out.png --ascii --ruler ruler.png`
 - Commercial QA Template: `pixelai qa out.png --template reviews/out.review.json`
 - Commercial QA Decision: `pixelai qa out.png --review reviews/out.review.json --catalog reviews/catalog.json --record` (0 approved, 1 rejected, 2 needs review; metrics alone never approve)
 - Extract Embedded Spec from PNG: `pixelai extract out.png`
@@ -54,7 +55,13 @@ AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 - `{"op": "polygon", "points": [[0,0], [8,4], [0,8]], "color": "roof", "filled": true}`
 - `{"op": "fill", "x": 4, "y": 4, "color": "water"}`
 - `{"op": "grid", "x": 0, "y": 0, "rows": ["..oo..", ".oggo."]}` (`.` and ` ` = transparent)
-- `{"op": "dither", "x": 0, "y": 0, "w": 8, "h": 8, "color_a": "grass", "color_b": "grass_d"}`
+- `{"op": "dither", "x": 0, "y": 0, "w": 8, "h": 8, "color_a": "grass", "color_b": "grass_d", "mode": "checker|bayer4", "ratio": 0.5}`
+- `{"op": "band_gradient", "x": 0, "y": 0, "w": 32, "h": 16, "ramp": ["#263b4d", "#4c7c9e", "#9bd4e8"], "direction": "vertical|horizontal|diagonal|radial", "strip": 0.33}` (Flat color bands with 4x4 Bayer dithering strictly along band edges; also accepts `"hue_ramp": {"n": 5, "hue": 120}`)
+- `{"op": "solid", "primitives": [{"type": "capsule", "ax": 16, "ay": 10, "bx": 16, "by": 24, "ra": 5, "rb": 7}, {"type": "ellipse", "x": 16, "y": 8, "rx": 5, "ry": 4}], "ramp": [...], "k": 0.8, "inflate": 0, "dither_strip": 0}` (Smooth-min SDF metaball union with normal-mapped lighting)
+- `{"op": "flame", "x": 16, "ground": 30, "height": 22, "width": 7, "embers": 4}` / `{"op": "smoke", "x": 16, "ground": 28, "height": 32, "width": 2.5, "warp": 18}` (Deterministic FBM + warp organic effects; auto-animates across `frame_count`)
+- `{"op": "ik_limb", "start": [12, 16], "target": [22, 28], "l1": 8, "l2": 8, "direction": 1, "color": "wood", "radius_a": 2.5, "radius_b": 1.5}` (2-bone analytical IK limb)
+- `{"op": "bend", "def": "tail_sprite", "rest": [[4, 16], [16, 16], [28, 16]], "wave": {"amp": 3.0, "wavelength": 16.0, "from": 0.2}}` (Inverse-bilinear spine deformation via explicit `pose` or auto-animated `wave`)
+- `{"op": "text", "x": 2, "y": 2, "text": "LV 9", "color": "#ffffff", "scale": 1}` (Crisp 3x5 bitmap pixel font)
 - `{"op": "scatter", "x": 0, "y": 0, "w": 32, "h": 32, "color": "grass_l", "target_color": "grass", "pattern": "noise|brick|shingle|cobble|wood|grass|rock|soil|leaves|bark|water|cloth", "density": 0.2, "seed": 42}` (Use material accents clipped to the surface; avoid random noise as a substitute for material planes.)
 - `{"op": "material", "kind": "rock|cobble|soil|leaves|bark|grass|water|cloth|wood|roof", "x": 0, "y": 0, "w": 64, "h": 48, "seed": 42, "inside": false}` (Structured native material planes; optional `color` base tint or five-entry `colors` ramp. `trunk` aliases bark, `shingle` aliases roof.)
 - `{"op": "building", "x": 12, "y": 14, "w": 104, "h": 98, "roof_style": "gable|pitched|barn", "wall_color": "cream", "roof_color": "roof", "timber_frame": true, "chimney": true, "smoke": true, "shadow_opacity": 0.22}` (Top-down 3/4 architecture; straight projected ground shadow, optional shadow_dx/shadow_dy; PNG preserves partial alpha.)
@@ -73,6 +80,7 @@ AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 - `{"op": "emote", "x": 18, "y": 2, "kind": "heart|angry|sweat|zzz|exclamation|sick", "frame": 0, "outline": false}`
 - Universal op flags: `"inside": true` (clips shading/markings strictly inside existing opaque silhouette), `"outline": false` (excludes floating particles/emotes/shadows from external outline).
 - `{"op": "mirror_x"}` / `{"op": "mirror_y"}`
+- Post-processing (`post`): `cleanup` (`tol`, `keep_lone`), `pixel_perfect`, `rim_light` (`ramp`, `dir`, `steps` — runs before `outline`), `outline`, `recolor_material`, `drop_shadow`, `pad`, `shade`, `scale`.
 - Top-level `"extends": "sprite.png | spec.json"` inherits palette, defs, and ops from an existing PNG or JSON!
 - Top-level `"imports": ["@foliage/leaf_clusters", "@fx/gold_enchant"]` imports reusable defs, material ramps, and FX presets from `library/`.
 - Top-level `"style_profile": "cozy_modern|16bit_cluster|crisp_retro|enchanted_hd"` configures directional selout and jaggy cleanup automatically.
@@ -202,6 +210,12 @@ def _cmd_render(args: argparse.Namespace) -> int:
         artifacts["layers"] = [str(path.resolve()) for path in paths]
         report(f"Exported {len(paths)} layer PNGs -> {args.layers_dir}")
 
+    if args.ruler:
+        ruler_canvas = render_ruler(frames[0], scale=args.ruler_scale, step=args.ruler_step)
+        ruler_out = export_png(ruler_canvas, args.ruler)
+        artifacts["ruler"] = str(ruler_out.resolve())
+        report(f"Exported coordinate ruler ({ruler_canvas.width}x{ruler_canvas.height}) -> {ruler_out}")
+
     result = {
         "artifacts": artifacts,
         "width": frames[0].width,
@@ -222,6 +236,10 @@ def _cmd_render(args: argparse.Namespace) -> int:
 
 def _cmd_inspect(args: argparse.Namespace) -> int:
     stats, frames = analyze_image_file(args.image)
+    if args.ruler:
+        ruler_canvas = render_ruler(frames[0], scale=args.ruler_scale, step=args.ruler_step)
+        ruler_out = export_png(ruler_canvas, args.ruler)
+        stats["ruler"] = str(ruler_out.resolve())
     print(json.dumps(stats, indent=2))
     if args.ascii:
         for idx, f in enumerate(frames if args.all_frames else frames[:1]):
@@ -462,6 +480,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="Print ASCII luminance preview of the first frame to stdout.",
     )
     render_p.add_argument("--json", action="store_true", help="Return artifact paths, frame dimensions, and warnings as JSON.")
+    render_p.add_argument("--ruler", default=None, help="Optional output PNG path for an upscaled coordinate-grid ruler overlay.")
+    render_p.add_argument("--ruler-scale", type=int, default=4, help="Upscale factor for --ruler output (default: 4).")
+    render_p.add_argument("--ruler-step", type=int, default=8, help="Coordinate grid step in native pixels for --ruler (default: 8).")
     render_p.set_defaults(func=_cmd_render)
     render_p.add_argument("--fresh", action="store_true", help="Generate from scratch: reject extends and load_png, including nested definitions and frames.")
 
@@ -472,7 +493,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     inspect_p = sub.add_parser(
         "inspect",
-        help="Inspect a PNG or multi-frame GIF (bounding box, margins, islands, color count, and ASCII preview).",
+        help="Inspect a PNG or multi-frame GIF (bounding box, margins, islands, edge quality, color count, ASCII, and ruler).",
     )
     inspect_p.add_argument("image", help="Path to PNG or GIF file to inspect.")
     inspect_p.add_argument(
@@ -485,6 +506,9 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print ASCII preview for every frame of a GIF.",
     )
+    inspect_p.add_argument("--ruler", default=None, help="Optional output PNG path for an upscaled coordinate-grid ruler overlay.")
+    inspect_p.add_argument("--ruler-scale", type=int, default=4, help="Upscale factor for --ruler output (default: 4).")
+    inspect_p.add_argument("--ruler-step", type=int, default=8, help="Coordinate grid step in native pixels for --ruler (default: 8).")
     inspect_p.set_defaults(func=_cmd_inspect)
 
     qa_p = sub.add_parser("qa", help="Assess commercial readiness against eleven evidenced review criteria; metrics alone never approve art.")

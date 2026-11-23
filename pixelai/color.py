@@ -161,3 +161,92 @@ MATERIAL_PRESETS: dict[str, dict[str, object]] = {
     },
 }
 
+
+BAYER_4X4: tuple[float, ...] = tuple(
+    (v + 0.5) / 16.0
+    for v in (0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5)
+)
+
+
+def bayer_threshold(x: int, y: int) -> float:
+    """Return the normalized 4x4 Bayer threshold in (0, 1) for pixel (x, y)."""
+    return BAYER_4X4[((y & 3) << 2) | (x & 3)]
+
+
+def dither_band_index(
+    v: float, n: int, x: int, y: int, strip: float = 1.0 / 3.0
+) -> int:
+    """Map a normalized scalar `v` in [0, 1] to a palette index in [0, n-1].
+
+    Keeps color bands flat and applies 4x4 Bayer ordered dithering only inside
+    a thin transition strip of width `strip` where two bands meet.
+    """
+    if n <= 1:
+        return 0
+    clamped = max(0.0, min(1.0, v))
+    f = clamped * (n - 1)
+    k = int(f)
+    if k >= n - 1:
+        return n - 1
+    fr = f - k
+    if strip <= 0.0:
+        return min(n - 1, k + (1 if fr >= 0.5 else 0))
+    t = max(0.0, min(1.0, (fr - 0.5) / strip + 0.5))
+    return min(n - 1, k + (1 if bayer_threshold(x, y) < t else 0))
+
+
+def hsl_to_rgba(h: float, s: float, l: float, a: int = 255) -> RGBA:
+    """Convert HSL (h in degrees, s and l in [0, 1]) to an RGBA tuple."""
+    h_norm = (((h % 360.0) + 360.0) % 360.0) / 60.0
+    c = (1.0 - abs(2.0 * l - 1.0)) * s
+    x = c * (1.0 - abs((h_norm % 2.0) - 1.0))
+    m = l - c * 0.5
+    if h_norm < 1.0:
+        r, g, b = c, x, 0.0
+    elif h_norm < 2.0:
+        r, g, b = x, c, 0.0
+    elif h_norm < 3.0:
+        r, g, b = 0.0, c, x
+    elif h_norm < 4.0:
+        r, g, b = 0.0, x, c
+    elif h_norm < 5.0:
+        r, g, b = x, 0.0, c
+    else:
+        r, g, b = c, 0.0, x
+    return (
+        max(0, min(255, int(round((r + m) * 255.0)))),
+        max(0, min(255, int(round((g + m) * 255.0)))),
+        max(0, min(255, int(round((b + m) * 255.0)))),
+        max(0, min(255, int(a))),
+    )
+
+
+def hue_ramp(
+    n: int,
+    hue: float = 110.0,
+    shift: float = 60.0,
+    sat: float = 0.55,
+    sat_drop: float = 0.35,
+    light: tuple[float, float] = (0.12, 0.62),
+) -> list[RGBA]:
+    """Build an n-step hue-shifted pixel art color ramp (shadows -> blue 240, lights -> yellow 60)."""
+    if n <= 0:
+        return []
+    l0, l1 = float(light[0]), float(light[1])
+
+    def _toward(h_deg: float, target: float, amt: float) -> float:
+        diff = ((target - h_deg + 540.0) % 360.0) - 180.0
+        sign = 1.0 if diff >= 0.0 else -1.0
+        return h_deg + sign * min(abs(diff), amt)
+
+    ramp: list[RGBA] = []
+    for i in range(n):
+        t = i / (n - 1) if n > 1 else 0.5
+        edge = abs(2.0 * t - 1.0)
+        h_val = _toward(hue, 240.0 if t < 0.5 else 60.0, shift * edge)
+        s_val = max(0.0, min(1.0, sat * (1.0 - sat_drop * edge)))
+        l_val = max(0.0, min(1.0, l0 + (l1 - l0) * t))
+        ramp.append(hsl_to_rgba(h_val, s_val, l_val))
+    return ramp
+
+

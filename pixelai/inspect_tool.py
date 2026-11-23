@@ -4,7 +4,84 @@ from collections import deque
 from pathlib import Path
 from typing import Any
 from PIL import Image, ImageSequence
-from pixelai.canvas import Canvas
+from pixelai.canvas import Canvas, bitmap_text_width
+from pixelai.color import RGBA, lerp_rgba
+
+
+def edge_check(canvas: Canvas) -> dict[str, list[list[int]]]:
+    """Detect silhouette edge artifacts: 1px nubs, 1px-thin strips, and 1px pinholes."""
+    w, h = canvas.width, canvas.height
+
+    def _solid(x: int, y: int) -> int:
+        if x < 0 or y < 0 or x >= w or y >= h:
+            return 0
+        return 1 if canvas.pixels[y * w + x][3] > 0 else 0
+
+    nubs: list[list[int]] = []
+    strips: list[list[int]] = []
+    holes: list[list[int]] = []
+    for y in range(h):
+        for x in range(w):
+            l = _solid(x - 1, y)
+            rt = _solid(x + 1, y)
+            u = _solid(x, y - 1)
+            d = _solid(x, y + 1)
+            n = l + rt + u + d
+            if _solid(x, y):
+                if n <= 1:
+                    nubs.append([x, y])
+                elif n == 2 and ((l and rt) or (u and d)):
+                    strips.append([x, y])
+            elif 0 < x < w - 1 and 0 < y < h - 1 and n >= 3:
+                holes.append([x, y])
+    return {"nubs": nubs, "strips": strips, "holes": holes}
+
+
+def render_ruler(
+    canvas: Canvas,
+    scale: int = 4,
+    step: int = 8,
+    bg: RGBA = (22, 22, 26, 255),
+    ink: RGBA = (235, 235, 235, 255),
+    line: RGBA = (255, 90, 160, 255),
+) -> Canvas:
+    """Render an upscaled diagnostic canvas with numbered pixel-coordinate gridlines."""
+    s = max(1, int(scale))
+    grid_step = max(1, int(step))
+    ml = bitmap_text_width(str(max(canvas.width, canvas.height)), scale=1) + 4
+    mt = 9
+    out_w = canvas.width * s + ml + 1
+    out_h = canvas.height * s + mt + 1
+    out = Canvas(out_w, out_h, fill=bg)
+    k1: RGBA = (44, 44, 50, 255)
+    k2: RGBA = (36, 36, 42, 255)
+
+    for j in range(canvas.height * s):
+        sy = j // s
+        for i in range(canvas.width * s):
+            sx = i // s
+            px = canvas.get_pixel(sx, sy)
+            col = px if px[3] > 0 else (k1 if ((i >> 3) ^ (j >> 3)) & 1 else k2)
+            out.pixels[(mt + j) * out_w + ml + i] = col
+
+    def _tint(x: int, y: int) -> None:
+        if out.in_bounds(x, y):
+            idx = y * out_w + x
+            out.pixels[idx] = lerp_rgba(out.pixels[idx], line, 0.55)
+
+    for gx in range(0, canvas.width + 1, grid_step):
+        lx = ml + gx * s
+        for y in range(max(0, mt - 2), out_h):
+            _tint(lx, y)
+        out.draw_bitmap_text(lx + 2, 1, str(gx), ink, scale=1)
+
+    for gy in range(0, canvas.height + 1, grid_step):
+        ly = mt + gy * s
+        for x in range(max(0, ml - 2), out_w):
+            _tint(x, ly)
+        out.draw_bitmap_text(1, ly + 2, str(gy), ink, scale=1)
+
+    return out
 
 
 def count_connected_components(canvas: Canvas) -> int:
@@ -35,7 +112,7 @@ def count_connected_components(canvas: Canvas) -> int:
 
 
 def analyze_canvas(canvas: Canvas) -> dict[str, Any]:
-    """Compute bounding box, margins, opaque pixel count, unique colors, and island count."""
+    """Compute bounding box, margins, opaque pixel count, unique colors, islands, and edge quality."""
     min_x, min_y = canvas.width, canvas.height
     max_x, max_y = -1, -1
     opaque = 0
@@ -64,6 +141,7 @@ def analyze_canvas(canvas: Canvas) -> dict[str, Any]:
             "unique_colors": 0,
             "islands": 0,
             "isolated_single_pixels": 0,
+            "edge_quality": {"nubs": 0, "strips": 0, "holes": 0},
             "bbox": None,
             "margins": {"top": canvas.height, "right": canvas.width, "bottom": canvas.height, "left": canvas.width},
         }
@@ -81,6 +159,7 @@ def analyze_canvas(canvas: Canvas) -> dict[str, Any]:
                 if not has_neighbor:
                     isolated_singles += 1
 
+    edges = edge_check(canvas)
     return {
         "width": canvas.width,
         "height": canvas.height,
@@ -88,6 +167,11 @@ def analyze_canvas(canvas: Canvas) -> dict[str, Any]:
         "unique_colors": len(colors),
         "islands": count_connected_components(canvas),
         "isolated_single_pixels": isolated_singles,
+        "edge_quality": {
+            "nubs": len(edges["nubs"]),
+            "strips": len(edges["strips"]),
+            "holes": len(edges["holes"]),
+        },
         "bbox": {"x": min_x, "y": min_y, "w": max_x - min_x + 1, "h": max_y - min_y + 1},
         "margins": {
             "top": min_y,
