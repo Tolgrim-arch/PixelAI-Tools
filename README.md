@@ -23,6 +23,20 @@ Traditional image-generation models struggle with pixel art: they produce blurry
 | :---: | :---: | :---: |
 | ![Commercial Humans](outputs/commercial_humans.png) | ![Cozy Barn](samples/cozy_barn_iso_v2.png) | ![Water Grass Autotile](samples/water_grass_autotile.png) |
 
+### Organic SDF Solids, Flow FX, 2-Bone IK & Spine Rigging
+| SDF Metaballs + FBM `flame` & `smoke` | 2-Bone `ik_limb` + Spine `bend`/`wave` | Band-Edge Bayer 4×4 & `hue_ramp` |
+| :---: | :---: | :---: |
+| ![SDF Solid + Flame + Smoke](samples/demo_5_organic_fx.gif) | ![2-Bone IK + Spine Bend](samples/demo_4_ik_bend.gif) | ![Band Gradient + Bayer4](samples/demo_2_dither.png) |
+
+### Post-Processing & AI-Agent Visual Diagnostics
+| `cleanup` + `pixel_perfect` | `rim_light` Before `selout` | CLI `--ruler` Coordinate Grid |
+| :---: | :---: | :---: |
+| ![Cleanup + Pixel Perfect](samples/demo_1_cleanup.png) | ![Rim Light + Selout](samples/demo_3_rimlight.png) | ![CLI Coordinate Ruler](samples/demo_6_ruler.png) |
+
+| `pixelai diff` (`BEFORE \| AFTER \| DIFF`) | `render --contact-sheet` Frame Strip |
+| :---: | :---: |
+| ![CLI Diff Sheet](samples/demo_cli_diff.png) | ![CLI Contact Sheet](samples/demo_cli_contact_sheet.png) |
+
 ---
 
 ## Why `pixelai-tools`?
