@@ -15,7 +15,7 @@ from pixelai import autotile, building, creatures, deform, filters, fx, iso, ite
 _GENERATOR_OPS = frozenset({
     "animal_rig", "char_rig", "nature_rig", "item_rig",
     "building", "portrait_rig", "ui_rig", "autotile",
-    "tilemap", "iso_structure", "material",
+    "tilemap", "iso_structure", "material", "spine_rig",
 })
 
 
@@ -554,6 +554,24 @@ def _execute_ops_unchecked(canvas, ops, palette, defs, frame_idx, total_frames):
                 target=canvas,
                 offset_x=int(op.get("x", 0)),
                 offset_y=int(op.get("y", 0)),
+            )
+        elif kind == "spine_rig":
+            eye_col = parse_color(op.get("eye_color", "#ff3b6b"), palette)
+            deform.draw_biped_spine_rig(
+                canvas,
+                cx=float(op["cx"]) if "cx" in op else None,
+                ground_y=float(op["ground_y"]) if "ground_y" in op else None,
+                facing=op.get("facing", op.get("dir", "right")),
+                action=str(op.get("action", op.get("pose", "walk"))),
+                frame=int(op.get("frame", frame_idx)),
+                total_frames=int(op.get("total_frames", max(1, total_frames))),
+                body_hue=float(op.get("body_hue", op.get("hue", 270.0))),
+                body_sat=float(op.get("body_sat", op.get("sat", 0.65))),
+                eye_color=eye_col,
+                horns=bool(op.get("horns", True)),
+                tail=bool(op.get("tail", True)),
+                scale=float(op.get("scale", 1.0)),
+                shadow=bool(op.get("shadow", True)),
             )
         else:
             raise ValueError(f"Unknown op: {kind!r}")

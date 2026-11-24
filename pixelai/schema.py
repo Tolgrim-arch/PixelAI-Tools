@@ -106,6 +106,12 @@ OP_SPECS: dict[str, dict[str, Any]] = {
         "optional": ["pose", "wave", "reach", "x", "y"],
         "example": {"op": "bend", "def": "tail", "rest": [[4, 16], [16, 16], [28, 16]], "wave": {"amp": 3.0, "wavelength": 16.0, "from": 0.1}},
     },
+    "spine_rig": {
+        "summary": "Full-body Spine + 2-bone IK animated biped creature with guaranteed forward gait, anatomical knee/elbow bends, depth-darkened far limbs, and strict back-to-front Z-order.",
+        "required": [],
+        "optional": ["cx", "ground_y", "facing", "dir", "action", "pose", "frame", "total_frames", "body_hue", "hue", "body_sat", "sat", "eye_color", "horns", "tail", "scale", "shadow"],
+        "example": {"op": "spine_rig", "facing": "right", "action": "walk", "body_hue": 270, "horns": True, "tail": True},
+    },
     "text": {
         "summary": "Render crisp 3x5 bitmap pixel text.",
         "required": ["text"],
