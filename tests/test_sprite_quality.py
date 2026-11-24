@@ -23,7 +23,7 @@ class SpriteQualityTests(unittest.TestCase):
     def test_unknown_animal_does_not_silently_render_chicken(self):
         from pixelai.creatures import draw_animal_rig
         with self.assertRaisesRegex(ValueError, 'Unsupported animal species'):
-            draw_animal_rig(Canvas(32, 32), 0, 0, {}, {'species': 'rabbit'})
+            draw_animal_rig(Canvas(32, 32), 0, 0, {}, {'species': 'dragon'})
 
     def test_unknown_item_does_not_silently_render_apple(self):
         with self.assertRaisesRegex(ValueError, 'Unsupported item kind'):

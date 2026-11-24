@@ -165,6 +165,7 @@ def analyze_canvas(canvas: Canvas) -> dict[str, Any]:
         "height": canvas.height,
         "opaque_pixels": opaque,
         "unique_colors": len(colors),
+        "color_histogram": color_histogram(canvas, top_n=12),
         "islands": count_connected_components(canvas),
         "isolated_single_pixels": isolated_singles,
         "edge_quality": {
@@ -180,6 +181,27 @@ def analyze_canvas(canvas: Canvas) -> dict[str, Any]:
             "left": min_x,
         },
     }
+
+
+def color_histogram(canvas: Canvas, top_n: int = 12) -> list[dict[str, Any]]:
+    """Return top-N opaque colors sorted by frequency with hex code, pixel count, and share."""
+    counts: dict[RGBA, int] = {}
+    total = 0
+    for px in canvas.pixels:
+        if px[3] > 0:
+            counts[px] = counts.get(px, 0) + 1
+            total += 1
+    if total == 0:
+        return []
+    ranked = sorted(counts.items(), key=lambda item: item[1], reverse=True)[: max(1, top_n)]
+    return [
+        {
+            "hex": f"#{c[0]:02x}{c[1]:02x}{c[2]:02x}" if c[3] == 255 else f"#{c[0]:02x}{c[1]:02x}{c[2]:02x}{c[3]:02x}",
+            "count": n,
+            "share": round(n / total, 4),
+        }
+        for c, n in ranked
+    ]
 
 
 def render_ascii(canvas: Canvas, max_width: int = 64) -> str:
@@ -253,6 +275,17 @@ def analyze_image_file(path: str | Path) -> tuple[dict[str, Any], list[Canvas]]:
             1 for i in range(1, len(frames)) if frames[i].pixels == frames[i - 1].pixels
         )
         first_stats["duplicate_frames"] = dup_count
+        total_px = max(1, frames[0].width * frames[0].height)
+        deltas = [
+            round(
+                sum(1 for a, b in zip(frames[i - 1].pixels, frames[i].pixels) if a != b) / total_px,
+                4,
+            )
+            for i in range(1, len(frames))
+        ]
+        first_stats["frame_deltas"] = deltas
+        first_stats["avg_frame_delta"] = round(sum(deltas) / len(deltas), 4) if deltas else 0.0
+        first_stats["max_frame_delta"] = max(deltas) if deltas else 0.0
         for side, val in min_margins.items():
             if val == 0:
                 warnings.append(f"Frame touches '{side}' border (min_margins.{side}=0); risk of clipping.")
@@ -265,3 +298,126 @@ def analyze_image_file(path: str | Path) -> tuple[dict[str, Any], list[Canvas]]:
     if warnings:
         first_stats["warnings"] = warnings
     return first_stats, frames
+
+
+def _blit_checker(dst: Canvas, src: Canvas, ox: int, oy: int, scale: int) -> None:
+    k1: RGBA = (44, 44, 52, 255)
+    k2: RGBA = (36, 36, 44, 255)
+    sw, sh = src.width * scale, src.height * scale
+    for j in range(sh):
+        sy = j // scale
+        for i in range(sw):
+            sx = i // scale
+            px = src.get_pixel(sx, sy)
+            col = px if px[3] > 0 else (k1 if ((i >> 3) ^ (j >> 3)) & 1 else k2)
+            dst.set_pixel(ox + i, oy + j, col)
+
+
+def diff_canvases(before: Canvas, after: Canvas) -> tuple[dict[str, Any], Canvas]:
+    """Compare two canvases pixel-by-pixel and return metrics plus a diff highlight canvas."""
+    w = max(before.width, after.width)
+    h = max(before.height, after.height)
+    diff_c = Canvas(w, h)
+    changed = 0
+    min_x, min_y = w, h
+    max_x, max_y = -1, -1
+
+    for y in range(h):
+        for x in range(w):
+            a = before.get_pixel(x, y) if before.in_bounds(x, y) else (0, 0, 0, 0)
+            b = after.get_pixel(x, y) if after.in_bounds(x, y) else (0, 0, 0, 0)
+            if a != b:
+                changed += 1
+                if x < min_x:
+                    min_x = x
+                if x > max_x:
+                    max_x = x
+                if y < min_y:
+                    min_y = y
+                if y > max_y:
+                    max_y = y
+                # Green = added, Red = removed, Magenta = modified
+                if a[3] == 0 and b[3] > 0:
+                    diff_c.set_pixel(x, y, (80, 235, 130, 255))
+                elif a[3] > 0 and b[3] == 0:
+                    diff_c.set_pixel(x, y, (240, 75, 85, 255))
+                else:
+                    diff_c.set_pixel(x, y, (255, 80, 200, 255))
+            elif b[3] > 0:
+                # Dim unchanged silhouette for spatial context
+                diff_c.set_pixel(x, y, (b[0] // 3, b[1] // 3, b[2] // 3, 255))
+
+    total = max(1, w * h)
+    stats: dict[str, Any] = {
+        "same_size": (before.width == after.width and before.height == after.height),
+        "before_size": [before.width, before.height],
+        "after_size": [after.width, after.height],
+        "changed_pixels": changed,
+        "total_pixels": w * h,
+        "change_ratio": round(changed / total, 4),
+        "change_bbox": (
+            {"x": min_x, "y": min_y, "w": max_x - min_x + 1, "h": max_y - min_y + 1}
+            if changed > 0
+            else None
+        ),
+    }
+    return stats, diff_c
+
+
+def render_diff_sheet(before: Canvas, after: Canvas, scale: int = 4) -> tuple[dict[str, Any], Canvas]:
+    """Render a BEFORE | AFTER | DIFF side-by-side comparison sheet with metrics."""
+    s = max(1, int(scale))
+    stats, diff_c = diff_canvases(before, after)
+    pad = 6
+    label_h = 10
+    bw, bh = before.width * s, before.height * s
+    aw, ah = after.width * s, after.height * s
+    dw, dh = diff_c.width * s, diff_c.height * s
+    out_w = pad * 4 + bw + aw + dw
+    out_h = pad * 2 + label_h + max(bh, ah, dh)
+    out = Canvas(out_w, out_h, fill=(22, 22, 28, 255))
+
+    out.draw_bitmap_text(pad, pad, "BEFORE", (235, 235, 240, 255), scale=1)
+    out.draw_bitmap_text(pad * 2 + bw, pad, "AFTER", (140, 235, 170, 255), scale=1)
+    out.draw_bitmap_text(pad * 3 + bw + aw, pad, "DIFF", (255, 110, 210, 255), scale=1)
+
+    oy = pad + label_h
+    _blit_checker(out, before, pad, oy, s)
+    _blit_checker(out, after, pad * 2 + bw, oy, s)
+    _blit_checker(out, diff_c, pad * 3 + bw + aw, oy, s)
+    return stats, out
+
+
+def render_contact_sheet(
+    frames: list[Canvas],
+    names: list[str] | None = None,
+    scale: int = 4,
+    cols: int | None = None,
+) -> Canvas:
+    """Render all animation frames onto a labeled checkerboard contact sheet."""
+    if not frames:
+        raise ValueError("Cannot render contact sheet from empty frames list")
+    s = max(1, int(scale))
+    n = len(frames)
+    c_count = max(1, min(cols if cols is not None else min(6, n), n))
+    r_count = (n + c_count - 1) // c_count
+    fw = max(f.width for f in frames) * s
+    fh = max(f.height for f in frames) * s
+    pad = 6
+    label_h = 9
+    cell_w = max(fw, 24)
+    cell_h = fh + label_h
+    out_w = pad + c_count * (cell_w + pad)
+    out_h = pad + r_count * (cell_h + pad)
+    out = Canvas(out_w, out_h, fill=(22, 22, 28, 255))
+
+    for idx, frame in enumerate(frames):
+        col = idx % c_count
+        row = idx // c_count
+        ox = pad + col * (cell_w + pad)
+        oy = pad + row * (cell_h + pad)
+        label = (names[idx] if names and idx < len(names) else f"F{idx}").upper()[:10]
+        out.draw_bitmap_text(ox, oy, label, (235, 235, 240, 255), scale=1)
+        _blit_checker(out, frame, ox, oy + label_h, s)
+    return out
+

@@ -15,10 +15,18 @@ from pixelai.exporter import (
     export_spritesheet,
     extract_spec_from_png,
 )
-from pixelai.inspect_tool import analyze_image_file, load_png_as_canvas, render_ascii, render_ruler
+from pixelai.inspect_tool import (
+    analyze_image_file,
+    load_png_as_canvas,
+    render_ascii,
+    render_contact_sheet,
+    render_diff_sheet,
+    render_ruler,
+)
 from pixelai.palettes import list_palettes
 from pixelai.runner import resolve_spec_paths, run_frames, run_layers
 from pixelai.quality import assess_artifact, check_catalog_rejection, record_assessment, review_template
+from pixelai.schema import build_json_schema, format_op_guide, format_op_list
 
 AGENT_GUIDE = """# pixelai-tools — Agent Reference Guide
 
@@ -216,6 +224,12 @@ def _cmd_render(args: argparse.Namespace) -> int:
         artifacts["ruler"] = str(ruler_out.resolve())
         report(f"Exported coordinate ruler ({ruler_canvas.width}x{ruler_canvas.height}) -> {ruler_out}")
 
+    if args.contact_sheet:
+        cs_canvas = render_contact_sheet(frames, names=names, scale=args.contact_scale, cols=cols)
+        cs_out = export_png(cs_canvas, args.contact_sheet)
+        artifacts["contact_sheet"] = str(cs_out.resolve())
+        report(f"Exported contact sheet ({len(frames)} frames, {cs_canvas.width}x{cs_canvas.height}) -> {cs_out}")
+
     result = {
         "artifacts": artifacts,
         "width": frames[0].width,
@@ -329,12 +343,40 @@ def _cmd_extract(args: argparse.Namespace) -> int:
     return 0
 
 
-def _cmd_guide(_args: argparse.Namespace) -> int:
+def _cmd_guide(args: argparse.Namespace) -> int:
+    if getattr(args, "op", None):
+        print(format_op_guide(args.op))
+        return 0
+    if getattr(args, "list", False):
+        print(format_op_list())
+        return 0
     print(AGENT_GUIDE)
     print("## Built-in Palettes")
     for name, colors in list_palettes().items():
         keys = ", ".join(colors.keys())
         print(f"- `{name}` ({len(colors)} colors): keys = [{keys}]")
+    return 0
+
+
+def _cmd_schema(_args: argparse.Namespace) -> int:
+    print(json.dumps(build_json_schema(), indent=2))
+    return 0
+
+
+def _cmd_diff(args: argparse.Namespace) -> int:
+    before = load_png_as_canvas(args.before)
+    after = load_png_as_canvas(args.after)
+    stats, sheet = render_diff_sheet(before, after, scale=args.scale)
+    if args.output:
+        out = export_png(sheet, args.output)
+        stats["diff_image"] = str(out.resolve())
+    if args.json or not args.output:
+        print(json.dumps(stats, indent=2))
+    else:
+        pct = stats["change_ratio"] * 100.0
+        print(
+            f"Diff: {stats['changed_pixels']}/{stats['total_pixels']} px changed ({pct:.2f}%) -> {stats['diff_image']}"
+        )
     return 0
 
 
@@ -483,6 +525,8 @@ def build_parser() -> argparse.ArgumentParser:
     render_p.add_argument("--ruler", default=None, help="Optional output PNG path for an upscaled coordinate-grid ruler overlay.")
     render_p.add_argument("--ruler-scale", type=int, default=4, help="Upscale factor for --ruler output (default: 4).")
     render_p.add_argument("--ruler-step", type=int, default=8, help="Coordinate grid step in native pixels for --ruler (default: 8).")
+    render_p.add_argument("--contact-sheet", default=None, help="Optional output PNG path for a labeled multi-frame checkerboard contact sheet.")
+    render_p.add_argument("--contact-scale", type=int, default=4, help="Upscale factor for --contact-sheet (default: 4).")
     render_p.set_defaults(func=_cmd_render)
     render_p.add_argument("--fresh", action="store_true", help="Generate from scratch: reject extends and load_png, including nested definitions and frames.")
 
@@ -632,9 +676,28 @@ def build_parser() -> argparse.ArgumentParser:
 
     guide_p = sub.add_parser(
         "guide",
-        help="Print complete LLM agent guide (all ops, isometric primitives, and palettes).",
+        help="Print complete LLM agent guide, compact op index (--list), or single-op reference (--op <name>).",
     )
+    guide_p.add_argument("--list", action="store_true", help="Print a compact, token-efficient index of all ops and palettes.")
+    guide_p.add_argument("--op", default=None, help="Print focused documentation and JSON example for a single op or post op.")
     guide_p.set_defaults(func=_cmd_guide)
+
+    schema_p = sub.add_parser(
+        "schema",
+        help="Print the JSON Schema (draft-07) for PixelAI-Tools declarative specs.",
+    )
+    schema_p.set_defaults(func=_cmd_schema)
+
+    diff_p = sub.add_parser(
+        "diff",
+        help="Compare two PNG/GIF sprites pixel-by-pixel and export a BEFORE | AFTER | DIFF sheet.",
+    )
+    diff_p.add_argument("before", help="Path to the baseline PNG/GIF image.")
+    diff_p.add_argument("after", help="Path to the modified PNG/GIF image.")
+    diff_p.add_argument("-o", "--output", default=None, help="Optional output PNG path for BEFORE | AFTER | DIFF sheet.")
+    diff_p.add_argument("--scale", type=int, default=4, help="Integer upscale factor for diff sheet (default: 4).")
+    diff_p.add_argument("--json", action="store_true", help="Print diff metrics as JSON.")
+    diff_p.set_defaults(func=_cmd_diff)
 
     return parser
 
@@ -645,7 +708,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return args.func(args)
     except (OSError, ValueError, KeyError, IndexError, TypeError, AttributeError, OverflowError) as exc:
-        print(f"pixelai {args.command}: {exc}", file=sys.stderr)
+        if getattr(args, "json", False):
+            print(json.dumps({"ok": False, "command": args.command, "error": str(exc)}), file=sys.stderr)
+        else:
+            print(f"pixelai {args.command}: {exc}", file=sys.stderr)
         return 1
 
 

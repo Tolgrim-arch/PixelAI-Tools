@@ -8,6 +8,7 @@ from pixelai.color import RGBA, TRANSPARENT, brighten, darken, hue_ramp, parse_c
 from pixelai.exporter import extract_spec_from_png
 from pixelai.inspect_tool import load_png_as_canvas
 from pixelai.palettes import resolve_palette
+from pixelai.schema import lint_op_fields, lint_post_fields
 from pixelai import autotile, building, creatures, deform, filters, fx, iso, items, materials, nature, organic, rig, ui
 
 
@@ -40,6 +41,8 @@ def _execute_ops(
 def _execute_ops_unchecked(canvas, ops, palette, defs, frame_idx, total_frames):
     for op in ops:
         kind = op["op"]
+        for warn in lint_op_fields(op):
+            canvas.warnings.append(warn)
         if "z" in op:
             canvas.current_z = float(op["z"])
         else:
@@ -658,6 +661,8 @@ def _apply_post(
 ) -> Canvas:
     for post in post_ops:
         kind = post["op"]
+        for warn in lint_post_fields(post):
+            canvas.warnings.append(warn)
         if kind == "outline":
             canvas = filters.outline(
                 canvas,
