@@ -20,68 +20,120 @@ def _draw_potion(
     shine: bool,
     frame: int,
 ) -> None:
+    import math
+
     s = size / 24.0
-    liq_l = brighten(liquid, 1.22)
+    liq_hi = brighten(liquid, 1.38)
+    liq_l = brighten(liquid, 1.18)
     liq_d = darken(liquid, 0.72)
-    glass_l = brighten(glass, 1.18)
-    cork_d = darken(cork, 0.76)
+    liq_dd = darken(liquid, 0.48)
+    glass_hi = (255, 250, 236, 255)
+    glass_l = brighten(glass, 1.22)
+    glass_d = darken(glass, 0.74)
+    glass_dd = darken(glass, 0.52)
+    cork_l = brighten(cork, 1.24)
+    cork_d = darken(cork, 0.70)
 
     def px(u: float) -> int:
         return int(round(u * s))
 
+    # Tilt geometry: diagonal puts cork top-left and bulb bottom-right (classic RPG icon angle)
     if orientation == "diagonal":
-        # 45-degree tilted RPG potion (neck top-right, bulb bottom-left)
-        local.draw_circle(px(9), px(15), _sc(5.5, s), glass, filled=True)
-        # Short neck, perpendicular flared glass lip, and flat-top cork
-        local.draw_circle(px(13), px(11), _sc(1.4, s), glass, filled=True)
-        local.draw_circle(px(14), px(10), _sc(1.4, s), glass, filled=True)
-        # Flared perpendicular lip (diagonal collar)
-        local.draw_line(px(12.8), px(7.8), px(16.2), px(11.2), glass_l)
-        local.draw_line(px(13.4), px(7.4), px(16.6), px(10.6), glass_l)
-        # Short flat-topped cork
-        local.draw_line(px(15.0), px(7.2), px(16.8), px(9.0), cork)
-        local.draw_line(px(15.8), px(6.4), px(17.6), px(8.2), cork_d)
+        bx, by = 12.6 * s, 14.2 * s
+        br = 6.6 * s
+        lx, ly, lz = 0.46, -0.62, 0.64  # top-right key light
+        # Chunky tilted cork (top-left)
+        for dy in range(-px(4), px(4) + 1):
+            for dx in range(-px(4), px(4) + 1):
+                x, y = px(6.2) + dx, px(6.2) + dy
+                # Rotate into cork-local frame (45 deg)
+                u = (dx + dy) * 0.7071 / max(1.0, s)
+                v = (-dx + dy) * 0.7071 / max(1.0, s)
+                if abs(u) <= 2.2 and abs(v) <= 2.3:
+                    if u < -0.5 and v < 0.8:
+                        c = cork_l
+                    elif u > 0.8 or v > 1.2:
+                        c = cork_d
+                    else:
+                        c = cork
+                    local.set_pixel(x, y, c)
+        # Flared glass neck collar
+        for dy in range(-px(4), px(4) + 1):
+            for dx in range(-px(4), px(4) + 1):
+                x, y = px(8.4) + dx, px(8.4) + dy
+                u = (dx + dy) * 0.7071 / max(1.0, s)
+                v = (-dx + dy) * 0.7071 / max(1.0, s)
+                if -1.1 <= u <= 1.2 and abs(v) <= 3.1:
+                    local.set_pixel(x, y, glass_l if v < 0.2 else glass_d)
+    else:
+        bx, by = size * 0.5, 14.8 * s
+        br = 6.6 * s
+        lx, ly, lz = -0.46, -0.62, 0.64  # top-left key light
+        cx = size // 2
+        # Upright shaded cork
+        local.draw_rect(cx - _sc(2, s), px(3), _sc(4, s), _sc(3, s), cork, filled=True)
+        local.draw_rect(cx - _sc(2, s), px(3), _sc(2, s), _sc(2, s), cork_l, filled=True)
+        local.draw_rect(cx + _sc(1, s), px(4), _sc(1, s), _sc(2, s), cork_d, filled=True)
+        # Glass neck + flared collar
+        local.draw_rect(cx - _sc(2.2, s), px(6), _sc(4.4, s), _sc(4, s), glass, filled=True)
+        local.draw_rect(cx - _sc(3.2, s), px(5.5), _sc(6.4, s), _sc(1.8, s), glass_l, filled=True)
+        local.draw_rect(cx + _sc(1, s), px(6.5), _sc(2, s), _sc(2.5, s), glass_d, filled=True)
 
-        # Gravity-leveled liquid with bright meniscus clipped strictly inside flask bulb
-        local.clip_to_opaque = True
-        liq_r = _sc(4.6, s)
-        fill_h = max(2, int(round(8 * s * max(0.2, min(1.0, fill_level)))))
-        liq_top = px(20) - fill_h
-        # Confine liquid strictly to the bulb (center (9, 15)) via intersection
-        bulb = Canvas(size, size)
-        bulb.draw_circle(px(9), px(15), liq_r, liquid, filled=True)
-        bulb.clip_to_opaque = True
-        bulb.draw_rect(px(3), 0, px(13), liq_top, (0, 0, 0, 0), filled=True)
-        bulb.draw_rect(px(3), px(18), px(13), px(5), liq_d, filled=True)
-        bulb.draw_rect(px(4), liq_top, px(11), _sc(1, s), liq_l, filled=True)
-        bulb.clip_to_opaque = False
-        local.blit(bulb, 0, 0)
-        if shine:
-            sx_off = 1 if (frame % 4) in (1, 2) else 0
-            local.draw_rect(px(6), px(12 + sx_off), max(1, _sc(1, s)), max(1, _sc(2, s)), (255, 255, 255, 255))
-            local.set_pixel(px(7), px(11 + sx_off), glass_l)
-        local.clip_to_opaque = False
-        return
+    # Spherical normal-mapped flask bulb + curved liquid volume + specular crescent
+    fill_clamped = max(0.18, min(0.95, fill_level))
+    liq_top_y = (by + br) - (2.0 * br * 0.86 * fill_clamped)
+    wave_phase = (frame % 4) * (math.pi * 0.5)
 
-    # Vertical potion (centered at x = size // 2)
-    cx = size // 2
-    local.draw_circle(cx, px(15), _sc(5.5, s), glass, filled=True)
-    local.draw_rect(cx - _sc(2, s), px(7), _sc(4, s), _sc(5, s), glass, filled=True)
-    local.draw_rect(cx - _sc(3, s), px(6), _sc(6, s), _sc(1.5, s), glass_l, filled=True)
-    local.draw_rect(cx - _sc(1.5, s), px(4), _sc(3, s), _sc(2, s), cork, filled=True)
-    local.draw_rect(cx - _sc(1.5, s), px(5), _sc(3, s), _sc(1, s), cork_d, filled=True)
+    for y in range(size):
+        for x in range(size):
+            nx = (x + 0.5 - bx) / max(1.0, br)
+            ny = (y + 0.5 - by) / max(1.0, br)
+            r2 = nx * nx + ny * ny
+            if r2 > 1.0:
+                continue
+            r_norm = math.sqrt(r2)
+            nz = math.sqrt(max(0.0, 1.0 - r2))
+            ndotl = nx * lx + ny * ly + nz * lz
 
-    local.clip_to_opaque = True
-    fill_h = max(1, int(round(9 * s * max(0.0, min(1.0, fill_level)))))
-    if fill_h > 0:
-        top_y = px(20) - fill_h
-        local.draw_rect(cx - _sc(5, s), top_y, _sc(10, s), fill_h, liquid, filled=True)
-        local.draw_rect(cx - _sc(5, s), px(17), _sc(10, s), _sc(4, s), liq_d, filled=True)
-        local.draw_rect(cx - _sc(4, s), top_y, _sc(8, s), _sc(1, s), liq_l, filled=True)
-    if shine:
-        glint_y = px(12) + (1 if (frame % 4) in (1, 2) else 0)
-        local.draw_rect(cx - _sc(3, s), glint_y, max(1, _sc(1, s)), _sc(3, s), (255, 255, 255, 255))
-    local.clip_to_opaque = False
+            # Inner liquid region (inset by 1px glass wall)
+            meniscus_y = liq_top_y + math.sin(nx * 2.6 + wave_phase) * (0.45 * s)
+            in_liquid = r_norm <= 0.84 and (y + 0.5) >= meniscus_y
+
+            if in_liquid:
+                # Meniscus bright lip at top of liquid
+                if (y + 0.5) - meniscus_y <= max(1.1, 1.15 * s):
+                    c = liq_hi if ndotl > 0.15 else liq_l
+                else:
+                    # 4-tone spherical liquid shading + subtle bottom caustic glow
+                    caustic = 1.0 if (ny > 0.35 and abs(nx - lx * 0.4) < 0.38 and r_norm < 0.72) else 0.0
+                    shade = ndotl + caustic * 0.22 - (ny * 0.18)
+                    if shade > 0.42:
+                        c = liq_l
+                    elif shade > 0.08:
+                        c = liquid
+                    elif shade > -0.22:
+                        c = liq_d
+                    else:
+                        c = liq_dd
+                local.set_pixel(x, y, c)
+            else:
+                # Glass shell shading (cool rim darkening + bright upper-lit dome)
+                if r_norm > 0.86:
+                    c = glass_d if ndotl > -0.1 else glass_dd
+                elif ndotl > 0.45:
+                    c = glass_l
+                elif ndotl > -0.1:
+                    c = glass
+                else:
+                    c = glass_d
+                local.set_pixel(x, y, c)
+
+            # Curved specular crescent on upper-lit glass surface (over both glass and liquid)
+            if shine and 0.40 <= r_norm <= 0.78 and ndotl > 0.76:
+                local.set_pixel(x, y, glass_hi)
+            elif shine and 0.35 <= r_norm <= 0.80 and ndotl > 0.66 and not in_liquid:
+                local.set_pixel(x, y, glass_l)
+
 
 
 def _draw_sword(
