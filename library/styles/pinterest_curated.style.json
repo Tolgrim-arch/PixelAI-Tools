@@ -1,0 +1,150 @@
+{
+  "schema_version": "1.0",
+  "name": "pinterest_curated",
+  "sources": [
+    "(1) Makary (@DevMakary) _ X.jfif",
+    "(5) Instagram.jfif",
+    "1 \ub2d8(@_738294)\uc758 \ubbf8\ub514\uc5b4 \uac8c\uc2dc\ubb3c _ X.jfif",
+    "Ander-Charlie (@Andero7Charlie) on X.jfif",
+    "Awacato on X.jfif",
+    "Nashor_Kim.jfif",
+    "Sprite-0002.png",
+    "descarga (1).jfif",
+    "descarga (11).jfif",
+    "descarga (12).jfif",
+    "descarga (13).jfif",
+    "descarga (14).jfif",
+    "descarga (15).jfif",
+    "descarga (16).jfif",
+    "descarga (18).jfif",
+    "descarga (19).jfif",
+    "descarga (21).jfif",
+    "descarga (22).jfif",
+    "descarga (7).jfif",
+    "descarga (8).jfif",
+    "descarga (9).jfif",
+    "descarga.jfif",
+    "https___x_com_RunninBlood.jfif",
+    "things.jfif",
+    "\u0413\u043b\u0430\u0432\u043d\u0430\u044f _ X.jfif",
+    "\u4e3b\u9875 _ Twitter.jfif",
+    "\u79c1\u304c\u4f5c\u3063\u305f\u3044\u304f\u3064\u304b\u306e\u518d\u30b9\u30d7\u30ea\u30c3\u30c8\u3001\u3042\u306a\u305f\u305f\u3061\u306f\u3069\u3046\u601d\u3044\u307e\u3059\u304b\uff1f.jfif"
+  ],
+  "reference_count": 27,
+  "confidence": 0.81,
+  "palette": [
+    "#e7e3d7",
+    "#555965",
+    "#e8d49d",
+    "#6c4636",
+    "#974e3c",
+    "#c3c2bb",
+    "#837f7e",
+    "#a67870",
+    "#cd9471",
+    "#fcf7f1",
+    "#f5bb90",
+    "#343944",
+    "#563662",
+    "#5a3524",
+    "#736c63",
+    "#6b1d1d",
+    "#e8a58b",
+    "#9a6839",
+    "#75495d",
+    "#2b2b2b",
+    "#cc7b46",
+    "#d38694",
+    "#7a5d3c",
+    "#ab7940"
+  ],
+  "color_model": {
+    "ramps": [
+      {
+        "name": "neutral",
+        "colors": [
+          "#2b2b2b",
+          "#343944",
+          "#555965",
+          "#736c63",
+          "#837f7e",
+          "#c3c2bb",
+          "#fcf7f1"
+        ],
+        "hue_shift_deg": 0.0
+      },
+      {
+        "name": "ramp_1",
+        "colors": [
+          "#6b1d1d",
+          "#5a3524",
+          "#6c4636",
+          "#75495d",
+          "#974e3c",
+          "#7a5d3c",
+          "#9a6839",
+          "#ab7940",
+          "#a67870",
+          "#cc7b46",
+          "#d38694",
+          "#cd9471",
+          "#e8a58b",
+          "#f5bb90"
+        ],
+        "hue_shift_deg": 25.5
+      },
+      {
+        "name": "ramp_2",
+        "colors": [
+          "#e8d49d",
+          "#e7e3d7"
+        ],
+        "hue_shift_deg": 1.0
+      },
+      {
+        "name": "ramp_3",
+        "colors": [
+          "#563662"
+        ],
+        "hue_shift_deg": 0.0
+      }
+    ],
+    "shadow_hue_shift_deg": -16.5,
+    "highlight_hue_shift_deg": -3.2,
+    "avg_saturation": 0.362,
+    "luminance_span": 0.803
+  },
+  "outline": {
+    "mode": "lineless",
+    "color": "#000000",
+    "contrast": 0.024
+  },
+  "lighting": {
+    "direction": "top",
+    "vector": [
+      -0.161,
+      -0.987
+    ]
+  },
+  "shading": {
+    "dither_ratio": 0.0061,
+    "isolated_pixel_ratio": 0.3793,
+    "style": "cel_clean"
+  },
+  "proportions": {
+    "native_size": [
+      62,
+      59
+    ],
+    "bbox_aspect": 1.144,
+    "fill_ratio": 0.543
+  },
+  "agent_rules": [
+    "Palette discipline: stay near 24 colors using the learned ramps; avoid raw RGB noise.",
+    "Outline style: use 'lineless' (reference outline color #000000, contrast 0.024).",
+    "Lighting: primary light comes from 'top' (vector [-0.161, -0.987]).",
+    "Shading: prefer 'cel_clean' clusters (dither ratio 0.0061).",
+    "Hue-shifting: shadow shift -16.5deg, highlight shift -3.2deg.",
+    "Layer Z-order (CRITICAL): ops and layers draw BACK-TO-FRONT \u2014 index 0 is farthest behind, last index is frontmost (or set explicit integer 'z' on layers: higher z = in front)."
+  ]
+}
