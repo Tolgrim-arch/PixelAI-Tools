@@ -156,9 +156,11 @@ def _cmd_render(args: argparse.Namespace) -> int:
     spec = _read_spec(args.spec)
     if args.fresh:
         spec["fresh"] = True
+    if getattr(args, "style", None):
+        spec["style_ref"] = args.style
     if args.lineless:
         spec["style"] = "lineless"
-    else:
+    elif "style_ref" not in spec:
         spec.setdefault("style", "ext_outline")
     frames, names = run_frames(spec)
     _enforce_fresh_catalog_gate(frames, spec)
@@ -345,6 +347,10 @@ def _cmd_extract(args: argparse.Namespace) -> int:
 
 
 def _cmd_guide(args: argparse.Namespace) -> int:
+    if getattr(args, "style", None):
+        from pixelai.style_profile import format_style_guide, load_style_profile
+        print(format_style_guide(load_style_profile(args.style)))
+        return 0
     if getattr(args, "op", None):
         print(format_op_guide(args.op))
         return 0
@@ -396,10 +402,111 @@ def _cmd_qa(args: argparse.Namespace) -> int:
     if args.record and catalog_path is None:
         raise ValueError("--record requires --catalog")
     result = assess_artifact(args.image, review, catalog)
+    if getattr(args, "style", None):
+        from pixelai.style_profile import compare_canvas_to_style, load_style_profile
+        profile = load_style_profile(args.style)
+        result["style_fidelity"] = compare_canvas_to_style(load_png_as_canvas(args.image), profile)
     if args.record:
         record_assessment(catalog_path, args.image, result)
     print(json.dumps(result, indent=2))
     return {"approved": 0, "rejected": 1, "needs_review": 2}[result["status"]]
+
+
+def _cmd_style_ingest(args: argparse.Namespace) -> int:
+    from pixelai.style_ingest import ingest_reference_image
+    from pixelai.style_study import collect_image_paths
+
+    paths = collect_image_paths(args.inputs)
+    if not paths:
+        raise ValueError("No supported images (.jpg, .jpeg, .jfif, .png, .webp) found.")
+
+    out_target = Path(args.output)
+    multi = len(paths) > 1 or out_target.suffix.lower() != ".png"
+    if multi:
+        out_target.mkdir(parents=True, exist_ok=True)
+
+    reports = []
+    for p in paths:
+        res = ingest_reference_image(
+            p,
+            force_scale=args.scale,
+            max_colors=args.max_colors,
+            keep_bg=args.keep_bg,
+        )
+        dst = (out_target / f"{p.stem}_clean.png") if multi else out_target
+        saved = export_png(res.canvas, dst)
+        reports.append({
+            "source": p.name,
+            "output": str(saved.resolve()),
+            "source_size": list(res.source_size),
+            "native_size": [res.grid.grid_w, res.grid.grid_h],
+            "cell_size": res.grid.cell_w,
+            "confidence": res.grid.confidence,
+            "colors": len(res.palette),
+            "bg_removed": res.bg_removed,
+        })
+
+    if args.json:
+        print(json.dumps({"ok": True, "ingested": reports}, indent=2))
+    else:
+        for r in reports:
+            print(
+                f"Ingested {r['source']} ({r['source_size'][0]}x{r['source_size'][1]} -> "
+                f"{r['native_size'][0]}x{r['native_size'][1]}, cell={r['cell_size']}, "
+                f"conf={r['confidence']}, colors={r['colors']}) -> {r['output']}"
+            )
+    return 0
+
+
+def _cmd_style_study(args: argparse.Namespace) -> int:
+    from pixelai.style_study import study_reference_images
+
+    profile, ingested = study_reference_images(
+        args.inputs,
+        name=args.name,
+        max_colors=args.max_colors,
+        force_scale=args.scale,
+        keep_bg=args.keep_bg,
+    )
+
+    if args.save_clean:
+        clean_dir = Path(args.save_clean)
+        clean_dir.mkdir(parents=True, exist_ok=True)
+        for p, res in ingested:
+            export_png(res.canvas, clean_dir / f"{p.stem}_clean.png")
+
+    out_path = Path(args.output)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(profile, indent=2) + "\n", encoding="utf-8")
+
+    if args.json:
+        print(json.dumps(profile, indent=2))
+    else:
+        print(
+            f"Studied {len(ingested)} reference(s) -> {out_path} "
+            f"(palette={len(profile['palette'])}, outline={profile['outline']['mode']}, "
+            f"light={profile['lighting']['direction']}, shading={profile['shading']['style']})"
+        )
+    return 0
+
+
+def _cmd_style_merge(args: argparse.Namespace) -> int:
+    from pixelai.style_profile import load_style_profile
+    from pixelai.style_study import merge_style_profiles
+
+    profiles = [load_style_profile(p) for p in args.profiles]
+    merged = merge_style_profiles(profiles, name=args.name, max_colors=args.max_colors)
+    out_path = Path(args.output)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(merged, indent=2) + "\n", encoding="utf-8")
+    print(f"Merged {len(profiles)} style profile(s) -> {out_path} (palette={len(merged['palette'])})")
+    return 0
+
+
+def _cmd_style_guide(args: argparse.Namespace) -> int:
+    from pixelai.style_profile import format_style_guide, load_style_profile
+    print(format_style_guide(load_style_profile(args.profile)))
+    return 0
 
 
 def _cmd_fx(args: argparse.Namespace) -> int:
@@ -479,6 +586,11 @@ def build_parser() -> argparse.ArgumentParser:
         "-o", "--output",
         required=True,
         help="Output file path (.png or .gif).",
+    )
+    render_p.add_argument(
+        "--style",
+        default=None,
+        help="Optional learned `.style.json` profile (path or `@styles/<name>`) to guide palette and outline.",
     )
     render_p.add_argument(
         "--fps",
@@ -563,6 +675,7 @@ def build_parser() -> argparse.ArgumentParser:
     review_args.add_argument("--review", help="Review JSON with independent reviewer, native/zoom inspection, delivery contract and all eleven criteria.")
     qa_p.add_argument("--catalog", help="JSON approval/rejection ledger; exact previously rejected pixels cannot be approved.")
     qa_p.add_argument("--record", action="store_true", help="Append this assessment to --catalog. Exit codes: 0 approved, 1 rejected, 2 needs review.")
+    qa_p.add_argument("--style", default=None, help="Optional `.style.json` profile to evaluate style fidelity against.")
     qa_p.set_defaults(func=_cmd_qa)
 
     showcase_p = sub.add_parser(
@@ -677,11 +790,61 @@ def build_parser() -> argparse.ArgumentParser:
 
     guide_p = sub.add_parser(
         "guide",
-        help="Print complete LLM agent guide, compact op index (--list), or single-op reference (--op <name>).",
+        help="Print complete LLM agent guide, compact op index (--list), single-op reference (--op <name>), or learned style brief (--style <profile>).",
     )
     guide_p.add_argument("--list", action="store_true", help="Print a compact, token-efficient index of all ops and palettes.")
     guide_p.add_argument("--op", default=None, help="Print focused documentation and JSON example for a single op or post op.")
+    guide_p.add_argument("--style", default=None, help="Print an agent-ready style brief from a `.style.json` profile.")
     guide_p.set_defaults(func=_cmd_guide)
+
+    style_p = sub.add_parser(
+        "style",
+        help="Workflow A: ingest JPG/JFIF/PNG/WEBP references, study their pixel-art Style DNA into `.style.json`, merge packs, and print agent briefs.",
+    )
+    style_sub = style_p.add_subparsers(dest="style_command", required=True)
+
+    st_ingest = style_sub.add_parser(
+        "ingest",
+        help="Recover clean 1:1 native pixel art PNG(s) from upscaled/compressed JPG, JFIF, PNG, or WEBP references.",
+    )
+    st_ingest.add_argument("inputs", nargs="+", help="Reference image file(s) or directory.")
+    st_ingest.add_argument("-o", "--output", required=True, help="Output .png file (single input) or directory (multiple inputs).")
+    st_ingest.add_argument("--scale", type=float, default=None, help="Optional manual logical pixel size (auto-detected if omitted).")
+    st_ingest.add_argument("--max-colors", type=int, default=32, help="Maximum palette colors after OKLAB quantization (default: 32).")
+    st_ingest.add_argument("--keep-bg", action="store_true", help="Keep original background instead of flood-fill removing solid borders.")
+    st_ingest.add_argument("--json", action="store_true", help="Print ingestion metrics as JSON.")
+    st_ingest.set_defaults(func=_cmd_style_ingest)
+
+    st_study = style_sub.add_parser(
+        "study",
+        help="Ingest one or more references and extract a reusable `.style.json` profile (ramps, hue-shifting, outline, lighting, shading).",
+    )
+    st_study.add_argument("inputs", nargs="+", help="Reference image file(s) or directory.")
+    st_study.add_argument("-o", "--output", required=True, help="Output `.style.json` path (e.g. library/styles/my_style.style.json).")
+    st_study.add_argument("--name", default="learned_style", help="Human-readable style name (default: learned_style).")
+    st_study.add_argument("--max-colors", type=int, default=24, help="Maximum colors in learned palette (default: 24).")
+    st_study.add_argument("--scale", type=float, default=None, help="Optional manual logical pixel size.")
+    st_study.add_argument("--keep-bg", action="store_true", help="Keep original background during ingestion.")
+    st_study.add_argument("--save-clean", default=None, help="Optional directory to also save cleaned 1:1 native PNGs.")
+    st_study.add_argument("--json", action="store_true", help="Print the full `.style.json` profile to stdout.")
+    st_study.set_defaults(func=_cmd_style_study)
+
+    st_merge = style_sub.add_parser(
+        "merge",
+        help="Consolidate multiple `.style.json` profiles into one consensus style pack.",
+    )
+    st_merge.add_argument("profiles", nargs="+", help="Input `.style.json` profile paths or `@styles/<name>`.")
+    st_merge.add_argument("-o", "--output", required=True, help="Output merged `.style.json` path.")
+    st_merge.add_argument("--name", default="merged_style", help="Name for the merged style pack.")
+    st_merge.add_argument("--max-colors", type=int, default=32, help="Maximum colors in merged palette (default: 32).")
+    st_merge.set_defaults(func=_cmd_style_merge)
+
+    st_guide = style_sub.add_parser(
+        "guide",
+        help="Print a concise, AI-agent-ready style brief from a `.style.json` profile.",
+    )
+    st_guide.add_argument("profile", help="Path to `.style.json` or `@styles/<name>`.")
+    st_guide.set_defaults(func=_cmd_style_guide)
 
     schema_p = sub.add_parser(
         "schema",

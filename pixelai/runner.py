@@ -928,9 +928,27 @@ def _expand_keyframes(keyframes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return expanded
 
 
+def _resolve_style_ref(spec: dict[str, Any]) -> dict[str, Any]:
+    """If top-level `style_ref` is present, apply the learned `.style.json` profile."""
+    ref = spec.get("style_ref")
+    if not ref:
+        return spec
+    from pixelai.style_profile import apply_style_to_spec, load_style_profile
+    profile = load_style_profile(ref)
+    return apply_style_to_spec(spec, profile)
+
+
+def _ordered_layers(spec: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return visible layers sorted back-to-front by explicit `z` (lower=behind, higher=front)."""
+    raw = spec.get("layers", [])
+    visible = [(idx, lspec) for idx, lspec in enumerate(raw) if lspec.get("visible", True)]
+    visible.sort(key=lambda pair: (int(pair[1].get("z", 0)), pair[0]))
+    return [lspec for _, lspec in visible]
+
+
 def run_layers(spec: dict[str, Any]) -> list[tuple[str, Canvas]]:
-    """Render each named layer in `spec['layers']` into its own separate Canvas."""
-    spec = _resolve_extends(spec)
+    """Render each visible named layer in `spec['layers']` (sorted back-to-front by `z`) into its own Canvas."""
+    spec = _resolve_style_ref(_resolve_extends(spec))
     width = int(spec["width"])
     height = int(spec["height"])
     palette = resolve_palette(spec.get("palette"), spec.get("palette_ext"))
@@ -946,7 +964,7 @@ def run_layers(spec: dict[str, Any]) -> list[tuple[str, Canvas]]:
         defs[name] = dc
 
     result: list[tuple[str, Canvas]] = []
-    for idx, lspec in enumerate(spec.get("layers", [])):
+    for idx, lspec in enumerate(_ordered_layers(spec)):
         lname = lspec.get("name", f"layer_{idx}")
         lc = Canvas(width, height, fill=TRANSPARENT)
         _execute_ops(lc, lspec.get("ops", []), palette, defs)
@@ -988,7 +1006,7 @@ def _merge_frame_ops_into_base(
 
 def run_frames(spec: dict[str, Any]) -> tuple[list[Canvas], list[str]]:
     """Execute a spec into one or more post-processed frames and their names."""
-    spec = _resolve_extends(spec)
+    spec = _resolve_style_ref(_resolve_extends(spec))
     width = int(spec["width"])
     height = int(spec["height"])
     palette = resolve_palette(spec.get("palette"), spec.get("palette_ext"))
@@ -1005,7 +1023,7 @@ def run_frames(spec: dict[str, Any]) -> tuple[list[Canvas], list[str]]:
         defs[name] = dc
 
     base_ops = list(spec.get("ops", []))
-    for lspec in spec.get("layers", []):
+    for lspec in _ordered_layers(spec):
         base_ops.extend(lspec.get("ops", []))
 
     post_ops = _resolve_post_ops(spec, palette)
