@@ -217,6 +217,17 @@ def detect_pixel_grid(img: Image.Image, force_scale: float | None = None) -> Gri
             if sub_joint >= best_score * 0.72:
                 best_score, best_p, best_ox, best_oy = sub_joint, sub_p, ox, oy
 
+    # Guard against JPEG 8x8 DCT block boundaries creating a fake peak at p ~= 8.0
+    is_jpeg = (img.format or "").upper() in ("JPEG", "JFIF", "JPG")
+    if is_jpeg and 7.6 <= best_p <= 8.4:
+        half_p = best_p * 0.5
+        sx, ox = _score_period(col_e, half_p)
+        sy, oy = _score_period(row_e, half_p)
+        half_joint = 0.5 * (sx + sy)
+        # If p~=8.0 is weak (< 0.85), it's almost certainly a JPEG DCT artifact rather than an 8x pixel grid
+        if best_score < 0.85 or half_joint >= best_score * 0.35:
+            best_score, best_p, best_ox, best_oy = max(half_joint, 0.30), half_p, ox, oy
+
     # Sub-pixel refinement around best_p
     for delta in (-0.20, -0.15, -0.10, -0.05, 0.05, 0.10, 0.15, 0.20):
         cand_p = best_p + delta

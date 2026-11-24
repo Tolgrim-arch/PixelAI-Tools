@@ -509,6 +509,24 @@ def _cmd_style_guide(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_style_compare(args: argparse.Namespace) -> int:
+    from pixelai.style_profile import load_style_profile, render_style_comparison
+
+    profile = load_style_profile(args.style) if args.style else None
+    report = render_style_comparison(
+        args.reference,
+        args.generated,
+        args.output,
+        profile=profile,
+        scale=args.scale,
+    )
+    if args.json:
+        print(json.dumps(report, indent=2))
+    else:
+        print(f"Exported style comparison -> {report['comparison_image']}")
+    return 0
+
+
 def _cmd_fx(args: argparse.Namespace) -> int:
     src_path = Path(args.source)
     if src_path.suffix.lower() == ".json":
@@ -845,6 +863,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     st_guide.add_argument("profile", help="Path to `.style.json` or `@styles/<name>`.")
     st_guide.set_defaults(func=_cmd_style_guide)
+
+    st_compare = style_sub.add_parser(
+        "compare",
+        help="Export a side-by-side visual comparison sheet (Reference | Ingest 1:1 | Generated).",
+    )
+    st_compare.add_argument("reference", help="Original reference image (JPG/JFIF/PNG/WEBP).")
+    st_compare.add_argument("generated", help="Generated sprite PNG to compare.")
+    st_compare.add_argument("-o", "--output", required=True, help="Output comparison PNG path.")
+    st_compare.add_argument("--style", default=None, help="Optional `.style.json` profile to include fidelity score.")
+    st_compare.add_argument("--scale", type=int, default=6, help="Nearest-neighbor zoom factor (default: 6).")
+    st_compare.add_argument("--json", action="store_true", help="Print comparison report as JSON.")
+    st_compare.set_defaults(func=_cmd_style_compare)
 
     schema_p = sub.add_parser(
         "schema",

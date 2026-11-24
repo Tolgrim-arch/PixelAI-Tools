@@ -504,7 +504,13 @@ def study_reference_images(
     force_scale: float | None = None,
     keep_bg: bool = False,
 ) -> tuple[dict[str, Any], list[tuple[Path, IngestResult]]]:
-    """Ingest and study one or more JPG/JFIF/PNG/WEBP references into a `.style.json` profile."""
+    """Ingest and study one or more JPG/JFIF/PNG/WEBP references into a `.style.json` profile.
+
+    Automatically slices multi-sprite sheets (e.g., 5x5 RPG icon packs) into
+    individual sprites so outline, lighting, and proportions reflect single assets.
+    """
+    from pixelai.style_ingest import slice_sprites
+
     paths = collect_image_paths(inputs)
     if not paths:
         raise ValueError("No supported reference images (.jpg, .jpeg, .jfif, .png, .webp) found.")
@@ -519,15 +525,33 @@ def study_reference_images(
             keep_bg=keep_bg,
         )
         ingested.append((p, res))
-        profiles.append(
-            study_canvas(
-                res.canvas,
-                res.palette,
-                name=p.stem,
-                source=p.name,
-                grid_confidence=res.grid.confidence,
+        sliced = slice_sprites(res.canvas, min_pixels=48)
+        if len(sliced) >= 2:
+            sub_profiles = []
+            for idx, sp in enumerate(sliced[:32]):
+                sp_colors = list(dict.fromkeys(c for c in sp.pixels if c[3] > 0))
+                sub_profiles.append(
+                    study_canvas(
+                        sp,
+                        sp_colors or res.palette,
+                        name=f"{p.stem}_{idx}",
+                        source=p.name,
+                        grid_confidence=res.grid.confidence,
+                    )
+                )
+            sheet_prof = merge_style_profiles(sub_profiles, name=p.stem, max_colors=max_colors)
+            sheet_prof["sliced_sprites"] = len(sliced)
+            profiles.append(sheet_prof)
+        else:
+            profiles.append(
+                study_canvas(
+                    res.canvas,
+                    res.palette,
+                    name=p.stem,
+                    source=p.name,
+                    grid_confidence=res.grid.confidence,
+                )
             )
-        )
 
     final_profile = (
         profiles[0] if len(profiles) == 1 else merge_style_profiles(profiles, name=name, max_colors=max_colors)
