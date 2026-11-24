@@ -2,7 +2,15 @@
 
 from typing import Any
 from pixelai.canvas import Canvas
-from pixelai.color import ground_shadow_color, RGBA, brighten, darken, parse_color
+from pixelai.color import (
+    RGBA,
+    brighten,
+    darken,
+    ground_shadow_color,
+    parse_color,
+    shade_ramp_dithered,
+    specular_highlight,
+)
 
 
 def _sc(val: float, s: float) -> int:
@@ -23,14 +31,18 @@ def _draw_potion(
     import math
 
     s = size / 24.0
-    liq_hi = brighten(liquid, 1.38)
-    liq_l = brighten(liquid, 1.18)
+    liq_hi = specular_highlight(liquid)
+    liq_l = brighten(liquid, 1.20)
     liq_d = darken(liquid, 0.72)
-    liq_dd = darken(liquid, 0.48)
-    glass_hi = (255, 250, 236, 255)
+    liq_dd = darken(liquid, 0.50)
+    liq_ramp = [liq_dd, liq_d, liquid, liq_l]
+
+    glass_hi = specular_highlight(glass)
     glass_l = brighten(glass, 1.22)
     glass_d = darken(glass, 0.74)
-    glass_dd = darken(glass, 0.52)
+    glass_dd = darken(glass, 0.54)
+    glass_ramp = [glass_dd, glass_d, glass, glass_l]
+
     cork_l = brighten(cork, 1.24)
     cork_d = darken(cork, 0.70)
 
@@ -46,7 +58,6 @@ def _draw_potion(
         for dy in range(-px(4), px(4) + 1):
             for dx in range(-px(4), px(4) + 1):
                 x, y = px(6.2) + dx, px(6.2) + dy
-                # Rotate into cork-local frame (45 deg)
                 u = (dx + dy) * 0.7071 / max(1.0, s)
                 v = (-dx + dy) * 0.7071 / max(1.0, s)
                 if abs(u) <= 2.2 and abs(v) <= 2.3:
@@ -70,16 +81,14 @@ def _draw_potion(
         br = 6.6 * s
         lx, ly, lz = -0.46, -0.62, 0.64  # top-left key light
         cx = size // 2
-        # Upright shaded cork
         local.draw_rect(cx - _sc(2, s), px(3), _sc(4, s), _sc(3, s), cork, filled=True)
         local.draw_rect(cx - _sc(2, s), px(3), _sc(2, s), _sc(2, s), cork_l, filled=True)
         local.draw_rect(cx + _sc(1, s), px(4), _sc(1, s), _sc(2, s), cork_d, filled=True)
-        # Glass neck + flared collar
         local.draw_rect(cx - _sc(2.2, s), px(6), _sc(4.4, s), _sc(4, s), glass, filled=True)
         local.draw_rect(cx - _sc(3.2, s), px(5.5), _sc(6.4, s), _sc(1.8, s), glass_l, filled=True)
         local.draw_rect(cx + _sc(1, s), px(6.5), _sc(2, s), _sc(2.5, s), glass_d, filled=True)
 
-    # Spherical normal-mapped flask bulb + curved liquid volume + specular crescent
+    # Spherical normal-mapped flask bulb + Bayer-dithered liquid volume + chromatic specular crescent
     fill_clamped = max(0.18, min(0.95, fill_level))
     liq_top_y = (by + br) - (2.0 * br * 0.86 * fill_clamped)
     wave_phase = (frame % 4) * (math.pi * 0.5)
@@ -95,40 +104,26 @@ def _draw_potion(
             nz = math.sqrt(max(0.0, 1.0 - r2))
             ndotl = nx * lx + ny * ly + nz * lz
 
-            # Inner liquid region (inset by 1px glass wall)
             meniscus_y = liq_top_y + math.sin(nx * 2.6 + wave_phase) * (0.45 * s)
             in_liquid = r_norm <= 0.84 and (y + 0.5) >= meniscus_y
 
             if in_liquid:
-                # Meniscus bright lip at top of liquid
                 if (y + 0.5) - meniscus_y <= max(1.1, 1.15 * s):
                     c = liq_hi if ndotl > 0.15 else liq_l
                 else:
-                    # 4-tone spherical liquid shading + subtle bottom caustic glow
                     caustic = 1.0 if (ny > 0.35 and abs(nx - lx * 0.4) < 0.38 and r_norm < 0.72) else 0.0
-                    shade = ndotl + caustic * 0.22 - (ny * 0.18)
-                    if shade > 0.42:
-                        c = liq_l
-                    elif shade > 0.08:
-                        c = liquid
-                    elif shade > -0.22:
-                        c = liq_d
-                    else:
-                        c = liq_dd
+                    shade_norm = (ndotl + caustic * 0.22 - ny * 0.18 + 0.55) / 1.25
+                    c = shade_ramp_dithered(liq_ramp, shade_norm, x, y, dither_strength=0.38)
                 local.set_pixel(x, y, c)
             else:
-                # Glass shell shading (cool rim darkening + bright upper-lit dome)
                 if r_norm > 0.86:
                     c = glass_d if ndotl > -0.1 else glass_dd
-                elif ndotl > 0.45:
-                    c = glass_l
-                elif ndotl > -0.1:
-                    c = glass
                 else:
-                    c = glass_d
+                    g_norm = (ndotl + 0.45) / 1.30
+                    c = shade_ramp_dithered(glass_ramp, g_norm, x, y, dither_strength=0.35)
                 local.set_pixel(x, y, c)
 
-            # Curved specular crescent on upper-lit glass surface (over both glass and liquid)
+            # Chromatic warm specular crescent on upper-lit glass surface (never pure white)
             if shine and 0.40 <= r_norm <= 0.78 and ndotl > 0.76:
                 local.set_pixel(x, y, glass_hi)
             elif shine and 0.35 <= r_norm <= 0.80 and ndotl > 0.66 and not in_liquid:
@@ -297,14 +292,15 @@ def _draw_gem(local: Canvas, size: int, color: RGBA, shine: bool, frame: int) ->
 
     if shine:
         off = 1 if (frame % 4) in (1, 2) else 0
-        local.set_pixel(cx - px(2) + off, cy - px(4), (255, 252, 240, 255))
-        local.set_pixel(cx - px(3) + off, cy - px(3), (255, 252, 240, 255))
+        spec = specular_highlight(color)
+        local.set_pixel(cx - px(2) + off, cy - px(4), spec)
+        local.set_pixel(cx - px(3) + off, cy - px(3), spec)
         local.set_pixel(cx - px(2) + off, cy - px(3), col_hi)
     local.clip_to_opaque = False
 
 
 def _draw_shield(local: Canvas, size: int, primary: RGBA, trim: RGBA) -> None:
-    """Convex 3D heater shield with beveled metallic rim and normal-shaded field."""
+    """Convex 3D heater shield with beveled metallic rim and Bayer-dithered normal-shaded field."""
     import math
 
     s = size / 24.0
@@ -314,6 +310,7 @@ def _draw_shield(local: Canvas, size: int, primary: RGBA, trim: RGBA) -> None:
     pri_l = brighten(primary, 1.22)
     pri_d = darken(primary, 0.72)
     pri_dd = darken(primary, 0.50)
+    pri_ramp = [pri_dd, pri_d, primary, pri_l]
 
     def px(u: float) -> int:
         return int(round(u * s))
@@ -321,7 +318,6 @@ def _draw_shield(local: Canvas, size: int, primary: RGBA, trim: RGBA) -> None:
     pts = [(cx - px(6.5), px(4.5)), (cx + px(6.5), px(4.5)), (cx + px(6.5), px(12.5)), (cx, px(20.5)), (cx - px(6.5), px(12.5))]
     inner = [(cx - px(4.5), px(6.5)), (cx + px(4.5), px(6.5)), (cx + px(4.5), px(12.0)), (cx, px(17.5)), (cx - px(4.5), px(12.0))]
 
-    # Render trim mask first, then shade bevels by position relative to top-left light
     mask_outer = Canvas(size, size)
     mask_outer.draw_polygon(pts, trim, filled=True)
     mask_inner = Canvas(size, size)
@@ -333,21 +329,12 @@ def _draw_shield(local: Canvas, size: int, primary: RGBA, trim: RGBA) -> None:
                 nx = (x + 0.5 - cx) / max(1.0, 5.5 * s)
                 ny = (y + 0.5 - 11.5 * s) / max(1.0, 7.0 * s)
                 ndotl = -0.55 * nx - 0.55 * ny + 0.62 * math.sqrt(max(0.0, 1.0 - min(1.0, 0.5 * (nx * nx + ny * ny))))
-                if ndotl > 0.62:
-                    c = pri_l
-                elif ndotl > 0.25:
-                    c = primary
-                elif ndotl > -0.05:
-                    c = pri_d
-                else:
-                    c = pri_dd
+                c = shade_ramp_dithered(pri_ramp, (ndotl + 0.25) / 1.15, x, y, dither_strength=0.38)
                 local.set_pixel(x, y, c)
             elif mask_outer.get_pixel(x, y)[3] > 0:
-                # Metallic bevel rim: bright top-left, dark bottom-right
                 diag = (x - cx) + (y - 11.5 * s)
                 local.set_pixel(x, y, trim_l if diag < -1.5 * s else (trim_d if diag > 2.0 * s else trim))
 
-    # Raised metallic center crest
     local.draw_rect(cx - _sc(1, s), px(7.5), _sc(2, s), px(7.5), trim_l, filled=True)
     local.draw_rect(cx, px(8.5), _sc(1, s), px(6.5), trim_d, filled=True)
 
@@ -381,10 +368,11 @@ def _draw_coin_or_apple(local: Canvas, size: int, kind: str, color: RGBA, stem: 
 
     s = size / 24.0
     cx, cy = size // 2, size // 2
-    col_hi = brighten(color, 1.45)
+    col_hi = specular_highlight(color)
     col_l = brighten(color, 1.20)
     col_d = darken(color, 0.72)
-    col_dd = darken(color, 0.48)
+    col_dd = darken(color, 0.50)
+    ramp = [col_dd, col_d, color, col_l]
 
     def px(u: float) -> int:
         return int(round(u * s))
@@ -392,6 +380,7 @@ def _draw_coin_or_apple(local: Canvas, size: int, kind: str, color: RGBA, stem: 
     if kind == "coin":
         rx = max(2, _sc(5.5, s) - (2 if (frame % 4) in (1, 3) else 0))
         ry = _sc(6.5, s)
+        coin_ramp = [col_d, color, col_l, col_hi]
         for y in range(size):
             for x in range(size):
                 nx = (x + 0.5 - cx) / max(1.0, float(rx))
@@ -403,21 +392,15 @@ def _draw_coin_or_apple(local: Canvas, size: int, kind: str, color: RGBA, stem: 
                 ndotl = -0.55 * nx - 0.65 * ny + 0.52 * math.sqrt(max(0.0, 1.0 - r2))
                 if r > 0.78:
                     c = col_l if ndotl > 0.3 else col_d
-                elif ndotl > 0.68:
-                    c = col_hi
-                elif ndotl > 0.30:
-                    c = col_l
-                elif ndotl > -0.05:
-                    c = color
                 else:
-                    c = col_d
+                    c = shade_ramp_dithered(coin_ramp, (ndotl + 0.35) / 1.25, x, y, dither_strength=0.36)
                 local.set_pixel(x, y, c)
         if rx >= 3:
             local.draw_rect(cx - max(1, rx // 4), cy - _sc(2.5, s), max(1, rx // 2), _sc(5, s), col_d, filled=True)
             local.draw_rect(cx - max(1, rx // 4), cy - _sc(2.5, s), 1, _sc(4, s), col_hi, filled=True)
         return
 
-    # 3D bilobed spherical normal-mapped Apple
+    # 3D bilobed spherical normal-mapped Apple with Bayer dithering & chromatic warm specular
     apple_mask = Canvas(size, size)
     apple_mask.draw_polygon([
         (px(6), px(8)), (px(9), px(6)), (px(12), px(7.5)),
@@ -435,22 +418,14 @@ def _draw_coin_or_apple(local: Canvas, size: int, kind: str, color: RGBA, stem: 
             r2 = min(0.99, nx * nx + ny * ny)
             nz = math.sqrt(max(0.0, 1.0 - r2))
             ndotl = -0.52 * nx - 0.64 * ny + 0.56 * nz
-            # Subtle bottom-right bounce light
             bounce = 0.18 if (ny > 0.45 and nx > 0.15) else 0.0
-            shade = ndotl + bounce
+            shade_norm = (ndotl + bounce + 0.35) / 1.25
             if shine and 0.25 <= math.sqrt(r2) <= 0.72 and ndotl > 0.78:
-                c = (255, 248, 232, 255)
-            elif shade > 0.52:
-                c = col_l
-            elif shade > 0.18:
-                c = color
-            elif shade > -0.12:
-                c = col_d
+                c = col_hi
             else:
-                c = col_dd
+                c = shade_ramp_dithered(ramp, shade_norm, x, y, dither_strength=0.40)
             local.set_pixel(x, y, c)
 
-    # Shaded stem and curved leaf
     local.draw_rect(cx, cy - px(6.5), _sc(1, s), _sc(3, s), stem, filled=True)
     local.set_pixel(cx, cy - px(6.5), brighten(stem, 1.25))
     leaf = parse_color("grass", {"grass": (92, 168, 76, 255)})
