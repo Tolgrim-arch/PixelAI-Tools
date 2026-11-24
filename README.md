@@ -23,7 +23,11 @@ Traditional image-generation models struggle with pixel art: they produce blurry
 | :---: | :---: | :---: |
 | ![Commercial Humans](outputs/commercial_humans.png) | ![Cozy Barn](samples/cozy_barn_iso_v2.png) | ![Water Grass Autotile](samples/water_grass_autotile.png) |
 
-### Organic SDF Solids, Flow FX, 2-Bone IK & Spine Rigging
+### Organic SDF Solids, Flow FX, `spine_rig` & Nature Animation
+| Full-Body `spine_rig` Walk Cycle | Animated Sakura Tree (`sakura_64`) | Seeded Nature Variants (`nature_rig`) |
+| :---: | :---: | :---: |
+| ![Spine Rig Monster Walk](samples/monster_walk_v2.gif) | ![Sakura 64x64](output/sakura_64.gif) | ![Nature Quality Seeds](outputs/nature_quality_seeds.png) |
+
 | SDF Metaballs + FBM `flame` & `smoke` | 2-Bone `ik_limb` + Spine `bend`/`wave` | Band-Edge Bayer 4×4 & `hue_ramp` |
 | :---: | :---: | :---: |
 | ![SDF Solid + Flame + Smoke](samples/demo_5_organic_fx.gif) | ![2-Bone IK + Spine Bend](samples/demo_4_ik_bend.gif) | ![Band Gradient + Bayer4](samples/demo_2_dither.png) |
