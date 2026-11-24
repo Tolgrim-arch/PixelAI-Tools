@@ -98,6 +98,14 @@ def apply_style_to_spec(spec: dict[str, Any], profile: dict[str, Any]) -> dict[s
             })
             out["post"] = post
 
+    # 4. Attach style shading context for downstream rigs
+    out["_style_context"] = {
+        "light_vector": profile.get("lighting", {}).get("vector", [-0.46, -0.62]),
+        "shadow_hue_shift_deg": profile.get("color_model", {}).get("shadow_hue_shift_deg", -12.0),
+        "highlight_hue_shift_deg": profile.get("color_model", {}).get("highlight_hue_shift_deg", 10.0),
+        "outline_mode": mode,
+    }
+
     return out
 
 
@@ -202,4 +210,75 @@ def compare_canvas_to_style(canvas: Canvas, profile: dict[str, Any]) -> dict[str
             "lighting_direction": profile.get("lighting", {}).get("direction"),
             "shading_style": target_shading.get("style"),
         },
+    }
+
+
+def render_style_comparison(
+    ref_path: str | Path,
+    gen_path: str | Path,
+    out_path: str | Path,
+    *,
+    profile: dict[str, Any] | None = None,
+    scale: int = 6,
+) -> dict[str, Any]:
+    """Export a labeled side-by-side visual comparison sheet: Reference | Ingest 1:1 | Generated."""
+    from PIL import Image, ImageDraw
+    from pixelai.inspect_tool import load_png_as_canvas
+    from pixelai.style_ingest import ingest_reference_image, slice_sprites
+
+    ref_img = Image.open(ref_path).convert("RGBA")
+    ingested = ingest_reference_image(ref_path, max_colors=24)
+    sliced = slice_sprites(ingested.canvas, min_pixels=48)
+    sample_canvas = sliced[0] if sliced else ingested.canvas
+
+    gen_canvas = load_png_as_canvas(gen_path)
+    fidelity = compare_canvas_to_style(gen_canvas, profile) if profile else None
+
+    tile_sz = max(144, min(256, max(gen_canvas.width, gen_canvas.height) * max(2, scale)))
+
+    def _canvas_to_pil(c: Canvas) -> Image.Image:
+        im = Image.new("RGBA", (c.width, c.height))
+        im.putdata(c.pixels)
+        return im
+
+    def _fit_tile(im: Image.Image) -> Image.Image:
+        # Preserve aspect ratio with nearest-neighbor scaling inside tile_sz x tile_sz
+        rw, rh = im.size
+        s = min(tile_sz / max(1, rw), tile_sz / max(1, rh))
+        nw = max(1, int(round(rw * s)))
+        nh = max(1, int(round(rh * s)))
+        resized = im.resize((nw, nh), Image.Resampling.NEAREST)
+        box = Image.new("RGBA", (tile_sz, tile_sz), (26, 24, 32, 255))
+        box.paste(resized, ((tile_sz - nw) // 2, (tile_sz - nh) // 2), resized)
+        return box
+
+    t_ref = _fit_tile(ref_img)
+    t_ing = _fit_tile(_canvas_to_pil(sample_canvas))
+    t_gen = _fit_tile(_canvas_to_pil(gen_canvas))
+
+    score_txt = f" (score={fidelity['fidelity_score']})" if fidelity else ""
+    labels = [
+        f"1. Reference ({ref_img.size[0]}x{ref_img.size[1]})",
+        f"2. Ingest 1:1 ({sample_canvas.width}x{sample_canvas.height})",
+        f"3. Generated ({gen_canvas.width}x{gen_canvas.height}){score_txt}",
+    ]
+
+    pad = 12
+    header = 28
+    sheet = Image.new("RGBA", (tile_sz * 3 + pad * 4, tile_sz + header + pad), (34, 32, 42, 255))
+    draw = ImageDraw.Draw(sheet)
+    for idx, (tile, lbl) in enumerate(zip((t_ref, t_ing, t_gen), labels)):
+        x0 = pad + idx * (tile_sz + pad)
+        sheet.paste(tile, (x0, header), tile)
+        draw.text((x0 + 2, 8), lbl, fill=(238, 234, 224, 255))
+
+    dst = Path(out_path)
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    sheet.save(dst)
+
+    return {
+        "comparison_image": str(dst.resolve()),
+        "ingested_size": [sample_canvas.width, sample_canvas.height],
+        "sliced_sprites": len(sliced),
+        "fidelity": fidelity,
     }

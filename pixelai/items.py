@@ -258,37 +258,98 @@ def _draw_chest(
 
 
 def _draw_gem(local: Canvas, size: int, color: RGBA, shine: bool, frame: int) -> None:
+    """Multi-faceted crystal gem with 5-tone hue-shifted facets and internal refraction glow."""
     s = size / 24.0
     cx, cy = size // 2, size // 2
-    col_l = brighten(color, 1.28)
+    col_hi = brighten(color, 1.48)
+    col_l = brighten(color, 1.24)
     col_d = darken(color, 0.72)
+    col_dd = darken(color, 0.48)
 
     def px(u: float) -> int:
         return int(round(u * s))
 
-    pts = [(cx, cy - px(7)), (cx + px(6), cy - px(2)), (cx + px(4), cy + px(6)), (cx - px(4), cy + px(6)), (cx - px(6), cy - px(2))]
-    local.draw_polygon(pts, color, filled=True)
+    # Outer crystal silhouette
+    outer = [
+        (cx, cy - px(7.5)),
+        (cx + px(6.2), cy - px(2.2)),
+        (cx + px(4.4), cy + px(6.2)),
+        (cx, cy + px(7.5)),
+        (cx - px(4.4), cy + px(6.2)),
+        (cx - px(6.2), cy - px(2.2)),
+    ]
+    local.draw_polygon(outer, color, filled=True)
     local.clip_to_opaque = True
-    local.draw_polygon([(cx, cy - px(7)), (cx + px(3), cy - px(2)), (cx - px(3), cy - px(2))], col_l, filled=True)
-    local.draw_rect(cx, cy, px(7), px(7), col_d, filled=True)
+
+    # 6 distinct planar facets (top-left light source)
+    # Upper-left crown (brightest)
+    local.draw_polygon([(cx, cy - px(7.5)), (cx - px(6.2), cy - px(2.2)), (cx - px(2.4), cy - px(1.5))], col_hi, filled=True)
+    # Upper-right crown (light mid)
+    local.draw_polygon([(cx, cy - px(7.5)), (cx + px(6.2), cy - px(2.2)), (cx + px(2.4), cy - px(1.5))], col_l, filled=True)
+    # Center table facet
+    local.draw_polygon([(cx, cy - px(4.5)), (cx + px(2.8), cy - px(1.0)), (cx, cy + px(3.0)), (cx - px(2.8), cy - px(1.0))], col_l, filled=True)
+    # Lower-right deep shadow pavilion
+    local.draw_polygon([(cx + px(6.2), cy - px(2.2)), (cx + px(4.4), cy + px(6.2)), (cx, cy + px(7.5)), (cx, cy + px(2.0))], col_dd, filled=True)
+    # Lower-left mid-dark pavilion
+    local.draw_polygon([(cx - px(6.2), cy - px(2.2)), (cx - px(4.4), cy + px(6.2)), (cx, cy + px(7.5)), (cx, cy + px(2.0))], col_d, filled=True)
+    # Internal warm caustic bounce near bottom-left
+    local.draw_polygon([(cx - px(3.2), cy + px(3.2)), (cx - px(0.5), cy + px(5.8)), (cx - px(1.2), cy + px(2.2))], col_l, filled=True)
+
     if shine:
-        gx = cx - px(2) + (1 if (frame % 4) in (1, 2) else 0)
-        local.draw_rect(gx, cy - px(4), _sc(1, s), _sc(2, s), (255, 255, 255, 255))
+        off = 1 if (frame % 4) in (1, 2) else 0
+        local.set_pixel(cx - px(2) + off, cy - px(4), (255, 252, 240, 255))
+        local.set_pixel(cx - px(3) + off, cy - px(3), (255, 252, 240, 255))
+        local.set_pixel(cx - px(2) + off, cy - px(3), col_hi)
     local.clip_to_opaque = False
 
 
 def _draw_shield(local: Canvas, size: int, primary: RGBA, trim: RGBA) -> None:
+    """Convex 3D heater shield with beveled metallic rim and normal-shaded field."""
+    import math
+
     s = size / 24.0
     cx = size // 2
+    trim_l = brighten(trim, 1.28)
+    trim_d = darken(trim, 0.68)
+    pri_l = brighten(primary, 1.22)
+    pri_d = darken(primary, 0.72)
+    pri_dd = darken(primary, 0.50)
 
     def px(u: float) -> int:
         return int(round(u * s))
 
-    pts = [(cx - px(6), px(5)), (cx + px(6), px(5)), (cx + px(6), px(13)), (cx, px(20)), (cx - px(6), px(13))]
-    local.draw_polygon(pts, trim, filled=True)
-    inner = [(cx - px(4), px(7)), (cx + px(4), px(7)), (cx + px(4), px(12)), (cx, px(17)), (cx - px(4), px(12))]
-    local.draw_polygon(inner, primary, filled=True)
-    local.draw_rect(cx - _sc(1, s), px(8), _sc(2, s), px(7), brighten(trim, 1.18), filled=True)
+    pts = [(cx - px(6.5), px(4.5)), (cx + px(6.5), px(4.5)), (cx + px(6.5), px(12.5)), (cx, px(20.5)), (cx - px(6.5), px(12.5))]
+    inner = [(cx - px(4.5), px(6.5)), (cx + px(4.5), px(6.5)), (cx + px(4.5), px(12.0)), (cx, px(17.5)), (cx - px(4.5), px(12.0))]
+
+    # Render trim mask first, then shade bevels by position relative to top-left light
+    mask_outer = Canvas(size, size)
+    mask_outer.draw_polygon(pts, trim, filled=True)
+    mask_inner = Canvas(size, size)
+    mask_inner.draw_polygon(inner, primary, filled=True)
+
+    for y in range(size):
+        for x in range(size):
+            if mask_inner.get_pixel(x, y)[3] > 0:
+                nx = (x + 0.5 - cx) / max(1.0, 5.5 * s)
+                ny = (y + 0.5 - 11.5 * s) / max(1.0, 7.0 * s)
+                ndotl = -0.55 * nx - 0.55 * ny + 0.62 * math.sqrt(max(0.0, 1.0 - min(1.0, 0.5 * (nx * nx + ny * ny))))
+                if ndotl > 0.62:
+                    c = pri_l
+                elif ndotl > 0.25:
+                    c = primary
+                elif ndotl > -0.05:
+                    c = pri_d
+                else:
+                    c = pri_dd
+                local.set_pixel(x, y, c)
+            elif mask_outer.get_pixel(x, y)[3] > 0:
+                # Metallic bevel rim: bright top-left, dark bottom-right
+                diag = (x - cx) + (y - 11.5 * s)
+                local.set_pixel(x, y, trim_l if diag < -1.5 * s else (trim_d if diag > 2.0 * s else trim))
+
+    # Raised metallic center crest
+    local.draw_rect(cx - _sc(1, s), px(7.5), _sc(2, s), px(7.5), trim_l, filled=True)
+    local.draw_rect(cx, px(8.5), _sc(1, s), px(6.5), trim_d, filled=True)
 
 
 def _draw_key(local: Canvas, size: int, orientation: str, color: RGBA) -> None:
@@ -316,37 +377,85 @@ def _draw_key(local: Canvas, size: int, orientation: str, color: RGBA) -> None:
 
 
 def _draw_coin_or_apple(local: Canvas, size: int, kind: str, color: RGBA, stem: RGBA, shine: bool, frame: int) -> None:
+    import math
+
     s = size / 24.0
     cx, cy = size // 2, size // 2
+    col_hi = brighten(color, 1.45)
+    col_l = brighten(color, 1.20)
+    col_d = darken(color, 0.72)
+    col_dd = darken(color, 0.48)
 
     def px(u: float) -> int:
         return int(round(u * s))
 
     if kind == "coin":
-        rx = max(2, _sc(5, s) - (2 if (frame % 4) in (1, 3) else 0))
-        local.draw_ellipse(cx, cy, rx, _sc(6, s), color, filled=True)
-        local.clip_to_opaque = True
-        local.draw_ellipse(cx - 1, cy - 1, max(1, rx - 1), _sc(4, s), brighten(color, 1.22), filled=True)
-        local.draw_rect(cx, cy - _sc(2, s), max(1, rx // 3), _sc(5, s), darken(color, 0.72), filled=True)
-        if shine:
-            local.set_pixel(cx - max(1, rx // 2), cy - _sc(3, s), (255, 255, 255, 255))
-        local.clip_to_opaque = False
+        rx = max(2, _sc(5.5, s) - (2 if (frame % 4) in (1, 3) else 0))
+        ry = _sc(6.5, s)
+        for y in range(size):
+            for x in range(size):
+                nx = (x + 0.5 - cx) / max(1.0, float(rx))
+                ny = (y + 0.5 - cy) / max(1.0, float(ry))
+                r2 = nx * nx + ny * ny
+                if r2 > 1.0:
+                    continue
+                r = math.sqrt(r2)
+                ndotl = -0.55 * nx - 0.65 * ny + 0.52 * math.sqrt(max(0.0, 1.0 - r2))
+                if r > 0.78:
+                    c = col_l if ndotl > 0.3 else col_d
+                elif ndotl > 0.68:
+                    c = col_hi
+                elif ndotl > 0.30:
+                    c = col_l
+                elif ndotl > -0.05:
+                    c = color
+                else:
+                    c = col_d
+                local.set_pixel(x, y, c)
+        if rx >= 3:
+            local.draw_rect(cx - max(1, rx // 4), cy - _sc(2.5, s), max(1, rx // 2), _sc(5, s), col_d, filled=True)
+            local.draw_rect(cx - max(1, rx // 4), cy - _sc(2.5, s), 1, _sc(4, s), col_hi, filled=True)
         return
 
-    # Apple
-    local.draw_polygon([(px(6), px(8)), (px(9), px(6)), (px(12), px(7)),
-                        (px(15), px(6)), (px(18), px(8)), (px(19), px(12)),
-                        (px(17), px(17)), (px(14), px(19)), (px(12), px(18)),
-                        (px(10), px(19)), (px(7), px(17)), (px(5), px(12))], color, filled=True)
-    local.clip_to_opaque = True
-    local.draw_circle(cx + px(2), cy + px(3), _sc(5, s), darken(color, 0.75), filled=True)
-    local.draw_circle(cx - px(2), cy - px(1), _sc(2, s), brighten(color, 1.2), filled=True)
-    if shine:
-        local.draw_ellipse(px(8), px(10), _sc(1, s), _sc(2, s), brighten(color, 1.55), filled=True)
-        local.set_pixel(px(9), px(8), brighten(color, 1.8))
-    local.clip_to_opaque = False
-    local.draw_rect(cx, cy - px(6), _sc(1, s), _sc(3, s), stem, filled=True)
-    local.draw_rect(cx + _sc(1, s), cy - px(5), _sc(3, s), _sc(2, s), parse_color("grass", {"grass": (92, 168, 76, 255)}), filled=True)
+    # 3D bilobed spherical normal-mapped Apple
+    apple_mask = Canvas(size, size)
+    apple_mask.draw_polygon([
+        (px(6), px(8)), (px(9), px(6)), (px(12), px(7.5)),
+        (px(15), px(6)), (px(18), px(8)), (px(19), px(12.5)),
+        (px(17), px(17.5)), (px(14), px(19.5)), (px(12), px(18.5)),
+        (px(10), px(19.5)), (px(7), px(17.5)), (px(5), px(12.5)),
+    ], color, filled=True)
+
+    for y in range(size):
+        for x in range(size):
+            if apple_mask.get_pixel(x, y)[3] == 0:
+                continue
+            nx = (x + 0.5 - cx) / max(1.0, 7.2 * s)
+            ny = (y + 0.5 - 12.8 * s) / max(1.0, 6.8 * s)
+            r2 = min(0.99, nx * nx + ny * ny)
+            nz = math.sqrt(max(0.0, 1.0 - r2))
+            ndotl = -0.52 * nx - 0.64 * ny + 0.56 * nz
+            # Subtle bottom-right bounce light
+            bounce = 0.18 if (ny > 0.45 and nx > 0.15) else 0.0
+            shade = ndotl + bounce
+            if shine and 0.25 <= math.sqrt(r2) <= 0.72 and ndotl > 0.78:
+                c = (255, 248, 232, 255)
+            elif shade > 0.52:
+                c = col_l
+            elif shade > 0.18:
+                c = color
+            elif shade > -0.12:
+                c = col_d
+            else:
+                c = col_dd
+            local.set_pixel(x, y, c)
+
+    # Shaded stem and curved leaf
+    local.draw_rect(cx, cy - px(6.5), _sc(1, s), _sc(3, s), stem, filled=True)
+    local.set_pixel(cx, cy - px(6.5), brighten(stem, 1.25))
+    leaf = parse_color("grass", {"grass": (92, 168, 76, 255)})
+    local.draw_polygon([(cx + _sc(1, s), cy - px(5.5)), (cx + _sc(4, s), cy - px(6.5)), (cx + _sc(3, s), cy - px(3.5))], leaf, filled=True)
+    local.set_pixel(cx + _sc(2, s), cy - px(5.5), brighten(leaf, 1.25))
 
 
 def _draw_tool_or_food(local: Canvas, size: int, kind: str, color: RGBA, secondary: RGBA, shine: bool) -> None:
