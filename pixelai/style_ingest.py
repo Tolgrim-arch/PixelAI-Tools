@@ -124,43 +124,48 @@ def _edge_profiles(img: Image.Image) -> tuple[list[float], list[float]]:
 
 
 def _score_period(energy: list[float], period: float) -> tuple[float, float]:
-    """Score a candidate grid period by boundary-vs-center energy contrast.
+    """Score a candidate pixel pitch `p` by boundary sharpness vs interior flatness.
 
-    For a true pixel pitch `p`, edges concentrate at `offset + k*p` while cell
-    interiors at `offset + (k + 0.5)*p` are flat (near-zero energy). Even
-    harmonics (2p, 4p) place their centers on real boundaries and score ~0.
+    Inside a true pixel of width `p`, ALL interior pixels (between boundaries)
+    have near-zero edge energy. A macro-period (e.g., icon spacing on a sheet)
+    has huge edge energy inside the cell, so `boundary / (interior + eps)` drops
+    sharply compared to the true pixel pitch.
     """
     n = len(energy)
-    if n < 8 or period < 1.5:
+    if n < 12 or period < 1.8:
         return 0.0, 0.0
     mean_e = sum(energy) / n
     if mean_e <= 1e-6:
         return 0.0, 0.0
 
-    steps = max(6, min(20, int(round(period * 2))))
+    steps = max(6, min(16, int(round(period * 2))))
     best_score = -1.0
     best_offset = 0.0
-    half = period * 0.5
 
     for s in range(steps):
         off = (s / steps) * period
         pos = off
-        hits = 0
-        boundary_sum = 0.0
-        center_sum = 0.0
-        while pos + half < n - 1:
+        b_sum = 0.0
+        b_cnt = 0
+        i_sum = 0.0
+        i_cnt = 0
+        while pos + period < n:
             b_idx = int(round(pos))
-            c_idx = int(round(pos + half))
-            if 0 <= b_idx < n and 0 <= c_idx < n:
-                boundary_sum += energy[b_idx]
-                center_sum += energy[c_idx]
-                hits += 1
+            if 0 <= b_idx < n:
+                b_sum += energy[b_idx]
+                b_cnt += 1
+            # Sample 3 interior points (25%, 50%, 75%) to verify the whole cell is flat
+            for frac in (0.25, 0.50, 0.75):
+                i_idx = int(round(pos + period * frac))
+                if 0 <= i_idx < n:
+                    i_sum += energy[i_idx]
+                    i_cnt += 1
             pos += period
-        if hits >= 4:
-            b_avg = boundary_sum / hits
-            c_avg = center_sum / hits
-            # Normalized contrast: high at boundaries, low at centers
-            score = (b_avg - c_avg) / mean_e
+        if b_cnt >= 6 and i_cnt >= 6:
+            b_avg = b_sum / b_cnt
+            i_avg = i_sum / i_cnt
+            # High boundary energy AND flat interior
+            score = (b_avg - i_avg) / (i_avg + 0.25 * mean_e)
             if score > best_score:
                 best_score = score
                 best_offset = off
@@ -168,7 +173,7 @@ def _score_period(energy: list[float], period: float) -> tuple[float, float]:
 
 
 def detect_pixel_grid(img: Image.Image, force_scale: float | None = None) -> GridEstimate:
-    """Detect square logical pixel size (supports non-integer scales like 11.5px on 736px Pinterest saves)."""
+    """Detect square logical pixel size (supports non-integer scales like Pinterest 736px saves)."""
     w, h = img.size
     if force_scale is not None and force_scale > 0:
         cw = float(force_scale)
@@ -182,7 +187,8 @@ def detect_pixel_grid(img: Image.Image, force_scale: float | None = None) -> Gri
 
     col_e, row_e = _edge_profiles(img)
     min_dim = min(w, h)
-    max_p = min(24.0, min_dim / 16.0)
+    # Cap at 14px so spritesheet icon spacing (~20-40px) is never mistaken for pixel size
+    max_p = min(14.0, min_dim / 16.0)
     if max_p < 2.0:
         return GridEstimate(1.0, 1.0, 0.0, 0.0, w, h, 1.0)
 
@@ -201,14 +207,14 @@ def detect_pixel_grid(img: Image.Image, force_scale: float | None = None) -> Gri
 
     best_score, best_p, best_ox, best_oy = max(candidates, key=lambda t: t[0])
 
-    # Guard against odd harmonics (3x)
+    # Guard against integer harmonics (2x, 3x)
     for div in (2.0, 3.0):
         sub_p = best_p / div
         if sub_p >= 2.0:
             sx, ox = _score_period(col_e, sub_p)
             sy, oy = _score_period(row_e, sub_p)
             sub_joint = 0.5 * (sx + sy)
-            if sub_joint >= best_score * 0.80:
+            if sub_joint >= best_score * 0.72:
                 best_score, best_p, best_ox, best_oy = sub_joint, sub_p, ox, oy
 
     # Sub-pixel refinement around best_p
@@ -224,7 +230,7 @@ def detect_pixel_grid(img: Image.Image, force_scale: float | None = None) -> Gri
     # Weak periodicity -> already 1:1 or smooth illustration
     if best_score < 0.25:
         if max(w, h) > 256:
-            scale = max(w, h) / 128.0
+            scale = max(w, h) / 160.0
             return GridEstimate(
                 round(scale, 3),
                 round(scale, 3),
@@ -238,7 +244,7 @@ def detect_pixel_grid(img: Image.Image, force_scale: float | None = None) -> Gri
 
     gw = max(1, int(round((w - best_ox) / best_p)))
     gh = max(1, int(round((h - best_oy) / best_p)))
-    confidence = min(1.0, max(0.0, best_score / 1.5))
+    confidence = min(1.0, max(0.0, best_score / 2.0))
 
     return GridEstimate(
         cell_w=round(best_p, 3),
@@ -249,6 +255,53 @@ def detect_pixel_grid(img: Image.Image, force_scale: float | None = None) -> Gri
         grid_h=gh,
         confidence=round(confidence, 3),
     )
+
+
+def slice_sprites(canvas: Canvas, min_pixels: int = 24) -> list[Canvas]:
+    """Slice a multi-sprite sheet into individual cropped RGBA sprites via 8-connected components."""
+    w, h = canvas.width, canvas.height
+    visited = [[False] * w for _ in range(h)]
+    sprites: list[tuple[int, int, Canvas]] = []
+
+    for y in range(h):
+        for x in range(w):
+            if visited[y][x] or canvas.get_pixel(x, y)[3] == 0:
+                continue
+            q: deque[tuple[int, int]] = deque([(x, y)])
+            visited[y][x] = True
+            pts: list[tuple[int, int]] = []
+            min_x = max_x = x
+            min_y = max_y = y
+            while q:
+                cx, cy = q.popleft()
+                pts.append((cx, cy))
+                if cx < min_x:
+                    min_x = cx
+                if cx > max_x:
+                    max_x = cx
+                if cy < min_y:
+                    min_y = cy
+                if cy > max_y:
+                    max_y = cy
+                for dy in (-1, 0, 1):
+                    for dx in (-1, 0, 1):
+                        if dx == 0 and dy == 0:
+                            continue
+                        nx, ny = cx + dx, cy + dy
+                        if 0 <= nx < w and 0 <= ny < h and not visited[ny][nx]:
+                            if canvas.get_pixel(nx, ny)[3] > 0:
+                                visited[ny][nx] = True
+                                q.append((nx, ny))
+            if len(pts) >= min_pixels:
+                sw = max_x - min_x + 1
+                sh = max_y - min_y + 1
+                sub = Canvas(sw, sh)
+                for px_x, px_y in pts:
+                    sub.set_pixel(px_x - min_x, px_y - min_y, canvas.get_pixel(px_x, px_y))
+                sprites.append((min_y, min_x, sub))
+
+    sprites.sort(key=lambda t: (t[0] // 16, t[1]))
+    return [s for _, _, s in sprites]
 
 
 # ---------------------------------------------------------------------------
