@@ -49,24 +49,80 @@ def parse_color(
     raise ValueError(f"Invalid color value: {value!r}")
 
 
+def _shift_hue_toward(h: float, target_h: float, strength: float) -> float:
+    """Shift normalized hue `h` in [0, 1) toward `target_h` by `strength` in [0, 1]."""
+    diff = (target_h - h + 0.5) % 1.0 - 0.5
+    return (h + diff * strength) % 1.0
+
+
 def darken(c: RGBA, factor: float = 0.75) -> RGBA:
-    """Darken an RGBA color with cool-purple pixel-art hue shifting."""
+    """Darken an RGBA color with cool-violet chromatic hue-shifting (never pure black)."""
+    import colorsys
+
     r, g, b, a = c
-    # Cool shift: red & green drop faster than blue so shadows lean indigo/violet
-    nr = max(0, min(255, int(r * (factor * 0.94))))
-    ng = max(0, min(255, int(g * (factor * 0.98))))
-    nb = max(0, min(255, int(b * min(1.0, factor * 1.08) + 2)))
-    return (nr, ng, nb, a)
+    if a == 0:
+        return c
+    h, l, s = colorsys.rgb_to_hls(r / 255.0, g / 255.0, b / 255.0)
+    step = max(0.0, min(1.0, 1.0 - factor))
+    # Shift hue toward cool indigo/violet (~255 deg = 0.708)
+    nh = _shift_hue_toward(h, 0.708, step * 0.32) if s > 0.05 else 0.708
+    # Boost saturation slightly in shadows so they stay rich & chromatic, never muddy grey/black
+    ns = min(0.92, max(s * (1.0 + step * 0.22), 0.16 if step > 0.15 else s))
+    # Clamp minimum lightness so shadows never collapse to dead #000000
+    nl = max(0.13, min(l, l * factor))
+    nr, ng, nb = colorsys.hls_to_rgb(nh, nl, ns)
+    return (int(round(nr * 255)), int(round(ng * 255)), int(round(nb * 255)), a)
 
 
 def brighten(c: RGBA, factor: float = 1.16) -> RGBA:
-    """Brighten an RGBA color with warm-sunlight pixel-art hue shifting."""
+    """Brighten an RGBA color with warm-sunlight chromatic hue-shifting (never pure white)."""
+    import colorsys
+
     r, g, b, a = c
-    # Warm shift: red & green gain slightly more than blue so highlights lean golden
-    nr = max(0, min(255, int(r * (factor * 1.04) + 8)))
-    ng = max(0, min(255, int(g * (factor * 1.01) + 6)))
-    nb = max(0, min(255, int(b * (factor * 0.95) + 3)))
-    return (nr, ng, nb, a)
+    if a == 0:
+        return c
+    h, l, s = colorsys.rgb_to_hls(r / 255.0, g / 255.0, b / 255.0)
+    step = max(0.0, min(1.0, factor - 1.0))
+    # Shift hue toward warm golden sunlight (~52 deg = 0.144)
+    nh = _shift_hue_toward(h, 0.144, step * 0.35) if s > 0.05 else 0.125
+    # Keep visible chroma so highlights stay luminous cream/gold/peach, never dead #ffffff
+    ns = max(0.24, min(0.95, s * (1.0 - step * 0.12))) if s > 0.05 else 0.22
+    # Clamp maximum lightness below pure white
+    nl = min(0.87, max(l, l + (1.0 - l) * min(0.78, step * 0.75)))
+    nr, ng, nb = colorsys.hls_to_rgb(nh, nl, ns)
+    return (int(round(nr * 255)), int(round(ng * 255)), int(round(nb * 255)), a)
+
+
+def specular_highlight(c: RGBA) -> RGBA:
+    """Return a luminous warm-tinted specular highlight derived from `c` (never pure #ffffff)."""
+    return brighten(c, 1.55)
+
+
+def shade_ramp_dithered(
+    ramp: list[RGBA],
+    value: float,
+    x: int,
+    y: int,
+    dither_strength: float = 0.28,
+) -> RGBA:
+    """Map `value` in [0, 1] to `ramp` (darkest..lightest) using 4x4 Bayer dithering at band edges."""
+    if not ramp:
+        return TRANSPARENT
+    if len(ramp) == 1:
+        return ramp[0]
+    v = max(0.0, min(0.9999, value))
+    scaled = v * (len(ramp) - 1)
+    idx = int(scaled)
+    frac = scaled - idx
+    if dither_strength > 0.0 and idx < len(ramp) - 1:
+        # Apply 4x4 Bayer dithering only within the transition strip around 0.5
+        lo = 0.5 - dither_strength * 0.5
+        hi = 0.5 + dither_strength * 0.5
+        if lo < frac < hi:
+            t = (frac - lo) / max(1e-6, hi - lo)
+            if t > bayer_threshold(x, y):
+                return ramp[idx + 1]
+    return ramp[idx]
 
 
 def nearest_palette_color(target: RGBA, palette: Mapping[str, RGBA]) -> RGBA:
