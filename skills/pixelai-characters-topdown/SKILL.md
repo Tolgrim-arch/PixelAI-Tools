@@ -59,6 +59,13 @@ Use the following design choices to interpret the brief. Use sensible defaults f
 - Equipment stays rigid and is fitted to the mapped hand; review the actual
   elbow/wrist poses and all tool phases after fitting. The graph records
   whether fitting occurred. A clearance test does not establish good acting.
+- For one morphology-enabled character per source, `runtime.derive: "structure"`
+  derives stable ground/pivot/sorting coordinates, view/action tags and actual
+  hand/foot sockets. Set collision regions explicitly. Multiple characters in
+  one source make automatic derivation ambiguous.
+- A declared `frame_count` advances an implicit `char_rig` frame across the
+  existing four-pose cycle. Explicit `frame` values still select a fixed pose.
+  Longer sequences hold poses; they do not invent in-between acting.
 - Inspect `specs/morphology_profiles.json` for development examples. These
   proportions extend the existing pose library; do not describe them as a
   completed expressive animation system or commercial art approval.

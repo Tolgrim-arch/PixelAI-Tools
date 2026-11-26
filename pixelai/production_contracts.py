@@ -97,6 +97,8 @@ def validate_submission(stage, data, previous, project=None):
                 if not isinstance(proposal.get("image_path"), str) or Path(proposal["image_path"]).suffix.lower() != ".png":
                     raise ValueError("Each proposal requires native PNG image_path evidence")
                 proof = verify_construction(project, {**proposal, "evidence": data["evidence"]}, previous.get("contract", {}).get("native_size"))
+                if proof["frame_count"] != 1:
+                    raise ValueError("Design alternatives require one native PNG frame; evaluate animation during construction")
                 graphs.append((proposal["id"], proof["growth_graphs"]))
                 anatomies.append((proposal["id"], proof["anatomy_graphs"]))
                 path = Path(project) / proposal["image_path"]

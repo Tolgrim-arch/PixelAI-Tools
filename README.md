@@ -105,6 +105,12 @@ duration weights. GIF previews preserve frame holds with GIF timing rounded to
 10 ms and a minimum of 20 ms. A GIF preview plays the complete frame sequence;
 clip selection belongs to the metadata/runtime.
 
+When `frame_count` is declared, a `char_rig` without an explicit `frame`
+advances through its existing four-pose cycle over that sequence. Longer
+sequences deliberately hold poses; an explicit `frame` freezes the requested
+pose. This removes per-frame index bookkeeping without implying additional
+in-between drawings or expressive acting.
+
 ---
 
 ## Validate and automate renders
@@ -150,7 +156,8 @@ for review. Pixel differences alone do not establish meaningful design variety.
 Generate universal metadata directly with
 `pixelai render source.json -o art/sheet.png --manifest asset.json --json`.
 The source must declare `asset_id` and a `runtime` object with explicit
-`pivot`, `ground_anchor` and `sort_origin` coordinate pairs. Optional `regions`
+`pivot`, `ground_anchor` and `sort_origin` coordinate pairs, or
+`"derive":"structure"` for a single rendered anatomy/growth graph. Optional `regions`
 and `sockets` use the same native coordinates. `runtime.frame_overrides` maps
 rendered frame index strings to coordinate/region/socket overrides.
 Coordinates are attached before post-processing and follow padding and integer
@@ -158,6 +165,13 @@ scaling automatically. The output texture must be inside the manifest's
 directory. Metadata includes actual atlas regions, the texture hash, durations,
 clips and declared transitions. Output artifacts cannot share a path or
 overwrite the source specification.
+
+Structure-derived runtime metadata uses the rig's actual ground anchor for
+pivot/sorting and its fitted hand/foot joints or crown tips as named sockets.
+Anatomy graphs also supply view/action tags. Explicit runtime values override
+derived values; frame overrides win last. Socket dictionaries merge at each
+step. Multiple graphs are ambiguous and require separate asset specs or
+explicit coordinates. Collision regions are never guessed from the silhouette.
 
 Managed contracts can declare a structured `delivery` object containing
 `views`, `actions`, `states`, `required_combinations` and `distinct_views`.

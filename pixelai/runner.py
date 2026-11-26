@@ -283,6 +283,8 @@ def _execute_ops_unchecked(canvas, ops, palette, defs, frame_idx, total_frames):
                 int(op.get("y", 0)),
                 palette,
                 op,
+                frame_idx=frame_idx,
+                total_frames=total_frames,
             )
         elif kind == "portrait_rig":
             rig.draw_portrait_rig(

@@ -11,16 +11,40 @@ def attach_runtime(canvas, spec, index, count):
     if runtime is None:
         return
     allowed = {"pivot", "ground_anchor", "sort_origin", "regions", "sockets", "view", "action", "state"}
-    if not isinstance(runtime, dict) or set(runtime) - allowed - {"frame_overrides"}:
+    if not isinstance(runtime, dict) or set(runtime) - allowed - {"frame_overrides", "derive"}:
         raise ValueError("runtime contains unknown fields")
     overrides = runtime.get("frame_overrides", {})
     if not isinstance(overrides, dict) or any(not isinstance(key, str) or key not in {str(i) for i in range(count)} for key in overrides):
         raise ValueError("runtime.frame_overrides must use rendered frame index strings")
-    record = {key: deepcopy(value) for key, value in runtime.items() if key in allowed}
+    record = {}
+    if "derive" in runtime:
+        if runtime["derive"] != "structure":
+            raise ValueError("runtime.derive currently accepts structure only")
+        graphs = [item for item in canvas.attachments if item.get("type") in ("anatomy_graph", "growth_graph")]
+        if len(graphs) != 1:
+            raise ValueError("runtime.derive requires exactly one rendered anatomy or growth graph; enable morphology/growth and render one asset per spec")
+        graph = graphs[0]
+        record = {"pivot": deepcopy(graph["ground_anchor"]), "ground_anchor": deepcopy(graph["ground_anchor"]),
+                  "sort_origin": deepcopy(graph["ground_anchor"]),
+                  "sockets": {node["id"]: deepcopy(node["point"]) for node in graph["nodes"] if node["role"] in ("hand", "foot", "tip")}}
+        for tag in ("view", "action", "state"):
+            if tag in graph:
+                record[tag] = graph[tag]
+
+    def merge(fields):
+        for key, value in fields.items():
+            if key == "sockets":
+                if not isinstance(value, dict):
+                    raise ValueError("runtime.sockets must be an object")
+                record["sockets"] = {**record.get("sockets", {}), **deepcopy(value)}
+            else:
+                record[key] = deepcopy(value)
+
+    merge({key: value for key, value in runtime.items() if key in allowed})
     override = overrides.get(str(index), {})
     if not isinstance(override, dict) or set(override) - allowed:
         raise ValueError("Runtime frame override contains unknown fields")
-    record.update(deepcopy(override))
+    merge(override)
     for tag in ("view", "action", "state"):
         if tag in record and (not isinstance(record[tag], str) or not record[tag].strip()):
             raise ValueError(f"runtime.{tag} must be a nonempty name")

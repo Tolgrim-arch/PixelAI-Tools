@@ -27,13 +27,15 @@ def draw_char_rig(
     y: int,
     palette: dict[str, RGBA],
     op: dict[str, Any],
+    frame_idx: int = 0,
+    total_frames: int = 1,
 ) -> None:
     """Draw a native-resolution cozy RPG character rig (size=16..128) in top-down, side, or iso view."""
     size = max(16, int(op.get("size", 16)))
     s = size / 16.0
     raw_dir = op.get("dir", "down").lower()
     pose = op.get("pose", "idle").lower()
-    frame = int(op.get("frame", 0)) % 4
+    frame = int(op["frame"]) % 4 if "frame" in op else min(3, int(4*frame_idx/max(1, total_frames)))
     perspective = str(op.get("perspective", "topdown")).lower()
     draw_shadow = bool(op.get("shadow", True))
 
