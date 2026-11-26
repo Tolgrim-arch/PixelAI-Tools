@@ -40,10 +40,10 @@ def draw_char_rig(
     draw_shadow = bool(op.get("shadow", True))
 
     is_iso = perspective == "iso" or raw_dir in ("se", "sw", "ne", "nw")
-    if "morphology" in op and (perspective != "topdown" or is_iso or size < 32):
-        raise ValueError("morphology currently requires a top-down character at native size >= 32")
-    if "morphology" in op and (raw_dir not in ("down", "up", "left", "right") or pose not in ("idle", "walk", "run", "work", "attack", "jump", "fall")):
-        raise ValueError("morphology requires a supported direction and action")
+    if ("morphology" in op or "posture" in op) and (perspective != "topdown" or is_iso or size < 32):
+        raise ValueError("morphology/posture currently require a top-down character at native size >= 32")
+    if ("morphology" in op or "posture" in op) and (raw_dir not in ("down", "up", "left", "right") or pose not in ("idle", "walk", "run", "work", "attack", "jump", "fall")):
+        raise ValueError("morphology/posture require a supported direction and action")
     if perspective == "topdown" and not is_iso and size >= 32:
         from pixelai.human import draw_topdown_human
 

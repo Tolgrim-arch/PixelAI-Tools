@@ -173,6 +173,25 @@ derived values; frame overrides win last. Socket dictionaries merge at each
 step. Multiple graphs are ambiguous and require separate asset specs or
 explicit coordinates. Collision regions are never guessed from the silhouette.
 
+Top-down `char_rig` at native sizes of at least 32 accepts optional
+`"posture":{"lean":-0.15,"crouch":1.2}`. Lean ranges from -0.15 to 0.15;
+crouch ranges from 0 to 1.5 canonical 32px units and scales with the rig.
+Lean follows the rig's local horizontal axis, mirrored in the left view;
+it is not a 3D turn toward the facing direction. The torso shears above the
+legs, the head translates as one mass, and ground-line feet remain fixed.
+Equipment retains its rigid raster shape and is refitted to the grip.
+Morphology defaults to balanced when posture is used alone. Posture values
+and resulting joints are included in anatomy graphs. This bounded deformation
+does not solve IK, balance, limb-length constraints or expressive acting.
+
+`specs/acting_strike.json` demonstrates six authored frames with body loading,
+variable timing, scored beats and a damage event. Render it with
+`pixelai render specs/acting_strike.json -o OUTPUT/strike.png --columns 3 --manifest OUTPUT/strike.manifest.json`.
+Copy `specs/acting_strike.scene.json` to that output directory and run
+`pixelai scene OUTPUT/acting_strike.scene.json --output OUTPUT/scene --json`
+to inspect the exact damage-event time and both planted feet during loading.
+The example illustrates controls and checks, not a commercial-quality benchmark.
+
 Managed contracts can declare a structured `delivery` object containing
 `views`, `actions`, `states`, `required_combinations` and `distinct_views`.
 Runtime frame records carry explicit `view`, `action` and `state` tags through

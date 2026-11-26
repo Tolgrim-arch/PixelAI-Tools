@@ -152,9 +152,12 @@ def draw_topdown_human(canvas: Canvas, x: int, y: int, size: int, direction: str
     side = direction in ("right", "left")
     back = direction == "up"
     morphology = None
-    if "morphology" in op:
+    if "morphology" in op or "posture" in op:
         from pixelai.morphology import Morphology
-        morphology = Morphology(op["morphology"])
+        morphology = Morphology(op.get("morphology", {}))
+        if "posture" in op:
+            from pixelai.posture import PosturedBody
+            morphology = PosturedBody(morphology, op["posture"])
     human = Human(canvas, x, y, size, direction == "left", morphology)
     p, d = human.plane, human.dot
 
@@ -326,7 +329,9 @@ def draw_topdown_human(canvas: Canvas, x: int, y: int, size: int, direction: str
                     previous = name
         canvas.attachments.append({"type": "anatomy_graph", "schema_version": 1, "profile": morphology.body_plan,
                                    "view": direction, "action": pose, "ground_anchor": list(human.point((15.5, 28))),
-                                   "proportions": morphology.values, "equipment_fitted": human.equipment_fitted, "nodes": nodes})
+                                   "proportions": morphology.values,
+                                   **({"posture": morphology.posture} if hasattr(morphology, "posture") else {}),
+                                   "equipment_fitted": human.equipment_fitted, "nodes": nodes})
 
 
 def _draw_head(human: Human, back: bool, side: bool, bob: float, skin: RGBA,

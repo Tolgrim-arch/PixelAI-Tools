@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "width": 128,
+  "height": 96,
+  "background": "#464958",
+  "times_ms": [0,100,219,220,280,350,490,670],
+  "actors": [{"id":"worker","manifest":"strike.manifest.json","clip":"strike","position":[64,80]}],
+  "expectations": [{"actor":"worker","time_ms":280,"event":"hit"}],
+  "planted_contacts": [
+    {"actor":"worker","socket":"leg_0_foot","start_ms":0,"end_ms":219,"tolerance_px":0},
+    {"actor":"worker","socket":"leg_1_foot","start_ms":0,"end_ms":219,"tolerance_px":0}
+  ]
+}

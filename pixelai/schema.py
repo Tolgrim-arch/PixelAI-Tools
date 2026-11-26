@@ -172,7 +172,7 @@ OP_SPECS: dict[str, dict[str, Any]] = {
 _GENERATOR_FIELDS = {
     "material": "x y w h seed color colors kind",
     "building": "x y w h roof_style variant seed shadow_color wall_color roof_color trim_color foundation_color depth roof_h foundation_h ground_shadow shadow_opacity shadow_dx shadow_dy windows timber_frame door dormer chimney smoke name",
-    "char_rig": "x y size dir pose perspective frame skin hair eye shirt pants shoes hat tool handle shadow_color hair_style outfit trim morphology",
+    "char_rig": "x y size dir pose perspective frame skin hair eye shirt pants shoes hat tool handle shadow_color hair_style outfit trim morphology posture",
     "portrait_rig": "x y width height style preset face_dir dir expression gesture hat scar beard hair_style headband cheek_marks fill_background skin skin_l skin_d hair hair_l hair_d shirt shirt_d garment garment_d accent eye_color hat_color hat_light hat_dark ink beard_color headband_color headband_plate headband_emblem background cheek_mark_color",
     "animal_rig": "x y species variant dir pose frame total_frames perspective body shade deep_shade nest_prop ground_prop emotes shadow_color",
     "item_rig": "x y kind item orientation size shine frame shadow_color color secondary_color glass_color cork_color fill_level state flame_color",
@@ -202,6 +202,7 @@ OP_SPECS["char_rig"]["notes"] = [
     "Morphology independently controls head_width, head_height, shoulder_width, waist_width, pelvis_width, torso_length and leg_length. Unknown keys and proportions exceeding headroom fail.",
     "Head_height and torso_length accept [0.7,1.2], leg_length [0.65,1.3], widths [0.65,1.5]. All four views share the same body proportions and ground anchor.",
     "Equipment is moved rigidly and its grip fitted to the pose; it is not stretched by body proportions. Equipment fitting is recorded in anatomy graph metadata.",
+    "Optional posture uses lean [-0.15,0.15] and crouch [0,1.5] in canonical 32px coordinates; requires top-down native size>=32 and defaults to balanced morphology when omitted. Feet on the ground line remain fixed; head mass translates rigidly. Set distinct posture values per authored frame for body anticipation and recovery.",
     "Inspect all required directions/actions. Body-plan variety does not certify natural anatomy, acting or commercial finish.",
 ]
 
