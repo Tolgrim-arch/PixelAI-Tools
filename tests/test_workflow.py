@@ -85,6 +85,7 @@ class WorkflowTest(unittest.TestCase):
             project = root / "project"
             initialize(project, brief)
             first = operate(project, "start")
+            self.assertIn("quality_protocol", first)
             self.assertEqual(first, operate(project, "start"))
             self.assertEqual(first, operate(project, "resume"))
             response = root / "response.json"

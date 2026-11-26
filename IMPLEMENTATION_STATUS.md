@@ -6,6 +6,7 @@
 - Project-relative evidence files with SHA-256 identity and downstream reopening after changes.
 - Content-addressed evidence snapshots preserve previous bytes after working files change; changing the brief reopens tasks without resetting consumed budgets.
 - Stage-specific contract fields, six distinct proposal descriptions and eleven-criterion review completeness.
+- Every pending task includes category-specific failure checks, a visual inspection protocol and targeted repair instructions; review tasks include the eleven-criterion rubric.
 - Nonempty image evidence for construction/review and JSON source evidence for construction.
 - Single-frame native PNG construction is rerendered from the submitted fresh source and compared pixel-for-pixel. Reviews must include that exact artifact evidence.
 - Declared reviewer-context separation; these declarations are not authenticated host isolation.

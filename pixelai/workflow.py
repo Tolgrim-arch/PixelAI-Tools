@@ -7,6 +7,7 @@ from pathlib import Path
 
 from pixelai.evidence import bind_evidence, verify_evidence
 from pixelai.production_contracts import REQUIREMENTS, validate_submission
+from pixelai.production_guidance import task_guidance
 
 
 STAGES = (
@@ -119,8 +120,11 @@ def operate(project, action, task=None, response=None):
                 if key and usage[key] >= limits[key]:
                     return {"status": "blocked", "reason": f"Budget exhausted: {key}", "usage": usage, "limits": limits,
                             "latest_repair": json.loads(repair[0]) if repair else None, "approval_supported": False}
+                contract = db.execute("SELECT response FROM tasks WHERE stage='contract'").fetchone()
+                category = json.loads(contract[0]).get("category") if contract and contract[0] else None
                 return {"status": "needs_agent", "task_id": row[0], "stage": row[1], "guidance": row[2],
                         "required_output": REQUIREMENTS[row[1]], "usage": usage, "limits": limits,
+                        "quality_protocol": task_guidance(category, row[1]),
                         "latest_repair": json.loads(repair[0]) if repair else None, "approval_supported": False}
             count = db.execute("SELECT count(*) FROM tasks").fetchone()[0]
             return {"status": "blocked", "reason": "Artifact verification and host review adapters are not implemented" if count else "Start the workflow first", "approval_supported": False}
