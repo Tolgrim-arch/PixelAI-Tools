@@ -260,6 +260,32 @@ proposal reports include these comparisons automatically when both proposals
 contain growth graphs. The current command does not yet analyze other asset
 families or certify visual originality.
 
+### Top-down body proportions
+
+Native top-down `char_rig` sprites of size 32 or larger can opt into
+`"morphology":{"body_plan":"stocky"}`. Available plans are `balanced`,
+`stocky`, `slender`, `compact`, `long_legged`, `broad_shouldered` and `heavy`.
+Independent overrides cover `head_width`, `head_height`, `shoulder_width`,
+`waist_width`, `pelvis_width`, `torso_length` and `leg_length`. Run
+`pixelai guide --op char_rig` for accepted ranges and constraints.
+
+Proportions are shared across directions and anchored to the same ground
+position. Equipment keeps its rigid dimensions and pixel shape while its grip
+is fitted within the frame and remains connected to the hand. Morphology
+metadata exposes pose joints and whether equipment fitting was needed.
+`pixelai structure` and managed proposal reports compare these anatomy graphs
+independently of palette or body-plan names.
+
+`specs/morphology_profiles.json` shows idle, side-walk and attack poses for
+each plan. This increment changes proportions; it does not replace the action
+library with expressive acting. Other perspectives and native sizes below 32
+are unsupported and fail explicitly. Legacy character construction remains
+available without the opt-in field.
+
+Polygon fill now uses translation-invariant half-up scanline rounding. This
+fix prevents rigid shapes changing pixels when moved by an integer offset;
+some legacy polygon edge pixels may consequently differ from older renders.
+
 ### Named structural parts
 
 The `assembly` operation renders a graph of named parts. Each part declares

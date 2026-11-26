@@ -918,7 +918,7 @@ def build_parser() -> argparse.ArgumentParser:
     diff_p.add_argument("--json", action="store_true", help="Print diff metrics as JSON.")
     diff_p.set_defaults(func=_cmd_diff)
 
-    structure_p = sub.add_parser("structure", help="Inspect and compare rendered growth graphs independently of colors and labels.")
+    structure_p = sub.add_parser("structure", help="Inspect and compare rendered growth/anatomy graphs independently of colors and labels.")
     structure_p.add_argument("spec")
     structure_p.add_argument("--compare", help="Optional second source specification.")
     structure_p.add_argument("--frame", type=int, default=0)

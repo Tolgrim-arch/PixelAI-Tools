@@ -32,6 +32,8 @@
 - Named assembly parts with validated parent graphs, inherited offsets, deterministic draw order, material labels and transform-aware exported origins.
 - Optional versioned broadleaf growth graphs drive trunk, roots, forks and canopy supports for six distinct architectures. Trunk-only inspection and native-size/seed tests cover structure independently of foliage color; legacy trees remain unchanged without opt-in.
 - Growth graph topology/geometry/reflection comparisons ignore labels, translation and scale; managed proposal reports include these structural comparisons alongside silhouettes.
+- Opt-in top-down morphology supplies seven body plans and independent head/torso/limb proportion controls. Direction-stable ground anchors, rigid fitted equipment and anatomy-graph proposal comparisons are covered by a 672-case size/direction/action/frame matrix.
+- Polygon fill half-ties use translation-invariant rounding to prevent rigid equipment changing raster coverage after integer movement; legacy edge pixels can change under this correction.
 - Pending tasks return their required brief, contract, selected proposal and comparison inputs, allowing an agent to resume without recovering previous chat messages. Reviewer tasks keep author-side inputs excluded.
 
 ## Current limits

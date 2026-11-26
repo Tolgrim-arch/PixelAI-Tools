@@ -1,0 +1,30 @@
+{
+  "width": 448,
+  "height": 192,
+  "palette": "cozy24",
+  "style": "ext_outline",
+  "fresh": true,
+  "ops": [
+    {"op":"char_rig","x":0,"y":0,"size":64,"dir":"down","pose":"idle","shadow":false,"morphology":{"body_plan":"balanced"}},
+    {"op":"char_rig","x":64,"y":0,"size":64,"dir":"down","pose":"idle","shadow":false,"morphology":{"body_plan":"stocky"}},
+    {"op":"char_rig","x":128,"y":0,"size":64,"dir":"down","pose":"idle","shadow":false,"morphology":{"body_plan":"slender"}},
+    {"op":"char_rig","x":192,"y":0,"size":64,"dir":"down","pose":"idle","shadow":false,"morphology":{"body_plan":"compact"}},
+    {"op":"char_rig","x":256,"y":0,"size":64,"dir":"down","pose":"idle","shadow":false,"morphology":{"body_plan":"long_legged"}},
+    {"op":"char_rig","x":320,"y":0,"size":64,"dir":"down","pose":"idle","shadow":false,"morphology":{"body_plan":"broad_shouldered"}},
+    {"op":"char_rig","x":384,"y":0,"size":64,"dir":"down","pose":"idle","shadow":false,"morphology":{"body_plan":"heavy"}},
+    {"op":"char_rig","x":0,"y":64,"size":64,"dir":"right","pose":"walk","frame":1,"shadow":false,"morphology":{"body_plan":"balanced"}},
+    {"op":"char_rig","x":64,"y":64,"size":64,"dir":"right","pose":"walk","frame":1,"shadow":false,"morphology":{"body_plan":"stocky"}},
+    {"op":"char_rig","x":128,"y":64,"size":64,"dir":"right","pose":"walk","frame":1,"shadow":false,"morphology":{"body_plan":"slender"}},
+    {"op":"char_rig","x":192,"y":64,"size":64,"dir":"right","pose":"walk","frame":1,"shadow":false,"morphology":{"body_plan":"compact"}},
+    {"op":"char_rig","x":256,"y":64,"size":64,"dir":"right","pose":"walk","frame":1,"shadow":false,"morphology":{"body_plan":"long_legged"}},
+    {"op":"char_rig","x":320,"y":64,"size":64,"dir":"right","pose":"walk","frame":1,"shadow":false,"morphology":{"body_plan":"broad_shouldered"}},
+    {"op":"char_rig","x":384,"y":64,"size":64,"dir":"right","pose":"walk","frame":1,"shadow":false,"morphology":{"body_plan":"heavy"}},
+    {"op":"char_rig","x":0,"y":128,"size":64,"dir":"down","pose":"attack","frame":1,"shadow":false,"morphology":{"body_plan":"balanced"}},
+    {"op":"char_rig","x":64,"y":128,"size":64,"dir":"down","pose":"attack","frame":1,"shadow":false,"morphology":{"body_plan":"stocky"}},
+    {"op":"char_rig","x":128,"y":128,"size":64,"dir":"down","pose":"attack","frame":1,"shadow":false,"morphology":{"body_plan":"slender"}},
+    {"op":"char_rig","x":192,"y":128,"size":64,"dir":"down","pose":"attack","frame":1,"shadow":false,"morphology":{"body_plan":"compact"}},
+    {"op":"char_rig","x":256,"y":128,"size":64,"dir":"down","pose":"attack","frame":1,"shadow":false,"morphology":{"body_plan":"long_legged"}},
+    {"op":"char_rig","x":320,"y":128,"size":64,"dir":"down","pose":"attack","frame":1,"shadow":false,"morphology":{"body_plan":"broad_shouldered"}},
+    {"op":"char_rig","x":384,"y":128,"size":64,"dir":"down","pose":"attack","frame":1,"shadow":false,"morphology":{"body_plan":"heavy"}}
+  ]
+}

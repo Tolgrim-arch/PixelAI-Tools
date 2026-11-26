@@ -144,6 +144,7 @@ def operate(project, action, task=None, response=None):
                     inputs["selected_proposal"] = next(proposal for proposal in alternatives["proposals"] if proposal["id"] == alternatives["selected_id"])
                     inputs["proposal_comparisons"] = alternatives.get("proposal_comparisons", [])
                     inputs["growth_comparisons"] = alternatives.get("growth_comparisons", [])
+                    inputs["anatomy_comparisons"] = alternatives.get("anatomy_comparisons", [])
                 elif row[1] == "verification":
                     construction = json.loads(db.execute("SELECT response FROM tasks WHERE stage='construction'").fetchone()[0])
                     inputs["construction"] = {key: construction.get(key) for key in ("source_path", "image_path", "manifest_path", "revision_identity", "evidence")}

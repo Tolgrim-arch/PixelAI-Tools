@@ -56,7 +56,8 @@ def verify_construction(project, submission, native_size=None):
     fps = spec.get("fps", 8)
     timings = durations_ms(len(frames), fps, spec.get("durations_ms"))
     clips = clips_by_index(len(frames), spec.get("clips"))
-    proof = {"frame_count": len(frames), "growth_graphs": [record for record in frames[0].attachments if record.get("type") == "growth_graph"]}
+    proof = {"frame_count": len(frames), "growth_graphs": [record for record in frames[0].attachments if record.get("type") == "growth_graph"],
+             "anatomy_graphs": [record for record in frames[0].attachments if record.get("type") == "anatomy_graph"]}
     if image_path.suffix.lower() == ".gif":
         with tempfile.TemporaryDirectory(prefix="pixelai-provenance-") as directory:
             expected = Path(directory) / "expected.gif"

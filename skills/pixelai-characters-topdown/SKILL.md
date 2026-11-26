@@ -46,6 +46,23 @@ Use the following design choices to interpret the brief. Use sensible defaults f
 ```
 
 ## Four-direction acceptance
+- Native sizes 32 and above can use `morphology` with `body_plan` set to
+  `balanced`, `stocky`, `slender`, `compact`, `long_legged`, `broad_shouldered`
+  or `heavy`. Independent overrides control head width/height, shoulder,
+  waist and pelvis widths, torso length and leg length. Run the single-op
+  guide for ranges; unsupported views/sizes and unknown fields are errors.
+- Keep the same morphology in every direction and gameplay action. Compare
+  unclothed body landmarks and silhouettes before changing hair or colors.
+  `pixelai structure candidate.json --compare prior.json --json` includes
+  label-independent anatomy comparisons; translated or rescaled copies are
+  not new body plans.
+- Equipment stays rigid and is fitted to the mapped hand; review the actual
+  elbow/wrist poses and all tool phases after fitting. The graph records
+  whether fitting occurred. A clearance test does not establish good acting.
+- Inspect `specs/morphology_profiles.json` for development examples. These
+  proportions extend the existing pose library; do not describe them as a
+  completed expressive animation system or commercial art approval.
+
 - Default to a complete down/up/left/right set unless the user requests one view. One operation produces one direction; explicitly generate all four.
 - Inspect the contact sheet: front and back must differ; left and right must preserve the requested facing in every action, including jump/surprised.
 - Create fresh specs. Do not use discarded sheets as a new source. Check body proportions and animation contacts at native resolution before delivery.
