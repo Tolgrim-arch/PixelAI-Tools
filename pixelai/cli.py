@@ -893,6 +893,10 @@ def build_parser() -> argparse.ArgumentParser:
     diff_p.add_argument("--json", action="store_true", help="Print diff metrics as JSON.")
     diff_p.set_defaults(func=_cmd_diff)
 
+    from pixelai.workflow import register
+    register(sub)
+    from pixelai.manifest import register as register_manifest
+    register_manifest(sub)
     return parser
 
 

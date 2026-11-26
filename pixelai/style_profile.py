@@ -158,6 +158,9 @@ def compare_canvas_to_style(canvas: Canvas, profile: dict[str, Any]) -> dict[str
 
     deviations: list[str] = []
     penalties = 0.0
+    if not opaque_colors:
+        deviations.append("Empty artwork cannot match a visual style.")
+        penalties = 1.0
 
     # 1. Color count discipline
     if len(opaque_colors) > int(target_pal_len * 1.5) + 4:
