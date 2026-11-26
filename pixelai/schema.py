@@ -171,7 +171,7 @@ OP_SPECS: dict[str, dict[str, Any]] = {
 # as supported anatomy/material controls. This registry also drives help/lint.
 _GENERATOR_FIELDS = {
     "material": "x y w h seed color colors kind",
-    "building": "x y w h roof_style variant seed shadow_color wall_color roof_color trim_color foundation_color depth roof_h foundation_h ground_shadow shadow_opacity shadow_dx shadow_dy windows timber_frame door dormer chimney smoke name",
+    "building": "x y w h roof_style variant seed shadow_color wall_color roof_color trim_color foundation_color depth roof_h foundation_h ground_shadow shadow_opacity shadow_dx shadow_dy windows timber_frame door dormer chimney smoke name architecture massing_only",
     "char_rig": "x y size dir pose perspective frame skin hair eye shirt pants shoes hat tool handle shadow_color hair_style outfit trim morphology posture",
     "portrait_rig": "x y width height style preset face_dir dir expression gesture hat scar beard hair_style headband cheek_marks fill_background skin skin_l skin_d hair hair_l hair_d shirt shirt_d garment garment_d accent eye_color hat_color hat_light hat_dark ink beard_color headband_color headband_plate headband_emblem background cheek_mark_color",
     "animal_rig": "x y species variant dir pose frame total_frames perspective body shade deep_shade nest_prop ground_prop emotes shadow_color",
@@ -204,6 +204,12 @@ OP_SPECS["char_rig"]["notes"] = [
     "Equipment is moved rigidly and its grip fitted to the pose; it is not stretched by body proportions. Equipment fitting is recorded in anatomy graph metadata.",
     "Optional posture uses lean [-0.15,0.15] and crouch [0,1.5] in canonical 32px coordinates; requires top-down native size>=32 and defaults to balanced morphology when omitted. Feet on the ground line remain fixed; head mass translates rigidly. Set distinct posture values per authored frame for body anticipation and recovery.",
     "Inspect all required directions/actions. Body-plan variety does not certify natural anatomy, acting or commercial finish.",
+]
+OP_SPECS["building"]["notes"] = [
+    "Optional architecture mode requires native w>=64,h>=64: profile = longhouse|l_wing|t_plan|courtyard|stepped|tower.",
+    "architecture.rotation = 0|90|180|270; wall_height [0.8,1.2], roof_pitch [0.7,1.3]. Unknown or inactive legacy controls fail explicitly.",
+    "massing_only:true requires architecture and removes doors/windows. Compare projected footprint corners, roof ridges and connected masses independently of palette and ornament.",
+    "Architecture uses a fixed oblique projection and depth-tested faces; this is not a navigable interior, collision proof or commercial-quality certification.",
 ]
 
 

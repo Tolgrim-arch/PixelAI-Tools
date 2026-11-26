@@ -192,6 +192,32 @@ Copy `specs/acting_strike.scene.json` to that output directory and run
 to inspect the exact damage-event time and both planted feet during loading.
 The example illustrates controls and checks, not a commercial-quality benchmark.
 
+Buildings can opt into a connected-volume architecture model:
+
+```json
+{"op":"building","w":96,"h":96,
+ "architecture":{"profile":"l_wing","rotation":0,"wall_height":1,"roof_pitch":1},
+ "massing_only":false}
+```
+
+Profiles are `longhouse`, `l_wing`, `t_plan`, `courtyard`, `stepped` and `tower`.
+Native width/height must be at least 64. Rotation accepts 0/90/180/270 degrees;
+wall-height and roof-pitch multipliers accept [0.8,1.2] and [0.7,1.3]. These
+controls change the underlying volumes in a fixed oblique projection, with
+depth-tested wall/roof faces. `massing_only:true` removes doors and windows for
+structural inspection. Unsupported legacy controls such as chimneys fail
+explicitly in architecture mode. Without `architecture`, the legacy generator
+is retained.
+
+`architecture_graph` metadata records mass connections, projected footprint
+corners, roof ridges and an entrance-ground anchor. Projected coordinates
+follow offset/padding/scaling; canonical volume dimensions remain model units.
+`pixelai structure SOURCE.json --full --json` exposes the graph, and managed
+proposal comparisons include architecture geometry alongside silhouettes.
+Recoloring or removing decoration cannot change this graph. Inspect
+`specs/architecture_profiles.json` for six full/massing pairs. These are
+structural building primitives, not verified interiors or finished commercial art.
+
 `pixelai structure SOURCE.json --motion --json` analyzes named clip sequences
 using the actual rendered anatomy graphs. It requires exactly one character
 graph per frame with consistent joint IDs, roles and parents. Diagnostics

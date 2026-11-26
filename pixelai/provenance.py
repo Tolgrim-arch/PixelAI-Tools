@@ -59,7 +59,8 @@ def verify_construction(project, submission, native_size=None):
     from pixelai.animation_score import source_records, validate_scores
     validate_scores(clips, source_records(frames, timings))
     proof = {"frame_count": len(frames), "growth_graphs": [record for record in frames[0].attachments if record.get("type") == "growth_graph"],
-             "anatomy_graphs": [record for record in frames[0].attachments if record.get("type") == "anatomy_graph"]}
+             "anatomy_graphs": [record for record in frames[0].attachments if record.get("type") == "anatomy_graph"],
+             "architecture_graphs": [record for record in frames[0].attachments if record.get("type") == "architecture_graph"]}
     proof["motion_diagnostics"] = {"status": "unavailable", "reason": "Requires one anatomy graph per frame"}
     if all(sum(item.get("type") == "anatomy_graph" for item in frame.attachments) == 1 for frame in frames):
         from pixelai.motion_analysis import analyze_motion
