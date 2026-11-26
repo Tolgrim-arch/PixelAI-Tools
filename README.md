@@ -135,6 +135,21 @@ texture identity, coordinates and clip timing. It reports unverified runtime
 behaviors explicitly. `pixelai diversity first.png second.png --json` provides
 approximate silhouette similarity diagnostics, not artistic approval.
 
+`pixelai scene scene.json --output preview --json` renders native contextual
+frames from exported manifests, with pivot placement, clip timing and stable
+Y sorting. The output directory must be new. The bundle contains PNG frames
+and a `trace.json` report. A scene uses:
+
+```json
+{"schema_version":1,"width":320,"height":180,"background":"#404048",
+ "times_ms":[0,100,400],
+ "actors":[{"id":"hero","manifest":"hero/asset.json","clip":"idle","position":[160,120]}]}
+```
+
+Actor positions locate each frame's pivot in world pixels. Manifest and texture
+paths remain relative to their containing files. This reference compositor
+does not yet verify collision, transition blending, artistic quality or seams.
+
 See [AUTONOMOUS_ROADMAP.md](AUTONOMOUS_ROADMAP.md) for implemented capabilities,
 remaining stages and acceptance criteria.
 

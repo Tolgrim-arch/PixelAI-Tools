@@ -14,6 +14,7 @@
 - Construction/review submission quotas and explicit blocked status on exhaustion.
 - Universal manifest validation of texture hashes, actual frame regions, anchors, timing and clip references.
 - Exported clip timing traces, explicitly reporting unverified runtime behaviors.
+- Reference scene compositor consumes only exported manifests/textures and emits native PNGs plus timing, pivot placement and stable Y-sort traces.
 - Approximate silhouette comparison normalized for padding and scale, with reflection checks.
 - Empty artwork cannot pass style fidelity checks.
 - PNG metadata and Godot exports preserve explicit per-frame durations and named clips; GIF previews preserve holds within GIF timing limits.
@@ -22,7 +23,7 @@
 
 ## Current limits
 
-The managed queue never approves production. Provenance currently supports self-contained single-frame native PNGs; atlas and GIF construction verification remains pending. Distinct proposal descriptions do not yet establish visible structural diversity. Reviewer declarations do not prove isolated contexts or actual perception. Manifest validation does not yet simulate collisions, sorting, acting, transitions or tile seams. These checks remain necessary before enabling release.
+The managed queue never approves production. Provenance currently supports self-contained single-frame native PNGs; atlas and GIF construction verification remains pending. Distinct proposal descriptions do not yet establish visible structural diversity. Reviewer declarations do not prove isolated contexts or actual perception. The reference runtime renders pivot placement and sorting but does not yet simulate collision, acting, transition blending or tile seams. These checks remain necessary before enabling release.
 
 ## Next implementation priorities
 

@@ -906,6 +906,8 @@ def build_parser() -> argparse.ArgumentParser:
     register_manifest(sub)
     from pixelai.diversity import register as register_diversity
     register_diversity(sub)
+    from pixelai.runtime import register as register_runtime
+    register_runtime(sub)
     return parser
 
 
