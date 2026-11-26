@@ -1,6 +1,7 @@
 """Persistent, fail-closed agent task queue. No review attestation implies approval."""
 
 import json
+import hashlib
 import sqlite3
 from pathlib import Path
 
@@ -54,6 +55,7 @@ def connect(project):
     db = sqlite3.connect(root / "workflow.sqlite3")
     db.execute("CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY, stage TEXT UNIQUE, guidance TEXT, response TEXT)")
     db.execute("CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY, task_id INTEGER, payload TEXT NOT NULL)")
+    db.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
     return db
 
 
@@ -74,6 +76,12 @@ def operate(project, action, task=None, response=None):
         with db:
             db.execute("BEGIN IMMEDIATE")
             limits = _budgets(project)
+            brief_hash = hashlib.sha256((Path(project) / "brief.json").read_bytes()).hexdigest()
+            old_brief = db.execute("SELECT value FROM settings WHERE key='brief_sha256'").fetchone()
+            if old_brief and old_brief[0] != brief_hash:
+                db.execute("UPDATE tasks SET response=NULL")
+                db.execute("INSERT INTO events(payload) VALUES (?)", (json.dumps({"event": "brief_changed", "previous": old_brief[0], "current": brief_hash}),))
+            db.execute("INSERT OR REPLACE INTO settings(key,value) VALUES ('brief_sha256',?)", (brief_hash,))
             _invalidate_stale(db, project)
             if action == "start":
                 db.executemany("INSERT OR IGNORE INTO tasks(stage,guidance) VALUES (?,?)", STAGES)
@@ -98,13 +106,19 @@ def operate(project, action, task=None, response=None):
                         construction = db.execute("SELECT id FROM tasks WHERE stage='construction'").fetchone()[0]
                         db.execute("UPDATE tasks SET response=NULL WHERE id>=?", (construction,))
                         db.execute("INSERT INTO events(task_id,payload) VALUES (?,?)", (construction, json.dumps({"event": "repair_required", "defects": defects})))
+                        recent = db.execute("SELECT payload FROM events WHERE json_extract(payload,'$.event')='repair_required' ORDER BY id DESC LIMIT 3").fetchall()
+                        if len(recent) == 3 and len({tuple(sorted(json.loads(item[0])["defects"])) for item in recent}) == 1:
+                            alternatives = db.execute("SELECT id FROM tasks WHERE stage='alternatives'").fetchone()[0]
+                            db.execute("UPDATE tasks SET response=NULL WHERE id>=?", (alternatives,))
+                            db.execute("INSERT INTO events(task_id,payload) VALUES (?,?)", (alternatives, json.dumps({"event": "strategy_change_required", "reason": "Three reviews repeat the same failing criteria"})))
             row = db.execute("SELECT id,stage,guidance FROM tasks WHERE response IS NULL ORDER BY id LIMIT 1").fetchone()
             if row:
                 usage = _usage(db)
+                repair = db.execute("SELECT payload FROM events WHERE json_extract(payload,'$.event')='repair_required' ORDER BY id DESC LIMIT 1").fetchone()
                 key = "visual_reviews" if row[1] in ("art_review", "context_review") else "rendered_revisions" if row[1] == "construction" else None
                 if key and usage[key] >= limits[key]:
-                    return {"status": "blocked", "reason": f"Budget exhausted: {key}", "usage": usage, "limits": limits, "approval_supported": False}
-                repair = db.execute("SELECT payload FROM events WHERE json_extract(payload,'$.event')='repair_required' ORDER BY id DESC LIMIT 1").fetchone()
+                    return {"status": "blocked", "reason": f"Budget exhausted: {key}", "usage": usage, "limits": limits,
+                            "latest_repair": json.loads(repair[0]) if repair else None, "approval_supported": False}
                 return {"status": "needs_agent", "task_id": row[0], "stage": row[1], "guidance": row[2],
                         "required_output": REQUIREMENTS[row[1]], "usage": usage, "limits": limits,
                         "latest_repair": json.loads(repair[0]) if repair else None, "approval_supported": False}

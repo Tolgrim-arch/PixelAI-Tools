@@ -1,5 +1,6 @@
 """Persistent task ordering and fail-closed behavior."""
 import json
+import hashlib
 from pathlib import Path
 import tempfile
 import unittest
@@ -11,6 +12,40 @@ from pixelai.quality import CRITERIA
 
 
 class WorkflowTest(unittest.TestCase):
+    def test_three_repeated_rejections_require_new_alternatives(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            brief = root / "brief.json"
+            brief.write_text(json.dumps({"goal": "Test strategy changes"}))
+            project = root / "project"
+            initialize(project, brief)
+            operate(project, "start")
+            Image.new("RGBA", (4, 4), (255, 0, 0, 255)).save(project / "sprite.png")
+            (project / "source.json").write_text(json.dumps({"width": 4, "height": 4, "style": "lineless", "ops": [{"op": "rect", "x": 0, "y": 0, "w": 4, "h": 4, "color": "#ff0000"}]}))
+            base = {"source_path": "source.json", "image_path": "sprite.png", "evidence": [{"path": "sprite.png"}, {"path": "source.json"}]}
+            response = root / "response.json"
+
+            def submit(extra):
+                response.write_text(json.dumps({**base, **extra}))
+                task = operate(project, "next")
+                return operate(project, "submit", task["task_id"], response)
+
+            submit({"category": "item", "native_size": [4, 4], "art_direction": "Compact shapes", "functional_requirements": []})
+            submit({"proposals": [{"id": str(i), "structure": f"Structure {i}"} for i in range(6)], "selected_id": "0"})
+            for _ in range(3):
+                submit({})
+                result = submit({"context_id": "reviewer", "author_context_id": "author", "native_resolution": True, "integer_zoom": 3,
+                                 "criteria": {name: {"score": 2, "observation": "Same unresolved defect", "evidence_indices": [0]} for name in CRITERIA}})
+            self.assertEqual(result["stage"], "alternatives")
+            self.assertEqual(result["usage"]["rendered_revisions"], 3)
+            self.assertEqual(result["usage"]["visual_reviews"], 3)
+            changed = json.loads((project / "brief.json").read_text())
+            changed["goal"] = "Changed project direction"
+            (project / "brief.json").write_text(json.dumps(changed))
+            reopened = operate(project, "resume")
+            self.assertEqual(reopened["stage"], "contract")
+            self.assertEqual(reopened["usage"]["visual_reviews"], 3)
+
     def test_rejection_reopens_construction_and_preserves_budget(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -75,8 +110,11 @@ class WorkflowTest(unittest.TestCase):
             final = operate(project, "status")
             self.assertEqual(final["status"], "blocked")
             self.assertFalse(final["approval_supported"])
+            archived = project / ".pixelai" / "artifacts" / hashlib.sha256(evidence.read_bytes()).hexdigest()
+            self.assertEqual(archived.read_bytes(), evidence.read_bytes())
             evidence.write_text("Changed evidence")
             self.assertEqual(operate(project, "resume")["stage"], "contract")
+            self.assertNotEqual(archived.read_bytes(), evidence.read_bytes())
 
     def test_missing_and_outside_evidence_cannot_advance(self):
         with tempfile.TemporaryDirectory() as tmp:

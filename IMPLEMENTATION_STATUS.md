@@ -4,11 +4,13 @@
 
 - Persistent SQLite tasks, restart-safe ordering, idempotent start and audit events.
 - Project-relative evidence files with SHA-256 identity and downstream reopening after changes.
+- Content-addressed evidence snapshots preserve previous bytes after working files change; changing the brief reopens tasks without resetting consumed budgets.
 - Stage-specific contract fields, six distinct proposal descriptions and eleven-criterion review completeness.
 - Nonempty image evidence for construction/review and JSON source evidence for construction.
 - Single-frame native PNG construction is rerendered from the submitted fresh source and compared pixel-for-pixel. Reviews must include that exact artifact evidence.
 - Declared reviewer-context separation; these declarations are not authenticated host isolation.
 - Failed review scores reopen construction and preserve review history and consumed budgets.
+- Three consecutive reviews with the same failing criteria reopen structural alternatives; budget-exhaustion diagnostics retain the latest defects.
 - Construction/review submission quotas and explicit blocked status on exhaustion.
 - Universal manifest validation of texture hashes, actual frame regions, anchors, timing and clip references.
 - Exported clip timing traces, explicitly reporting unverified runtime behaviors.
