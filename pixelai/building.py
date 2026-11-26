@@ -58,6 +58,12 @@ def draw_building(
     total_frames: int = 1,
 ) -> None:
     """Draw a top-down 3/4 cozy building (farmhouse, cottage, or barn) with lineless bevels."""
+    if "architecture" in op:
+        from pixelai.architecture import draw_architecture
+        draw_architecture(canvas, palette, op)
+        return
+    if "massing_only" in op:
+        raise ValueError("massing_only requires architecture mode")
     bw = int(op.get("w", max(32, int(canvas.width * 0.78))))
     bh = int(op.get("h", max(32, int(canvas.height * 0.78))))
     bx = int(op.get("x", (canvas.width - bw) // 2))

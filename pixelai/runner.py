@@ -13,6 +13,7 @@ from pixelai import autotile, building, creatures, deform, filters, fx, iso, ite
 
 
 _GENERATOR_OPS = frozenset({
+    "assembly",
     "animal_rig", "char_rig", "nature_rig", "item_rig",
     "building", "portrait_rig", "ui_rig", "autotile",
     "tilemap", "iso_structure", "material", "spine_rig",
@@ -65,7 +66,24 @@ def _execute_ops_unchecked(canvas, ops, palette, defs, frame_idx, total_frames):
 
         canvas.clip_to_opaque = bool(op.get("inside", op.get("clip", False)))
 
-        if kind == "pixel":
+        if kind == "assembly":
+            from pixelai.assembly import resolve_parts
+            for part, (px, py) in resolve_parts(op["parts"]):
+                local = Canvas(part["width"], part["height"])
+                _execute_ops(local, part["ops"], palette, defs, frame_idx, total_frames)
+                ox, oy = int(op.get("x", 0)) + px, int(op.get("y", 0)) + py
+                canvas.blit(local, ox, oy)
+                canvas.clipped_pixels += local.clipped_pixels
+                canvas.warnings.extend(f"part[{part['id']}]: {warning}" for warning in local.warnings)
+                for field in ("shadow_pixels", "no_outline"):
+                    destination = getattr(canvas, field)
+                    for index in getattr(local, field):
+                        x, y = ox + index % local.width, oy + index // local.width
+                        if canvas.in_bounds(x, y):
+                            destination.add(y * canvas.width + x)
+                canvas.attachments.append({"type": "part", "name": part["id"], "parent": part.get("parent"),
+                                           "origin": [ox, oy], "material": part.get("material")})
+        elif kind == "pixel":
             canvas.set_pixel(op["x"], op["y"], parse_color(op["color"], palette))
         elif kind == "line":
             canvas.draw_line(
@@ -265,6 +283,8 @@ def _execute_ops_unchecked(canvas, ops, palette, defs, frame_idx, total_frames):
                 int(op.get("y", 0)),
                 palette,
                 op,
+                frame_idx=frame_idx,
+                total_frames=total_frames,
             )
         elif kind == "portrait_rig":
             rig.draw_portrait_rig(
@@ -799,7 +819,9 @@ def _check_fresh(spec: dict[str, Any]) -> None:
         visit(spec, "spec")
 
 
-_LIBRARY_ROOT = Path(__file__).resolve().parent.parent / "library"
+from pixelai.resources import library_root
+
+_LIBRARY_ROOT = library_root()
 
 
 def _resolve_import_path(ref: str) -> Path:
@@ -809,6 +831,8 @@ def _resolve_import_path(ref: str) -> Path:
         if not rel.endswith(".json"):
             rel += ".json"
         candidate = _LIBRARY_ROOT / rel
+        if not candidate.resolve().is_relative_to(_LIBRARY_ROOT.resolve()):
+            raise ValueError("Library imports must remain inside the built-in library")
         if not candidate.exists():
             raise ValueError(f"Unknown library import {ref!r} (expected {candidate})")
         return candidate
@@ -867,7 +891,9 @@ def _resolve_extends(spec: dict[str, Any]) -> dict[str, Any]:
     """Merge parent spec from 'extends' (.png with embedded spec or .json file) and 'imports'."""
     _check_fresh(spec)
     if "extends" not in spec:
-        return _resolve_imports(spec)
+        resolved = _resolve_imports(spec)
+        _check_fresh(resolved)
+        return resolved
     parent_path = Path(spec["extends"])
     if parent_path.suffix.lower() == ".png":
         parent = extract_spec_from_png(parent_path)
@@ -887,7 +913,9 @@ def _resolve_extends(spec: dict[str, Any]) -> dict[str, Any]:
         else:
             merged[k] = v
     _check_fresh(merged)
-    return _resolve_imports(merged)
+    resolved = _resolve_imports(merged)
+    _check_fresh(resolved)
+    return resolved
 
 
 _TWEEN_KEYS = ("x", "y", "cx", "cy", "rx", "ry", "r", "w", "h", "angle", "x0", "y0", "x1", "y1")
@@ -1007,6 +1035,7 @@ def _merge_frame_ops_into_base(
 def run_frames(spec: dict[str, Any]) -> tuple[list[Canvas], list[str]]:
     """Execute a spec into one or more post-processed frames and their names."""
     spec = _resolve_style_ref(_resolve_extends(spec))
+    from pixelai.runtime_contract import attach_runtime
     width = int(spec["width"])
     height = int(spec["height"])
     palette = resolve_palette(spec.get("palette"), spec.get("palette_ext"))
@@ -1052,6 +1081,7 @@ def run_frames(spec: dict[str, Any]) -> tuple[list[Canvas], list[str]]:
     if not raw_frames:
         canvas = Canvas(width, height, fill=bg)
         _execute_ops(canvas, _merge_frame_ops_into_base([], base_ops), palette, defs, frame_idx=0, total_frames=1)
+        attach_runtime(canvas, spec, 0, 1)
         base_frame = _apply_post(canvas, post_ops, palette)
         if fx_list:
             fx_frames = fx.apply_fx_pipeline(
@@ -1074,6 +1104,7 @@ def run_frames(spec: dict[str, Any]) -> tuple[list[Canvas], list[str]]:
             else list(fspec.get("ops", []))
         )
         _execute_ops(canvas, effective_ops, palette, defs, frame_idx=idx, total_frames=total)
+        attach_runtime(canvas, spec, idx, total)
         frames.append(_apply_post(canvas, post_ops, palette))
         names.append(fspec.get("name", f"frame_{idx}"))
     if fx_list:

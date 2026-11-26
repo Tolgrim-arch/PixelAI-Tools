@@ -153,6 +153,11 @@ def _cmd_validate(args: argparse.Namespace) -> int:
 
 
 def _cmd_render(args: argparse.Namespace) -> int:
+    targets = [Path(value).resolve() for value in (args.output, args.meta, args.manifest, args.godot, args.ruler, args.contact_sheet) if value]
+    if len(targets) != len(set(targets)):
+        raise ValueError("Render artifact paths must be distinct")
+    if args.spec != "-" and Path(args.spec).resolve() in targets:
+        raise ValueError("Render output cannot overwrite its source specification")
     spec = _read_spec(args.spec)
     if args.fresh:
         spec["fresh"] = True
@@ -181,15 +186,26 @@ def _cmd_render(args: argparse.Namespace) -> int:
     fps = args.fps if args.fps is not None else int(spec.get("fps", 8))
     cols = args.columns if args.columns is not None else spec.get("columns")
 
-    if is_gif and (args.sheet or args.meta or args.godot):
-        raise ValueError("GIF output cannot be combined with --sheet, --meta, or --godot")
+    if is_gif and (args.sheet or args.meta or args.godot or args.manifest):
+        raise ValueError("GIF output cannot be combined with --sheet, --meta, --godot or --manifest")
     if fps <= 0:
         raise ValueError("fps: expected a positive value")
     if cols is not None and (not isinstance(cols, int) or cols <= 0):
         raise ValueError("columns: expected a positive integer")
 
+    from pixelai.animation_contract import durations_ms, clips_by_index, validate_transitions
+    timings = durations_ms(len(frames), fps, spec.get("durations_ms"))
+    clips = clips_by_index(len(frames), spec.get("clips"))
+    from pixelai.animation_score import source_records, validate_scores
+    validate_scores(clips, source_records(frames, timings))
+    validate_transitions(spec.get("transitions", []), clips)
+    manifest = None
+    if args.manifest:
+        from pixelai.manifest import build_manifest
+        manifest = build_manifest(spec, frames, out_path, args.manifest, cols, timings, clips)
+
     if is_gif:
-        out = export_gif(frames, out_path, fps=fps)
+        out = export_gif(frames, out_path, fps=fps, durations_ms=timings)
         report(f"Rendered GIF ({len(frames)} frames @ {fps}fps, {frames[0].width}x{frames[0].height}) -> {out}")
     elif args.sheet or len(frames) > 1 or args.godot or args.meta:
         out = export_spritesheet(
@@ -199,6 +215,8 @@ def _cmd_render(args: argparse.Namespace) -> int:
             columns=cols,
             meta_path=args.meta,
             spec_json=json.dumps(spec),
+            durations_ms=timings,
+            clips=clips,
         )
         report(f"Rendered spritesheet ({len(frames)} frames) -> {out}")
     else:
@@ -206,12 +224,20 @@ def _cmd_render(args: argparse.Namespace) -> int:
         report(f"Rendered {frames[0].width}x{frames[0].height} -> {out}")
 
     artifacts["image"] = str(out.resolve())
+    if manifest is not None:
+        import hashlib
+        manifest["texture_sha256"] = hashlib.sha256(out.read_bytes()).hexdigest()
+        manifest_path = Path(args.manifest)
+        manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        manifest_path.write_text(json.dumps(manifest, indent=2))
+        artifacts["manifest"] = str(manifest_path.resolve())
     if args.meta:
         artifacts["metadata"] = str(Path(args.meta).resolve())
 
     if args.godot:
         tres_out = export_godot_tres(
-            out_path, args.godot, frames, frame_names=names, columns=cols, fps=fps
+            out_path, args.godot, frames, frame_names=names, columns=cols, fps=fps,
+            durations_ms=timings if "durations_ms" in spec else None, clips=clips
         )
         artifacts["godot"] = str(tres_out.resolve())
         report(f"Exported Godot 4 SpriteFrames -> {tres_out}")
@@ -632,6 +658,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional output path for spritesheet JSON metadata.",
     )
+    render_p.add_argument("--manifest", help="Export a universal asset manifest; requires spec.asset_id and explicit spec.runtime coordinates.")
     render_p.add_argument(
         "--godot",
         default=None,
@@ -893,6 +920,32 @@ def build_parser() -> argparse.ArgumentParser:
     diff_p.add_argument("--json", action="store_true", help="Print diff metrics as JSON.")
     diff_p.set_defaults(func=_cmd_diff)
 
+    structure_p = sub.add_parser("structure", help="Inspect growth/anatomy/architecture/fracture graphs independently of colors and labels.")
+    structure_p.add_argument("spec")
+    structure_p.add_argument("--compare", help="Optional second source specification.")
+    structure_p.add_argument("--frame", type=int, default=0)
+    structure_p.add_argument("--full", action="store_true", help="Include complete rendered graph records.")
+    structure_p.add_argument("--motion", action="store_true", help="Trace body/limb movement across named clips; requires one consistent anatomy graph per frame.")
+    structure_p.add_argument("--json", action="store_true")
+
+    def report_structure(args):
+        from pixelai.structure import analyze_structures
+        print(json.dumps(analyze_structures(_read_spec(args.spec), _read_spec(args.compare) if args.compare else None, args.frame, args.full, args.motion)))
+        return 0
+
+    structure_p.set_defaults(func=report_structure)
+    from pixelai.workflow import register
+    register(sub)
+    from pixelai.manifest import register as register_manifest
+    register_manifest(sub)
+    from pixelai.diversity import register as register_diversity
+    register_diversity(sub)
+    from pixelai.runtime import register as register_runtime
+    register_runtime(sub)
+    from pixelai.nine_slice import register as register_ui
+    register_ui(sub)
+    from pixelai.tileqa import register as register_tileqa
+    register_tileqa(sub)
     return parser
 
 

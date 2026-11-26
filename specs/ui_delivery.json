@@ -1,0 +1,4 @@
+{
+  "states":["normal","hover","pressed","selected","disabled","focus"],
+  "ui":{"target_sizes":[[64,32],[144,64]],"content_min":[40,12],"distinct_states":true}
+}

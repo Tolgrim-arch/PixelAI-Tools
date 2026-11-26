@@ -184,6 +184,10 @@ def draw_ui_rig(
     op: dict[str, Any],
 ) -> None:
     """Render HUD/UI components: panel, bar, button, heart(s), or inventory slot."""
+    if "composition" in op:
+        from pixelai.ui_composition import draw_composition
+        draw_composition(canvas,x,y,palette,op)
+        return
     kind = str(op.get("kind", op.get("component", "panel"))).lower()
     theme = str(op.get("theme", "wood")).lower()
     state = str(op.get("state", "normal")).lower()

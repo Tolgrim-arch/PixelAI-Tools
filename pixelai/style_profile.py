@@ -13,7 +13,9 @@ from pixelai.canvas import Canvas
 from pixelai.color import RGBA, luminance
 from pixelai.style_study import analyze_lighting, analyze_outline, analyze_shading
 
-LIBRARY_STYLES_DIR = Path(__file__).resolve().parent.parent / "library" / "styles"
+from pixelai.resources import library_root
+
+LIBRARY_STYLES_DIR = library_root() / "styles"
 
 
 def resolve_style_path(ref: str | Path) -> Path:
@@ -158,6 +160,9 @@ def compare_canvas_to_style(canvas: Canvas, profile: dict[str, Any]) -> dict[str
 
     deviations: list[str] = []
     penalties = 0.0
+    if not opaque_colors:
+        deviations.append("Empty artwork cannot match a visual style.")
+        penalties = 1.0
 
     # 1. Color count discipline
     if len(opaque_colors) > int(target_pal_len * 1.5) + 4:

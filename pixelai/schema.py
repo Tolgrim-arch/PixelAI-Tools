@@ -10,6 +10,11 @@ from pixelai.palettes import list_palettes
 UNIVERSAL_OP_FIELDS: frozenset[str] = frozenset({"op", "z", "inside", "clip", "outline", "shadow"})
 
 OP_SPECS: dict[str, dict[str, Any]] = {
+    "assembly": {
+        "summary": "Render named parented native-pixel parts with stable ids, offsets and draw order.",
+        "required": ["parts"], "optional": ["x", "y"],
+        "example": {"op": "assembly", "parts": [{"id": "body", "width": 8, "height": 8, "offset": [4, 4], "ops": [{"op": "rect", "x": 0, "y": 0, "w": 8, "h": 8, "color": "#448855"}]}]},
+    },
     "pixel": {
         "summary": "Set a single pixel at (x, y).",
         "required": ["x", "y", "color"],
@@ -162,6 +167,60 @@ OP_SPECS: dict[str, dict[str, Any]] = {
     "iso_structure": {"summary": "Depth-sorted multi-part 2:1 isometric structure with per-pixel Z-buffer.", "required": ["items"], "optional": ["origin_x", "origin_y", "step_x", "step_y", "bevel", "ground_shadow"], "flexible": True, "example": {"op": "iso_structure", "origin_x": 32, "origin_y": 30, "items": []}},
 }
 
+# Generator fields are explicit so ignored agent inventions cannot masquerade
+# as supported anatomy/material controls. This registry also drives help/lint.
+_GENERATOR_FIELDS = {
+    "material": "x y w h seed color colors kind",
+    "building": "x y w h roof_style variant seed shadow_color wall_color roof_color trim_color foundation_color depth roof_h foundation_h ground_shadow shadow_opacity shadow_dx shadow_dy windows timber_frame door dormer chimney smoke name architecture massing_only",
+    "char_rig": "x y size dir pose perspective frame skin hair eye shirt pants shoes hat tool handle shadow_color hair_style outfit trim morphology posture",
+    "portrait_rig": "x y width height style preset face_dir dir expression gesture hat scar beard hair_style headband cheek_marks fill_background skin skin_l skin_d hair hair_l hair_d shirt shirt_d garment garment_d accent eye_color hat_color hat_light hat_dark ink beard_color headband_color headband_plate headband_emblem background cheek_mark_color",
+    "animal_rig": "x y species variant dir pose frame total_frames perspective body shade deep_shade nest_prop ground_prop emotes shadow_color",
+    "item_rig": "x y kind item orientation size shine frame shadow_color color secondary_color glass_color cork_color fill_level state flame_color",
+    "nature_rig": "x y kind variant stage sway ground_base frame w h seed color trunk_color accent_color shadow_color foliage_color bark_ramp band_colors ramp fruit bush_ramp shape layout r style growth trunk_only fracture fracture_only deposit",
+    "ui_rig": "x y kind component theme state selected color count w h frame_width inner_fill fill value fill_color segmented filled composition",
+    "tilemap": "x y tile_w tile_h mode map rows step_x step_y",
+    "autotile": "x y tile_size inner outer lip seed",
+    "emote": "x y kind frame",
+    "iso_tile": "cx cy rx ry color border",
+    "iso_box": "cx cy rx ry h top left right bevel ground_shadow door windows window roof",
+    "iso_roof": "cx cy rx ry h left right style gable eave_shadow bevel chimney",
+    "iso_wall_rect": "face x y w h color arch recessed role",
+    "iso_structure": "origin_x origin_y items step_x step_y bevel ground_shadow",
+}
+for _name, _fields in _GENERATOR_FIELDS.items():
+    OP_SPECS[_name]["optional"] = sorted((set(OP_SPECS[_name]["optional"]) | set(_fields.split())) - set(OP_SPECS[_name]["required"]))
+    OP_SPECS[_name].pop("flexible", None)
+
+OP_SPECS["nature_rig"]["notes"] = [
+    "Optional fracture for kind:rock, native w>=32,h>=32: profile = slab|spire|wedge|block|shard|twin; cuts integer [1,5], angle [-75,75] degrees. Seed controls geometric cuts rather than pixel noise. Inactive legacy controls fail explicitly.",
+    "Fracture variants: boulder (bare), ore and mossy (upper-facet exposure). fracture_only:true hides deposits. Ore deposit pattern = vein|network|junction, width [0.03,0.12], seams integer [1,3] <=cuts; junction requires a real >=3-facet intersection and cuts>=2, without seams. Moss deposit coverage [0.1,0.5], slope [-0.5,0.5]. Material controls cannot substitute for mass variety.",
+    "Optional growth graph for oak/fruit/sakura: growth.profile = upright|forked|multi_stem|gnarled|leaning|windswept.",
+    "growth.lean [-1,1], spread [0.6,1.25], thickness [0.6,1.8], root_span [0.6,1.5]; unknown growth fields are errors.",
+    "Growth trees require native w>=32, h>=40. trunk_only:true requires growth and reveals the complete trunk/root structure for review.",
+    "The same graph drives trunk geometry and canopy supports. Inspect trunk-only and full renders; profile differences do not certify artistic quality.",
+]
+OP_SPECS["char_rig"]["notes"] = [
+    "Optional morphology for top-down native size>=32 only: body_plan = balanced|stocky|slender|compact|long_legged|broad_shouldered|heavy.",
+    "Morphology independently controls head_width, head_height, shoulder_width, waist_width, pelvis_width, torso_length and leg_length. Unknown keys and proportions exceeding headroom fail.",
+    "Head_height and torso_length accept [0.7,1.2], leg_length [0.65,1.3], widths [0.65,1.5]. All four views share the same body proportions and ground anchor.",
+    "Equipment is moved rigidly and its grip fitted to the pose; it is not stretched by body proportions. Equipment fitting is recorded in anatomy graph metadata.",
+    "Optional posture uses lean [-0.15,0.15] and crouch [0,1.5] in canonical 32px coordinates; requires top-down native size>=32 and defaults to balanced morphology when omitted. Feet on the ground line remain fixed; head mass translates rigidly. Set distinct posture values per authored frame for body anticipation and recovery.",
+    "Inspect all required directions/actions. Body-plan variety does not certify natural anatomy, acting or commercial finish.",
+]
+OP_SPECS["building"]["notes"] = [
+    "Optional architecture mode requires native w>=64,h>=64: profile = longhouse|l_wing|t_plan|courtyard|stepped|tower.",
+    "architecture.rotation = 0|90|180|270; wall_height [0.8,1.2], roof_pitch [0.7,1.3]. Unknown or inactive legacy controls fail explicitly.",
+    "massing_only:true requires architecture and removes doors/windows. Compare projected footprint corners, roof ridges and connected masses independently of palette and ornament.",
+    "Architecture uses a fixed oblique projection and depth-tested faces; this is not a navigable interior, collision proof or commercial-quality certification.",
+]
+OP_SPECS["ui_rig"]["notes"] = [
+    "Optional composition for panel/button/slot: profile = quiet|brackets|header|sidebar|footer|tab; native w>=32,h>=24 subject to content/cap clearance.",
+    "Composition border integer [2,6], padding [2,8], motif = facet|stud|chevron (inactive for quiet), ornament_budget [0,4], content_min positive [width,height]. Unsupported legacy controls fail.",
+    "All six states are explicit: normal|hover|pressed|selected|disabled|focus. Protected content remains clear; sparse motifs stay inside fixed corner caps for nine-slice resizing.",
+    "Universal manifests export a source-bound UI contract for a single composition per frame. Use uicheck on actual exported pixels; preserved caps do not prove text fit, focus behavior or artistic quality.",
+]
+
+
 POST_OP_SPECS: dict[str, dict[str, Any]] = {
     "outline": {"required": ["color"], "optional": ["selout", "selout_amount", "auto_pad", "directional_selout", "clean_jaggies"]},
     "recolor_material": {"required": ["material"], "optional": ["target_colors", "reflectance", "recolor_outline"]},
@@ -207,6 +266,36 @@ def lint_post_fields(post: dict[str, Any]) -> list[str]:
     return warnings
 
 
+def validate_managed_fields(spec: dict[str, Any]) -> None:
+    """Reject unknown operation fields throughout a managed source spec."""
+    def visit(value, path):
+        if isinstance(value, dict):
+            for key, child in value.items():
+                if key in ("palette", "palette_ext", "colors", "map", "runtime", "clips"):
+                    continue
+                if key == "defs" and isinstance(child, dict):
+                    for name, definition in child.items():
+                        visit(definition, f"{path}.defs[{name}]")
+                    continue
+                if key in ("ops", "post"):
+                    if not isinstance(child, list):
+                        raise ValueError(f"{path}.{key} must be an array")
+                    for index, operation in enumerate(child):
+                        if not isinstance(operation, dict):
+                            raise ValueError(f"{path}.{key}[{index}] must be an operation object")
+                        registry = POST_OP_SPECS if key == "post" else OP_SPECS
+                        if operation.get("op") not in registry:
+                            raise ValueError(f"{path}.{key}[{index}]: unknown operation")
+                        warnings = lint_post_fields(operation) if key == "post" else lint_op_fields(operation)
+                        if warnings:
+                            raise ValueError(f"{path}.{key}[{index}]: {'; '.join(warnings)}")
+                visit(child, f"{path}.{key}")
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                visit(child, f"{path}[{index}]")
+    visit(spec, "spec")
+
+
 def format_op_list() -> str:
     """Return a compact, token-efficient list of all ops, post ops, and palettes."""
     lines = ["# pixelai-tools — Ops & Post-Processing Index", "", "## Drawing Ops (`ops`)"]
@@ -240,6 +329,7 @@ def format_op_guide(op_name: str) -> str:
             "Example:",
             json.dumps(meta["example"], indent=2),
         ]
+        lines.extend(["", *meta.get("notes", [])])
         return "\n".join(lines)
     if key in POST_OP_SPECS:
         meta = POST_OP_SPECS[key]
@@ -267,6 +357,10 @@ def build_json_schema() -> dict[str, Any]:
         "properties": {
             "width": {"type": "integer", "minimum": 1},
             "height": {"type": "integer", "minimum": 1},
+            "asset_id": {"type": "string", "minLength": 1},
+            "runtime": {"type": "object", "properties": {"regions_from_structure": {"const": "footprints"}},
+                        "dependentRequired": {"regions_from_structure": ["derive"]},
+                        "anyOf": [{"required": ["pivot", "ground_anchor", "sort_origin"]}, {"required": ["derive"], "properties": {"derive": {"const": "structure"}}}]},
             "palette": {"oneOf": [{"type": "string", "enum": palette_names}, {"type": "object"}]},
             "palette_ext": {"type": "object", "additionalProperties": {"type": "string"}},
             "style": {"type": "string", "enum": ["ext_outline", "lineless"]},
@@ -276,6 +370,23 @@ def build_json_schema() -> dict[str, Any]:
             "fresh": {"type": "boolean"},
             "material": {"type": "string"},
             "fps": {"type": "integer", "minimum": 1},
+            "durations_ms": {"type": "array", "items": {"type": "integer", "minimum": 1}},
+            "transitions": {"type": "array", "items": {"type": "object", "required": ["from", "to"], "properties": {"from": {"type": "string"}, "to": {"type": "string"}}}},
+            "clips": {"type": "object", "additionalProperties": {"type": "object", "required": ["frames", "loop"], "properties": {
+                "frames": {"type": "array", "minItems": 1, "items": {"type": "integer", "minimum": 0}},
+                "loop": {"type": "boolean"}, "interruptible": {"type": "boolean"},
+                "score": {"type": "object", "additionalProperties": False, "required": ["schema_version", "intent", "beats"], "properties": {
+                    "schema_version": {"const": 1}, "intent": {"type": "string", "minLength": 1},
+                    "beats": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": False,
+                        "required": ["name", "purpose", "start", "end"], "properties": {
+                            "name": {"type": "string", "minLength": 1}, "purpose": {"type": "string", "minLength": 1},
+                            "start": {"type": "integer", "minimum": 0}, "end": {"type": "integer", "minimum": 1}}}},
+                    "events": {"type": "array", "items": {"type": "object", "additionalProperties": False,
+                        "required": ["id", "name", "at_ms"], "properties": {
+                            "id": {"type": "string", "minLength": 1}, "name": {"type": "string", "minLength": 1},
+                            "at_ms": {"type": "integer", "minimum": 0}, "socket": {"type": "string", "minLength": 1}}}}
+                }}
+            }}},
             "frame_count": {"type": "integer", "minimum": 1},
             "extends": {"type": "string"},
             "imports": {"type": "array", "items": {"type": "string"}},

@@ -1,0 +1,174 @@
+"""Persistent task ordering and fail-closed behavior."""
+import json
+import hashlib
+from pathlib import Path
+import tempfile
+import unittest
+
+from PIL import Image
+
+from pixelai.workflow import initialize, operate
+from pixelai.quality import CRITERIA
+from pixelai.exporter import export_png
+from pixelai.runner import run_spec
+
+
+def alternatives(project, size):
+    proposals, evidence = [], []
+    for index, (width, height) in enumerate(((1, 1), (1, 2), (1, 3), (2, 1), (2, 3), (3, 2))):
+        source_name, image_name = f"proposal_{index}.json", f"proposal_{index}.png"
+        source = {"width": size, "height": size, "style": "lineless", "ops": [
+            {"op": "rect", "x": 0, "y": 0, "w": width, "h": height, "color": "#448855"}]}
+        (project / source_name).write_text(json.dumps(source))
+        export_png(run_spec(source), project / image_name)
+        proposals.append({"id": str(index), "structure": f"Structural proposal {index}", "source_path": source_name, "image_path": image_name})
+        evidence.extend([{"path": source_name}, {"path": image_name}])
+    return {"proposals": proposals, "selected_id": "0", "evidence": evidence}
+
+
+def review_coverage(task, data):
+    packet = task["review_packet"]
+    return {**data, "packet_id": packet["packet_id"], "inspected_views": [view["path"] for view in packet["views"]],
+            "evidence": data["evidence"] + [{"path": view["path"], "sha256": view["sha256"]} for view in packet["views"]]}
+
+
+class WorkflowTest(unittest.TestCase):
+    def test_three_repeated_rejections_require_new_alternatives(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            brief = root / "brief.json"
+            brief.write_text(json.dumps({"goal": "Test strategy changes"}))
+            project = root / "project"
+            initialize(project, brief)
+            operate(project, "start")
+            (project / "contract.txt").write_text("Stable project contract evidence")
+            Image.new("RGBA", (4, 4), (255, 0, 0, 255)).save(project / "sprite.png")
+            (project / "source.json").write_text(json.dumps({"width": 4, "height": 4, "style": "lineless", "ops": [{"op": "rect", "x": 0, "y": 0, "w": 4, "h": 4, "color": "#ff0000"}]}))
+            base = {"source_path": "source.json", "image_path": "sprite.png", "evidence": [{"path": "sprite.png"}, {"path": "source.json"}]}
+            response = root / "response.json"
+
+            def submit(extra):
+                task = operate(project, "next")
+                data = {**base, **extra}
+                if task["stage"] in ("art_review", "context_review"):
+                    data = review_coverage(task, data)
+                response.write_text(json.dumps(data))
+                return operate(project, "submit", task["task_id"], response)
+
+            submit({"category": "item", "native_size": [4, 4], "art_direction": "Compact shapes", "functional_requirements": [], "evidence": [{"path": "contract.txt"}]})
+            submit(alternatives(project, 4))
+            for attempt in range(3):
+                if attempt:
+                    color = (255 - attempt, 0, 0, 255)
+                    Image.new("RGBA", (4, 4), color).save(project / "sprite.png")
+                    source = json.loads((project / "source.json").read_text())
+                    source["ops"][0]["color"] = f"#{255-attempt:02x}0000"
+                    (project / "source.json").write_text(json.dumps(source))
+                submit({})
+                result = submit({"context_id": "reviewer", "author_context_id": "author", "native_resolution": True, "integer_zoom": 3,
+                                 "criteria": {name: {"score": 2, "observation": "Same unresolved defect", "evidence_indices": [0]} for name in CRITERIA}})
+            self.assertEqual(result["stage"], "alternatives")
+            self.assertEqual(result["usage"]["rendered_revisions"], 3)
+            self.assertEqual(result["usage"]["visual_reviews"], 3)
+            changed = json.loads((project / "brief.json").read_text())
+            changed["goal"] = "Changed project direction"
+            (project / "brief.json").write_text(json.dumps(changed))
+            reopened = operate(project, "resume")
+            self.assertEqual(reopened["stage"], "contract")
+            self.assertEqual(reopened["usage"]["visual_reviews"], 3)
+
+    def test_rejection_reopens_construction_and_preserves_budget(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            brief = root / "input.json"
+            brief.write_text(json.dumps({"goal": "Test repairs", "budgets": {"rendered_revisions": 1}}))
+            project = root / "project"
+            initialize(project, brief)
+            operate(project, "start")
+            (project / "evidence.txt").write_text("Test evidence")
+            Image.new("RGBA", (32, 32), (80, 140, 60, 255)).save(project / "art.png")
+            (project / "source.json").write_text(json.dumps({"width": 32, "height": 32, "style": "lineless", "ops": [{"op": "rect", "x": 0, "y": 0, "w": 32, "h": 32, "color": "#508c3c"}]}))
+            response = root / "response.json"
+            base = {"source_path": "source.json", "image_path": "art.png", "evidence": [{"path": "evidence.txt"}, {"path": "art.png"}, {"path": "source.json"}]}
+            for extra in (
+                {"category": "item", "native_size": [32, 32], "art_direction": "Clear masses", "functional_requirements": []},
+                alternatives(project, 32),
+                {},
+            ):
+                response.write_text(json.dumps({**base, **extra}))
+                task = operate(project, "next")
+                operate(project, "submit", task["task_id"], response)
+            review = {**base, "context_id": "reviewer", "author_context_id": "author", "native_resolution": True, "integer_zoom": 3,
+                      "criteria": {name: {"score": 2, "observation": "Visible structural defect", "evidence_indices": [0]} for name in CRITERIA}}
+            task = operate(project, "next")
+            covered = review_coverage(task, review)
+            incomplete = {**covered, "inspected_views": covered["inspected_views"][:-1]}
+            response.write_text(json.dumps(incomplete))
+            with self.assertRaisesRegex(ValueError, "every native"):
+                operate(project, "submit", task["task_id"], response)
+            self.assertEqual(operate(project, "status")["usage"]["visual_reviews"], 0)
+            response.write_text(json.dumps(covered))
+            result = operate(project, "submit", task["task_id"], response)
+            self.assertEqual(result["status"], "blocked")
+            self.assertEqual(result["usage"]["rendered_revisions"], 1)
+            self.assertEqual(result["usage"]["visual_reviews"], 1)
+            self.assertEqual(result["reason"], "Budget exhausted: rendered_revisions")
+
+    def test_resume_order_and_no_attestation_approval(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            brief = root / "input.json"
+            brief.write_text(json.dumps({"goal": "Create a readable potion"}))
+            project = root / "project"
+            initialize(project, brief)
+            first = operate(project, "start")
+            self.assertIn("quality_protocol", first)
+            self.assertEqual(first, operate(project, "start"))
+            self.assertEqual(first, operate(project, "resume"))
+            response = root / "response.json"
+            evidence = project / "evidence.txt"
+            evidence.write_text("Synthetic evidence; not artistic approval")
+            Image.new("RGBA", (32, 32), (80, 140, 60, 255)).save(project / "art.png")
+            (project / "source.json").write_text(json.dumps({"width": 32, "height": 32, "style": "lineless", "ops": [{"op": "rect", "x": 0, "y": 0, "w": 32, "h": 32, "color": "#508c3c"}]}))
+            response.write_text(json.dumps({"evidence": [{"path": "evidence.txt"}]}))
+            with self.assertRaises(ValueError):
+                operate(project, "submit", 99, response)
+            for _ in range(6):
+                task = operate(project, "next")
+                if task["stage"] == "construction":
+                    self.assertEqual(task["inputs"]["selected_proposal"]["id"], "0")
+                    self.assertEqual(len(task["inputs"]["proposal_comparisons"]), 15)
+                data = {"source_path": "source.json", "image_path": "art.png", "evidence": [{"path": "evidence.txt"}, {"path": "art.png"}, {"path": "source.json"}]}
+                if task["stage"] == "contract":
+                    data.update(category="item", native_size=[32, 32], art_direction="Readable clean clusters", functional_requirements=[])
+                elif task["stage"] == "alternatives":
+                    data.update(alternatives(project, 32))
+                elif task["stage"] in ("art_review", "context_review"):
+                    data.update(context_id=task["stage"], author_context_id="author", native_resolution=True, integer_zoom=3,
+                                criteria={name: {"score": 3, "observation": "Synthetic test observation", "evidence_indices": [0]} for name in CRITERIA})
+                    data = review_coverage(task, data)
+                response.write_text(json.dumps(data))
+                operate(project, "submit", task["task_id"], response)
+            final = operate(project, "status")
+            self.assertEqual(final["status"], "blocked")
+            self.assertFalse(final["approval_supported"])
+            archived = project / ".pixelai" / "artifacts" / hashlib.sha256(evidence.read_bytes()).hexdigest()
+            self.assertEqual(archived.read_bytes(), evidence.read_bytes())
+            evidence.write_text("Changed evidence")
+            self.assertEqual(operate(project, "resume")["stage"], "contract")
+            self.assertNotEqual(archived.read_bytes(), evidence.read_bytes())
+
+    def test_missing_and_outside_evidence_cannot_advance(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            brief = root / "brief.json"
+            brief.write_text(json.dumps({"goal": "Test"}))
+            project = root / "project"
+            initialize(project, brief)
+            first = operate(project, "start")
+            response = root / "response.json"
+            for record in ("Claim only", {"path": "missing.png"}, {"path": "../brief.json"}):
+                response.write_text(json.dumps({"evidence": [record]}))
+                with self.assertRaises(ValueError):
+                    operate(project, "submit", first["task_id"], response)
+                self.assertEqual(operate(project, "next")["task_id"], first["task_id"])

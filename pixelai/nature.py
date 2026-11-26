@@ -137,11 +137,25 @@ def draw_nature_rig(
     variant = str(op.get("variant", variants.get(kind, ("oak",))[0])).lower()
     if kind in variants and variant not in variants[kind]:
         raise ValueError(f"Unknown {kind} variant: {variant!r}; choose {', '.join(variants[kind])}")
+    if "fracture_only" in op or "deposit" in op:
+        if "fracture" not in op:
+            raise ValueError("fracture_only/deposit require an explicit fracture configuration")
+    if "fracture" in op:
+        if kind != "rock":
+            raise ValueError("fracture requires nature_rig kind:rock")
+        from pixelai.fracture import draw_fracture
+        draw_fracture(canvas, x, y, palette, op)
+        return
     stage = max(0, min(3, int(op.get("stage", 3))))
     sway = bool(op.get("sway", False))
     draw_shadow = bool(op.get("shadow", True))
     ground_base = str(op.get("ground_base", "none")).lower()
     frame = int(op.get("frame", frame_idx)) % 4
+    if "growth" in op or "trunk_only" in op:
+        if kind != "tree" or variant == "pine":
+            raise ValueError("growth controls currently support oak, fruit and sakura trees only")
+        if "growth" not in op:
+            raise ValueError("trunk_only requires an explicit growth graph configuration")
 
     if kind == "tree":
         drawer = conifer.draw_pine if variant == "pine" else broadleaf.draw_broadleaf

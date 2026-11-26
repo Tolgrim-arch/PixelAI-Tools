@@ -1,0 +1,17 @@
+{
+  "width":384,"height":128,"style":"ext_outline","fresh":true,
+  "ops":[
+    {"op":"nature_rig","kind":"rock","x":0,"y":0,"w":64,"h":64,"shadow":false,"fracture":{"profile":"slab"}},
+    {"op":"nature_rig","kind":"rock","x":64,"y":0,"w":64,"h":64,"shadow":false,"fracture":{"profile":"spire"}},
+    {"op":"nature_rig","kind":"rock","x":128,"y":0,"w":64,"h":64,"shadow":false,"fracture":{"profile":"wedge"}},
+    {"op":"nature_rig","kind":"rock","x":192,"y":0,"w":64,"h":64,"shadow":false,"fracture":{"profile":"block"}},
+    {"op":"nature_rig","kind":"rock","x":256,"y":0,"w":64,"h":64,"shadow":false,"fracture":{"profile":"shard"}},
+    {"op":"nature_rig","kind":"rock","x":320,"y":0,"w":64,"h":64,"shadow":false,"fracture":{"profile":"twin"}},
+    {"op":"nature_rig","kind":"rock","x":0,"y":64,"w":64,"h":64,"seed":77,"shadow":false,"fracture":{"profile":"slab","cuts":4,"angle":35}},
+    {"op":"nature_rig","kind":"rock","x":64,"y":64,"w":64,"h":64,"seed":77,"shadow":false,"fracture":{"profile":"spire","cuts":4,"angle":35}},
+    {"op":"nature_rig","kind":"rock","x":128,"y":64,"w":64,"h":64,"seed":77,"shadow":false,"fracture":{"profile":"wedge","cuts":4,"angle":35}},
+    {"op":"nature_rig","kind":"rock","x":192,"y":64,"w":64,"h":64,"seed":77,"shadow":false,"fracture":{"profile":"block","cuts":4,"angle":35}},
+    {"op":"nature_rig","kind":"rock","x":256,"y":64,"w":64,"h":64,"seed":77,"shadow":false,"fracture":{"profile":"shard","cuts":4,"angle":35}},
+    {"op":"nature_rig","kind":"rock","x":320,"y":64,"w":64,"h":64,"seed":77,"shadow":false,"fracture":{"profile":"twin","cuts":4,"angle":35}}
+  ]
+}

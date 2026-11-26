@@ -146,7 +146,14 @@ def draw_broadleaf(canvas: Canvas, x: int, y: int, palette: dict[str, RGBA], op:
     seed = int(op.get("seed", 11 if variant == "oak" else 17))
     rng = random.Random(seed)
     local = Canvas(w, h)
-    if variant == "sakura":
+    graph = None
+    if "growth" in op:
+        from pixelai.growth import build_growth_graph
+        graph = build_growth_graph(w, h, seed, op["growth"])
+        if "trunk_only" in op and type(op["trunk_only"]) is not bool:
+            raise ValueError("trunk_only must be a boolean")
+        local.attachments.append({"type": "growth_graph", **graph})
+    if variant == "sakura" and graph is None:
         _draw_sakura(local, palette, op, frame, colors)
         canvas.blit(local, x, y)
         return
@@ -158,9 +165,21 @@ def draw_broadleaf(canvas: Canvas, x: int, y: int, palette: dict[str, RGBA], op:
     off = (-1, 0, 1, 0)[frame % 4] if op.get("sway") else 0
     rx, ry = int(w * 0.36), int(h * 0.28)
     cy = max(ry + 4, int(h * 0.38))
-    fo.draw_broadleaf_trunk(local, random.Random(seed ^ 0xACE), cx, cy, rx, ry, foot, bark)
-    bands = _crown_bands(cx + off, cy, rx, ry, rng)
+    if graph is not None:
+        from pixelai.growth import crown_bands, draw_growth_trunk
+        draw_growth_trunk(local, graph, bark)
+        if op.get("trunk_only", False):
+            from pixelai.filters import _transform_attachment_points
+            canvas.blit(local, x, y)
+            canvas.attachments.extend(_transform_attachment_points(local.attachments, dx=x, dy=y))
+            return
+        bands = crown_bands(graph, w, h, seed, off)
+    else:
+        fo.draw_broadleaf_trunk(local, random.Random(seed ^ 0xACE), cx, cy, rx, ry, foot, bark)
+        bands = _crown_bands(cx + off, cy, rx, ry, rng)
     stamped = ls._stamp(rng, bands, cx + off, cy, reach=max(4, round(9 * w / 128)), fringe=0.30, long_from=None, step=(7, 6))
+    if graph is not None:
+        stamped = {point: tone for point, tone in stamped.items() if 2 <= point[0] < w-2 and 2 <= point[1] < h-2}
     for (px, py) in stamped:  # crown cast shadow on the trunk
         for d in (1, 2, 3, 4):
             q = (px, py + d)
@@ -211,3 +230,6 @@ def draw_broadleaf(canvas: Canvas, x: int, y: int, palette: dict[str, RGBA], op:
             local.set_pixel(px, py, colors[0 if i % 3 == 0 else 1])
         local.mark_no_outline = False
     canvas.blit(local, x, y)
+    if graph is not None:
+        from pixelai.filters import _transform_attachment_points
+        canvas.attachments.extend(_transform_attachment_points(local.attachments, dx=x, dy=y))

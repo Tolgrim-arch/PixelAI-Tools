@@ -97,9 +97,458 @@ pixelai inspect sprite.png --ascii --ruler ruler.png
 pixelai extract sprite.png
 ```
 
+Animation specs may provide `"durations_ms": [100, 300, 100]` with one positive
+duration per rendered frame, and named clips such as
+`"clips": {"attack": {"frames": [0, 1, 2], "loop": false}}`.
+Spritesheet metadata preserves both; Godot exports named animations with
+duration weights. GIF previews preserve frame holds with GIF timing rounded to
+10 ms and a minimum of 20 ms. A GIF preview plays the complete frame sequence;
+clip selection belongs to the metadata/runtime.
+
+When `frame_count` is declared, a `char_rig` without an explicit `frame`
+advances through its existing four-pose cycle over that sequence. Longer
+sequences deliberately hold poses; an explicit `frame` freezes the requested
+pose. This removes per-frame index bookkeeping without implying additional
+in-between drawings or expressive acting.
+
 ---
 
 ## Validate and automate renders
+
+### Experimental managed production
+
+The autonomous production foundation provides a persistent agent task queue,
+stage-specific contracts, hash-bound file evidence, downstream invalidation,
+repair tasks and submission budgets. Initialize a project with a JSON brief
+containing a nonempty `goal`, then use:
+
+```sh
+pixelai project init my-project --brief brief.json
+pixelai workflow start my-project --json
+pixelai workflow next my-project --json
+pixelai workflow submit my-project --task 1 --input response.json
+pixelai workflow resume my-project --json
+```
+
+Each task reports its required output. Evidence records use paths relative to
+the project, for example `{"evidence":[{"path":"art/sprite.png"}]}`. Changing
+accepted evidence reopens dependent tasks. Reviews below 3/4 request repair.
+Review context identities are currently declarations, not host-authenticated
+isolation. The experimental workflow never grants production approval.
+
+Review tasks provide a `review_packet` with every frame at native size and
+4x nearest-neighbor zoom. Use a separate context for each reviewer and supply
+its `packet_id`, every view path in `inspected_views`, and the view records in
+the submission's `evidence` array. Missing views or stale packet identities
+cannot advance the task. Packets omit author justifications and peer scores;
+creating or declaring coverage of a packet does not attest actual observation.
+Construction submissions bind `source_path` and `image_path` to evidence
+files. Atlas PNGs also require `manifest_path`; each native frame, duration
+and named clip must match the source. GIF previews are checked after the
+renderer's palette and timing conversion.
+
+The alternatives stage requires six proposal records with distinct `id` and
+`structure` values plus `source_path` and `image_path` evidence. Every proposal
+is rerendered and must match the contracted native dimensions. Identical
+rendered proposals are rejected; pairwise silhouette diagnostics are recorded
+for review. Pixel differences alone do not establish meaningful design variety.
+
+Generate universal metadata directly with
+`pixelai render source.json -o art/sheet.png --manifest asset.json --json`.
+The source must declare `asset_id` and a `runtime` object with explicit
+`pivot`, `ground_anchor` and `sort_origin` coordinate pairs, or
+`"derive":"structure"` for a single rendered anatomy/growth/architecture/fracture graph. Optional `regions`
+and `sockets` use the same native coordinates. `runtime.frame_overrides` maps
+rendered frame index strings to coordinate/region/socket overrides.
+Coordinates are attached before post-processing and follow padding and integer
+scaling automatically. The output texture must be inside the manifest's
+directory. Metadata includes actual atlas regions, the texture hash, durations,
+clips and declared transitions. Output artifacts cannot share a path or
+overwrite the source specification.
+
+Structure-derived runtime metadata uses the rig's actual ground anchor for
+pivot/sorting and its fitted hand/foot joints or crown tips as named sockets.
+Anatomy graphs also supply view/action tags. Explicit runtime values override
+derived values; frame overrides win last. Socket dictionaries merge at each
+step. Multiple graphs are ambiguous and require separate asset specs or
+explicit coordinates. Collision regions are never guessed from the silhouette.
+
+For architecture only, explicitly request
+`"runtime":{"derive":"structure","regions_from_structure":"footprints"}`
+to export one convex collision region per modeled mass footprint. Derivation
+preserves L-shaped and courtyard gaps instead of filling a bounding rectangle.
+It also exposes the entrance socket and uses that ground point for pivot and
+sorting. Explicit regions and per-frame overrides retain precedence. These
+footprints describe solid masses; they do not implement traversable doors,
+interiors, destruction or engine-specific collision layers. Omit
+`regions_from_structure` to author collision geometry separately. The reusable
+`specs/architecture_runtime.json` demonstrates this export; managed provenance
+checks the resulting regions against the actual generated source.
+
+Top-down `char_rig` at native sizes of at least 32 accepts optional
+`"posture":{"lean":-0.15,"crouch":1.2}`. Lean ranges from -0.15 to 0.15;
+crouch ranges from 0 to 1.5 canonical 32px units and scales with the rig.
+Lean follows the rig's local horizontal axis, mirrored in the left view;
+it is not a 3D turn toward the facing direction. The torso shears above the
+legs, the head translates as one mass, and ground-line feet remain fixed.
+Equipment retains its rigid raster shape and is refitted to the grip.
+Morphology defaults to balanced when posture is used alone. Posture values
+and resulting joints are included in anatomy graphs. This bounded deformation
+does not solve IK, balance, limb-length constraints or expressive acting.
+
+`specs/acting_strike.json` demonstrates six authored frames with body loading,
+variable timing, scored beats and a damage event. Render it with
+`pixelai render specs/acting_strike.json -o OUTPUT/strike.png --columns 3 --manifest OUTPUT/strike.manifest.json`.
+Copy `specs/acting_strike.scene.json` to that output directory and run
+`pixelai scene OUTPUT/acting_strike.scene.json --output OUTPUT/scene --json`
+to inspect the exact damage-event time and both planted feet during loading.
+The example illustrates controls and checks, not a commercial-quality benchmark.
+
+Buildings can opt into a connected-volume architecture model:
+
+```json
+{"op":"building","w":96,"h":96,
+ "architecture":{"profile":"l_wing","rotation":0,"wall_height":1,"roof_pitch":1},
+ "massing_only":false}
+```
+
+Profiles are `longhouse`, `l_wing`, `t_plan`, `courtyard`, `stepped` and `tower`.
+Native width/height must be at least 64. Rotation accepts 0/90/180/270 degrees;
+wall-height and roof-pitch multipliers accept [0.8,1.2] and [0.7,1.3]. These
+controls change the underlying volumes in a fixed oblique projection, with
+depth-tested wall/roof faces. `massing_only:true` removes doors and windows for
+structural inspection. Unsupported legacy controls such as chimneys fail
+explicitly in architecture mode. Without `architecture`, the legacy generator
+is retained.
+
+`architecture_graph` metadata records mass connections, projected footprint
+corners, roof ridges and an entrance-ground anchor. Projected coordinates
+follow offset/padding/scaling; canonical volume dimensions remain model units.
+`pixelai structure SOURCE.json --full --json` exposes the graph, and managed
+proposal comparisons include architecture geometry alongside silhouettes.
+Recoloring or removing decoration cannot change this graph. Inspect
+`specs/architecture_profiles.json` for six full/massing pairs. These are
+structural building primitives, not verified interiors or finished commercial art.
+
+Rocks can opt into geometric fracture with
+`{"op":"nature_rig","kind":"rock","variant":"boulder","w":48,"h":48,"shadow":false,"fracture":{"profile":"block","cuts":3,"angle":-25}}`.
+Profiles are `slab`, `spire`, `wedge`, `block`, `shard` and `twin`. Native width
+and height must be at least 32; cuts accept integers [1,5] and angle accepts
+[-75,75] degrees. Seeded half-plane cuts partition each mass into convex
+facets with a bounded cut budget. Broad color planes follow the facets;
+there is no per-pixel noise or internal dark outline. Unsupported legacy
+controls fail explicitly. Omitted cut angles use profile-specific directions.
+
+Variants `ore` and `mossy` add structure-bound material regions.
+`fracture_only:true` hides them for a bare comparison. Ore uses
+`"deposit":{"pattern":"network","seams":2,"width":0.065}`: `vein` follows
+shared fault segments, `network` selects multiple segments, and `junction`
+forms a pocket where at least three facets meet. Width is a half-width/radius
+fraction of the mass's smaller extent, bounded to [0.03,0.12]. Seam counts
+accept integers [1,3] no greater than the cut count; junctions require at least
+two cuts, do not accept `seams`, and fail explicitly when no real junction
+exists. Moss uses `"deposit":{"coverage":0.3,"slope":0}` to clip material
+to an upper exposure plane: coverage accepts [0.1,0.5], slope [-0.5,0.5].
+`accent_color` applies only to ore and `foliage_color` only to moss. Polygons
+are clipped to actual facets and existing stone pixels; deposits preserve
+the silhouette and structural comparison signature. Inspect
+`specs/fracture_deposits.json` for ore/moss/bare comparisons. These simple
+geometric models do not establish convincing mineralogy or mature material art.
+`specs/fracture_runtime.json` is a reproducible padded/scaled ore export with
+a derived ground anchor and an explicit `rich` state tag. The tag does not
+implement depletion, collection, destruction or other resource behavior.
+
+`fracture_graph` stores the actual mass outlines, facet polygons and ground
+anchor, following offset/padding/scaling. Structure diagnostics and managed
+proposals compare these graphs; runtime anchors may be explicitly derived
+from a single graph. Collision regions remain separately authored. Inspect
+`specs/fracture_profiles.json` for mass profiles and alternate cut layouts.
+Seed/cut changes inside one silhouette do not establish meaningful catalog
+variety. These primitives do not certify geological realism or artistic finish.
+
+UI panels/buttons/slots can opt into `"composition":{"profile":"header"}`.
+Profiles are `quiet`, `brackets`, `header`, `sidebar`, `footer` and `tab`.
+They allocate chrome and protected content differently, with at most four
+ornament anchors in fixed corner caps. Border accepts integer [2,6], padding
+[2,8], ornament_budget [0,4], and content_min a positive [width,height] pair.
+Motifs are `facet`, `stud` and `chevron`; motif is inactive for quiet layouts.
+Native dimensions start at 32x24 but must fit fixed caps and required content.
+Unsupported legacy controls fail explicitly. Normal, hover, pressed, selected,
+disabled and focus states retain the same protected geometry. The legacy UI
+renderer remains available without composition.
+
+Single-composition universal frames export a source-bound `ui` contract with
+bounds, protected content, cuts and ornament anchors. Coordinates follow
+offsets/padding/scaling; a runtime state tag cannot contradict the rendered
+UI state. UI graph comparisons cover layout geometry rather than recoloring.
+`specs/ui_compositions.json` shows the six profiles; `specs/ui_states.json`
+exports six named states using `runtime.derive:structure` and a layout-origin
+pivot. UI components do not need character collision or foot-contact checks.
+
+`pixelai uicheck menu.manifest.json --frame 5 --size 64x32 --size 144x64 --output ui-review --json`
+reads the actual atlas frame, validates fixed-cap geometry, resizes nine regions
+with nearest-neighbor sampling, and emits native/4x images plus corner-preservation
+and content-coordinate diagnostics. Component bounds exclude surrounding canvas
+padding. The output directory must be new; invalid target sizes publish no bundle.
+Checks accept up to 16 targets within a four-million-native-pixel budget. The
+result remains `needs_visual_review`: text fit/localization, focus/input behavior,
+hierarchy and engine integration are unverified.
+
+Managed delivery contracts can require these technical properties:
+
+```json
+{"states":["normal","hover","pressed","selected","disabled","focus"],
+ "ui":{"target_sizes":[[64,32],[144,64]],"content_min":[40,12],"distinct_states":true}}
+```
+
+Every reachable frame must then have a UI slice contract. The checks enforce
+stable bounds/content/cuts/ornament geometry within each component group,
+minimum native and resized content capacity, and preserved corners. Requested
+distinct states must be present for each profile/view/action group and cannot
+contain identical exported component pixel sets. Transparent padding and
+renamed states cannot provide that distinction. Missing slices, insufficient
+space or relabeled duplicate states block managed construction; results are
+recorded in `delivery_verification` and returned with verification task inputs.
+Frame/target work is bounded to four million native and target pixels each.
+These checks still do not establish text fit, runtime interaction or artistic quality.
+`specs/ui_delivery.json` supplies the reusable requirement object for the six-state
+example. Put it under a managed contract's `delivery` field.
+
+`pixelai structure SOURCE.json --motion --json` analyzes named clip sequences
+using the actual rendered anatomy graphs. It requires exactly one character
+graph per frame with consistent joint IDs, roles and parents. Diagnostics
+separate chest/head/pelvis movement from limb movement, report ground travel,
+and include loop joins, repeated-frame holds, joint path lengths and spans.
+Add `--full` for ground-relative joint paths. Root translation alone does not
+count as body posing. Managed review packets recompute these diagnostics from
+verified construction sources; unavailable analysis is explicit. Limb-only
+transitions are review signals, since they may be intentional. View changes
+and large displacement cannot establish convincing acting or weight.
+
+Managed contracts can declare a structured `delivery` object containing
+`views`, `actions`, `states`, `required_combinations` and `distinct_views`.
+Runtime frame records carry explicit `view`, `action` and `state` tags through
+`runtime` defaults or per-frame overrides. For example:
+
+```json
+{"views":["down","up","left","right"],"actions":["idle","walk"],
+ "states":["healthy","hurt"],"distinct_views":true,
+ "required_combinations":[{"view":"down","action":"walk","state":"healthy"}]}
+```
+
+Coverage checks require the named tags and each explicitly valid combination;
+they do not invent a Cartesian product of incompatible gameplay states. Only
+frames reachable from exported clips count. When requested, distinct views
+cannot consist of identical frame-content sets. These checks establish
+coverage, not correct anatomy, state semantics or animation quality.
+
+For deliberate animation planning, each named clip may include a versioned
+`score`. Beat `start`/`end` values address positions in that clip's frame
+sequence, with an exclusive end; they do not address global atlas frame IDs.
+Beats must cover the entire sequence in order without gaps or overlap. Holds
+and repeated frame IDs are allowed. For a three-slot strike:
+
+```json
+{"frames":[0,1,2],"loop":false,"score":{
+ "schema_version":1,"intent":"A heavy strike followed by a slow recovery",
+ "beats":[
+  {"name":"anticipation","purpose":"Shift weight before committing","start":0,"end":1},
+  {"name":"impact","purpose":"Drive the tool into its target","start":1,"end":2},
+  {"name":"recovery","purpose":"Regain balance","start":2,"end":3}],
+ "events":[{"id":"hit","name":"damage","at_ms":100,"socket":"tool_tip"}]}}
+```
+
+Events need unique IDs and ordered nonnegative `at_ms` values below the clip's
+actual duration. An optional socket must exist in the active exported frame.
+Scores are validated before CLI export and checked against source during
+managed provenance verification. Godot exports retain clip timing; gameplay
+event handling remains the engine adapter's responsibility.
+
+A delivery contract can require
+`"animation_scores":{"strike":{"beats":["anticipation","impact","recovery"],"events":["hit"]}}`.
+Missing scores or required names block construction. Naming a beat does not
+prove visible anticipation or weight. Contextual review packets expose timing
+and event metadata while withholding the author's intent/purpose explanations.
+
+Rejected managed constructions cannot be resubmitted unchanged under the same
+delivery contract merely to obtain another review. Renaming, PNG metadata and
+transparent padding do not make new visual content. Artistic defects require
+changed pixels; purely technical/game-readiness defects can be repaired through
+changed runtime metadata while preserving artwork. Keep contract evidence
+separate from mutable construction files so normal iteration does not reopen
+the initial contract unnecessarily.
+
+`pixelai simulate asset.manifest.json --json` validates exported regions,
+texture identity, coordinates and clip timing. It reports unverified runtime
+behaviors explicitly. `pixelai diversity first.png second.png --json` provides
+approximate silhouette similarity diagnostics, not artistic approval.
+
+`pixelai scene scene.json --output preview --json` renders native contextual
+frames from exported manifests, with pivot placement, clip timing and stable
+Y sorting. The output directory must be new. The bundle contains PNG frames
+and a `trace.json` report. A scene uses:
+
+```json
+{"schema_version":1,"width":320,"height":180,"background":"#404048",
+ "times_ms":[0,100,400],
+ "actors":[{"id":"hero","manifest":"hero/asset.json","clip":"idle","position":[160,120]}]}
+```
+
+Actor positions locate each frame's pivot in world pixels. Manifest and texture
+paths remain relative to their containing files. Transition blending, artistic
+quality and seams still require separate verification.
+
+Frames may declare `regions` containing `{id, role, polygon}` records. Supported
+roles are `collision`, `hit`, `hurt`, `interaction` and `occluder`. Polygons use
+native frame coordinates and must be finite, nondegenerate and convex; use
+multiple convex regions for a concave footprint. Scene traces report overlaps
+with roles preserved. Boundary contact is not penetration. Set
+`"debug_regions": true` for visual outlines.
+
+Actors can declare `"velocity": [100, 0]` in pixels per second. Set the scene's
+`"collision_mode": "block"` to stop movement against collision-role regions;
+the default `"report"` permits movement and reports sampled overlaps. Blocking
+uses fixed 1ms ticks, stable actor-id order, X before Y, native integer steps
+and convex sweeps, independent of screenshot sampling. Blocked movement is
+discarded. Timeline position changes also attempt a swept move in blocking
+mode. Initial penetration and overlapping state geometry are errors. This is
+a reference grid solver without mass, impulses or gravity. Only collision-role
+regions block; interaction, hit, hurt and occluder regions remain diagnostic.
+`motion_budget` defaults to 10000 tick/step work units; exhaustion produces no
+output bundle. Contacts include the moving actor, obstacle and first/last times.
+
+Optional scene `expectations` assert sampled behavior, for example:
+
+```json
+[{"time_ms":400,"actor":"hero","position":[180,120],"clip":"idle",
+  "before":"tree","contacted":"wall"}]
+```
+
+Each assertion time must appear in `times_ms`. `before` checks draw order;
+`contacted` checks a recorded blocked movement on or before that time. A failed
+assertion returns CLI exit code 1 and preserves the evidence bundle with
+expected/actual diagnostics. Passing these assertions does not approve artwork.
+
+An expectation can also assert `"event":"hit"` at its exact `time_ms`.
+Scene `animation_events` traces include all occurrences, even between sampled
+screenshots. Loop events repeat; nonlooping events emit once; interruptions
+exclude old-clip events at the transition boundary; position-only updates keep
+clip phase. `event_budget` defaults to 10000 occurrences and fails before
+publishing a bundle on exhaustion. These traces describe declared gameplay
+events, not an engine callback or a visually verified impact.
+
+Use scene `planted_contacts` to declare continuous intervals where a named
+exported socket must remain fixed in world space:
+
+```json
+[{"actor":"hero","socket":"left_foot","start_ms":100,"end_ms":180,"tolerance_px":0}]
+```
+
+Every millisecond is inspected, including frames omitted from screenshots.
+Drift is measured from the interval's first world position, accounting for
+the rendered pivot and actual blocked movement. Each episode reports its
+maximum Euclidean drift, peak position/time and observation count. Excess
+drift makes the CLI return 1 with evidence preserved. Missing sockets are
+errors. Intervals require `start_ms < end_ms` within scene duration. The
+`contact_budget` defaults to 10000 observations, counting overlapping episodes
+separately; budget errors publish no bundle. These checks require explicit
+plant declarations and do not establish physical contact, weight or acting.
+
+An actor's optional `timeline` is an ordered array of `{at_ms, clip, position}`
+events. Each event can change clip, position or both; times must increase
+strictly. Position-only changes keep clip phase. An explicit clip restarts its
+phase. Changes between different clips require an exported `transitions` edge
+such as `{"from":"idle","to":"attack"}`. A clip with
+`"interruptible": false` cannot be replaced or restarted before its duration.
+These checks validate declared state changes, not transition blending or acting.
+
+`pixelai tilecheck atlas.png --mode wang16 --tile-size 16 --output tile-review`
+creates a legal-neighborhood mosaic at native and 4x size, comparison sheets
+for all 128 legal horizontal/vertical Wang16 edge pairs, and `seams.json` with
+comparison rectangles and premultiplied RGBA edge deltas. Use `--mode repeat`
+for a single bounded texture's repetition trial. Edge deltas are diagnostics;
+the result remains `needs_visual_review`. Temporal seams and Blob47 are not
+verified by this command.
+
+See [AUTONOMOUS_ROADMAP.md](AUTONOMOUS_ROADMAP.md) for implemented capabilities,
+remaining stages and acceptance criteria.
+
+### Growth-driven broadleaf architecture
+
+For oak, fruit and sakura trees, opt into a growth graph:
+
+```json
+{"op":"nature_rig","kind":"tree","variant":"oak","w":64,"h":78,
+ "seed":41,"growth":{"profile":"forked","spread":1.0,"thickness":1.0,"root_span":1.0}}
+```
+
+Profiles are `upright`, `forked`, `multi_stem`, `gnarled`, `leaning` and
+`windswept`. The graph drives trunk bends, branch topology, roots and canopy
+supports together. Optional `lean` is in [-1,1], `spread` in [0.6,1.25],
+`thickness` in [0.6,1.8] and `root_span` in [0.6,1.5]. Explicit zero lean is
+honored. Native dimensions must be at least 32x40. Pine growth graphs are not
+implemented; unsupported combinations fail explicitly.
+
+Use `trunk_only:true` with `shadow:false` to inspect roots and boughs without
+foliage. `specs/growth_profiles.json` pairs all six full and trunk-only renders.
+Existing specs retain their legacy tree geometry unless `growth` is present.
+These profiles are structural alternatives, not commercial quality approvals.
+
+`pixelai structure first.json --compare second.json --json` compares rendered
+growth, anatomy, architecture and fracture topology, normalized geometry and reflected geometry. `--full` includes
+graph records. Labels and palette changes do not count as structural changes;
+translation and integer scaling do not make a copied graph new. Managed
+proposal reports include these comparisons automatically when both proposals
+contain compatible graphs. Other asset families and visual originality remain
+outside this diagnostic's verification scope.
+
+### Top-down body proportions
+
+Native top-down `char_rig` sprites of size 32 or larger can opt into
+`"morphology":{"body_plan":"stocky"}`. Available plans are `balanced`,
+`stocky`, `slender`, `compact`, `long_legged`, `broad_shouldered` and `heavy`.
+Independent overrides cover `head_width`, `head_height`, `shoulder_width`,
+`waist_width`, `pelvis_width`, `torso_length` and `leg_length`. Run
+`pixelai guide --op char_rig` for accepted ranges and constraints.
+
+Proportions are shared across directions and anchored to the same ground
+position. Equipment keeps its rigid dimensions and pixel shape while its grip
+is fitted within the frame and remains connected to the hand. Morphology
+metadata exposes pose joints and whether equipment fitting was needed.
+`pixelai structure` and managed proposal reports compare these anatomy graphs
+independently of palette or body-plan names.
+
+`specs/morphology_profiles.json` shows idle, side-walk and attack poses for
+each plan. This increment changes proportions; it does not replace the action
+library with expressive acting. Other perspectives and native sizes below 32
+are unsupported and fail explicitly. Legacy character construction remains
+available without the opt-in field.
+
+Polygon fill now uses translation-invariant half-up scanline rounding. This
+fix prevents rigid shapes changing pixels when moved by an integer offset;
+some legacy polygon edge pixels may consequently differ from older renders.
+
+### Named structural parts
+
+The `assembly` operation renders a graph of named parts. Each part declares
+`id`, native `width`/`height`, local drawing `ops`, an optional `parent` id,
+integer `offset`, `z` draw order and a descriptive `material`. Child offsets
+are relative to the parent's origin. Moving a parent moves its children.
+Part origins survive padding and integer scaling in exported attachments.
+Missing parents, cycles, duplicate IDs and unknown part fields are errors.
+
+```json
+{"op":"assembly","parts":[
+  {"id":"torso","width":12,"height":16,"offset":[10,8],
+   "ops":[{"op":"rect","x":0,"y":0,"w":12,"h":16,"color":"#448855"}]},
+  {"id":"arm","parent":"torso","width":4,"height":10,"offset":[12,2],
+   "ops":[{"op":"rect","x":0,"y":0,"w":4,"h":10,"color":"#669966"}]}
+]}
+```
+
+This initial assembly contract supports translation and draw order. It does
+not yet solve anatomical constraints, rotations, contact physics or automatic
+structural diversity. Use explicit `frame_count` for animation nested in parts.
 
 New artwork can enforce generation without imported assets:
 

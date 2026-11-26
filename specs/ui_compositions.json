@@ -1,0 +1,11 @@
+{
+  "width":96,"height":48,"style":"lineless","fresh":true,
+  "frames":[
+    {"ops":[{"op":"ui_rig","w":96,"h":48,"theme":"gold","composition":{"profile":"quiet"}}]},
+    {"ops":[{"op":"ui_rig","w":96,"h":48,"theme":"gold","composition":{"profile":"brackets"}}]},
+    {"ops":[{"op":"ui_rig","w":96,"h":48,"theme":"gold","composition":{"profile":"header"}}]},
+    {"ops":[{"op":"ui_rig","w":96,"h":48,"theme":"gold","composition":{"profile":"sidebar"}}]},
+    {"ops":[{"op":"ui_rig","w":96,"h":48,"theme":"gold","composition":{"profile":"footer"}}]},
+    {"ops":[{"op":"ui_rig","w":96,"h":48,"theme":"gold","composition":{"profile":"tab"}}]}
+  ]
+}

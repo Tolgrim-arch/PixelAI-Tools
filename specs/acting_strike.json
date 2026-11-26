@@ -1,0 +1,34 @@
+{
+  "asset_id": "acting_strike",
+  "width": 64,
+  "height": 64,
+  "style": "ext_outline",
+  "fresh": true,
+  "durations_ms": [100, 120, 60, 70, 140, 180],
+  "runtime": {"derive": "structure", "state": "healthy"},
+  "frames": [
+    {"ops": [{"op":"char_rig","size":64,"dir":"right","pose":"attack","frame":0,"shadow":false,"morphology":{"body_plan":"stocky"},"posture":{"lean":-0.08,"crouch":0.3}}]},
+    {"ops": [{"op":"char_rig","size":64,"dir":"right","pose":"attack","frame":0,"shadow":false,"morphology":{"body_plan":"stocky"},"posture":{"lean":-0.15,"crouch":1.2}}]},
+    {"ops": [{"op":"char_rig","size":64,"dir":"right","pose":"attack","frame":1,"shadow":false,"morphology":{"body_plan":"stocky"},"posture":{"lean":0,"crouch":0.7}}]},
+    {"ops": [{"op":"char_rig","size":64,"dir":"right","pose":"attack","frame":2,"shadow":false,"morphology":{"body_plan":"stocky"},"posture":{"lean":0.15,"crouch":1.5}}]},
+    {"ops": [{"op":"char_rig","size":64,"dir":"right","pose":"attack","frame":3,"shadow":false,"morphology":{"body_plan":"stocky"},"posture":{"lean":0.08,"crouch":0.6}}]},
+    {"ops": [{"op":"char_rig","size":64,"dir":"right","pose":"attack","frame":3,"shadow":false,"morphology":{"body_plan":"stocky"},"posture":{"lean":0,"crouch":0}}]}
+  ],
+  "clips": {
+    "strike": {
+      "frames": [0,1,2,3,4,5], "loop": false, "interruptible": false,
+      "score": {
+        "schema_version": 1,
+        "intent": "A stocky worker loads the body before committing to a heavy strike, then settles after recovery.",
+        "beats": [
+          {"name":"anticipation","purpose":"Load the legs and move the chest away from the target","start":0,"end":2},
+          {"name":"commitment","purpose":"Shift the upper body toward the target","start":2,"end":3},
+          {"name":"impact","purpose":"Follow the tool with body mass","start":3,"end":4},
+          {"name":"recovery","purpose":"Release the crouch and reduce the lean","start":4,"end":5},
+          {"name":"settle","purpose":"Return the torso to neutral without inventing extra tool motion","start":5,"end":6}
+        ],
+        "events": [{"id":"hit","name":"damage","at_ms":280,"socket":"arm_1_hand"}]
+      }
+    }
+  }
+}

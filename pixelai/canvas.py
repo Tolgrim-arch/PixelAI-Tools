@@ -276,7 +276,9 @@ class Canvas:
                         xs.append(x_int)
                 xs.sort()
                 for i in range(0, len(xs) - 1, 2):
-                    self.draw_line(int(round(xs[i])), y, int(round(xs[i + 1])), y, color)
+                    # Half-to-even rounding changes fill coverage after odd-pixel
+                    # translations. A fixed half-up rule preserves raster shape.
+                    self.draw_line(math.floor(xs[i] + .5), y, math.floor(xs[i + 1] + .5), y, color)
 
         for i in range(n):
             x0, y0 = points[i]

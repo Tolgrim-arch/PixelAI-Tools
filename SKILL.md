@@ -5,6 +5,33 @@ description: Generate deterministic pixel art sprites, isometric buildings, 16-t
 
 # pixelai-tools Skill
 
+## Managed autonomous production
+
+For a managed production request, initialize a project and follow
+`pixelai workflow next PROJECT --json` until it requests the next action.
+Use the returned stage requirements and project-relative evidence paths.
+Never replace required image evidence with a written claim. Construction
+verifies fresh native PNG and atlas sources pixel-for-pixel, including atlas
+timing and clip definitions; provide manifest evidence for atlas construction.
+GIF previews are checked after palette conversion and timing quantization.
+Use separate contexts for artistic and contextual review. A score below 3/4
+requires repair; do not improve the score without changing or disproving the
+reported defect. Review pivot, collision, sorting, direction, transition,
+background, scale, gameplay state and seamless-tile requirements where applicable.
+The experimental workflow cannot grant production approval yet. Report its
+blocked state honestly and preserve the project for resumption.
+
+Review tasks return role-specific `review_packet` data. Supply that packet's
+`packet_id`, all generated view paths in `inspected_views` and each view's
+path/hash in `evidence`. Inspect every native and 4x frame. The generated
+packet deliberately excludes author arguments and the other reviewer's scores.
+Packet coverage is a completeness check, not authenticated host observation.
+
+Use `assembly` for named parented parts and structural edits. Use `diversity`
+to compare individual silhouettes, recognizing legitimate shared shapes.
+Specify `durations_ms` and named `clips` for holds and distinct actions;
+identical frames can be intentional pauses.
+
 ## Fresh generation and acceptance
 - For a new asset, write a new spec with `"fresh": true`; validate and render with `--fresh`. Do not import an old PNG, inherit an old spec, or copy a rejected design into a new deliverable. Existing files are references only unless the user requests editing an accepted asset.
 - Use a new explicit seed for a requested variation and compare silhouettes, not just colors. Keep rejected work separate and never present it as a new result.

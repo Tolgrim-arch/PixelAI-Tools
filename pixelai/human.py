@@ -1,10 +1,11 @@
 """Native 32+ px top-down humans with articulated limbs and directional clothing."""
 
-from math import hypot
+from math import ceil, hypot
 from typing import Any
 
 from pixelai.canvas import Canvas
 from pixelai.color import RGBA, brighten, darken, ground_shadow_color, parse_color
+from pixelai.geometry import tapered_polygon
 
 Point = tuple[float, float]
 
@@ -30,39 +31,65 @@ BACK_SWING = (
 )
 
 
+def axe_geometry(hand, tip):
+    dx, dy = tip[0]-hand[0], tip[1]-hand[1]
+    length = hypot(dx, dy)
+    if length <= 1e-9:
+        raise ValueError("Tool grip and tip must differ")
+    tx, ty = dx/length, dy/length
+
+    def blade(along, across):
+        return tip[0]+tx*along-ty*across, tip[1]+ty*along+tx*across
+
+    handle = blade(-length-1.3, 0), blade(.6, 0)
+    body = [blade(-1.7, -.45), blade(.1, -.55), blade(1.25, 1.05), blade(1.45, 2.2), blade(.0, 2.7), blade(-1.55, 1.7)]
+    highlight = [blade(.15, .3), blade(1.15, 1.3), blade(1.2, 2.15), blade(.05, 2.4), blade(-.8, 1.9)]
+    return handle, body, highlight
+
+
 class Human:
-    def __init__(self, canvas: Canvas, x: int, y: int, size: int, mirror: bool) -> None:
+    def __init__(self, canvas: Canvas, x: int, y: int, size: int, mirror: bool, morphology=None) -> None:
         self.canvas = canvas
         self.x = x
         self.y = y
         self.scale = size / 32
         self.mirror = mirror
         self.size = size
+        self.morphology = morphology
+        self.centered = morphology is not None
+        self.legs = []
+        self.arms = []
+        self.equipment_fitted = False
+        self.pixel_offset = (0, 0)
 
     def point(self, point: Point) -> tuple[int, int]:
+        if self.morphology is not None:
+            point = self.morphology.point(point)
         x, y = point
+        if self.centered:
+            local_x = round(x*self.scale) + self.size//2 - round(15.5*self.scale)
+            if self.mirror:
+                local_x = 2*(self.size//2)-local_x
+            return self.x + local_x + self.pixel_offset[0], self.y + round(y*self.scale) + self.pixel_offset[1]
         native_x = round(x * self.scale)
-        return self.x + (self.size - 1 - native_x if self.mirror else native_x), self.y + round(y * self.scale)
+        return self.x + (self.size - 1 - native_x if self.mirror else native_x) + self.pixel_offset[0], self.y + round(y * self.scale) + self.pixel_offset[1]
 
     def plane(self, color: RGBA, *points: Point) -> None:
         self.canvas.draw_polygon([self.point(point) for point in points], color, filled=True)
 
     def dot(self, color: RGBA, x: float, y: float, rx: float, ry: float) -> None:
+        if self.morphology is not None:
+            rx, ry = self.morphology.radii(x, y, rx, ry)
         self.canvas.draw_ellipse(*self.point((x, y)), max(0, round(rx * self.scale)),
                                  max(0, round(ry * self.scale)), color, filled=True)
 
     def link(self, color: RGBA, start: Point, end: Point, root: float, tip: float) -> None:
         """Rasterize a tapered limb or handle along a pair of joints."""
-        dx, dy = end[0] - start[0], end[1] - start[1]
-        length = hypot(dx, dy) or 1
-        nx, ny = -dy / length, dx / length
-        self.plane(color, (start[0] + nx * root, start[1] + ny * root),
-                   (end[0] + nx * tip, end[1] + ny * tip),
-                   (end[0] - nx * tip, end[1] - ny * tip),
-                   (start[0] - nx * root, start[1] - ny * root))
+        self.plane(color, *tapered_polygon(start, end, root, tip))
 
     def boot(self, pants: RGBA, shoes: RGBA, hip: Point, knee: Point, foot: Point,
              side: bool, far: bool) -> None:
+        self.legs.append((hip, knee, foot))
         self.link(pants, hip, knee, 1.85, 1.35)
         self.link(pants, knee, foot, 1.35, 1.05)
         x, y = foot
@@ -75,6 +102,7 @@ class Human:
                    (x + toe, y - .2), (x + toe - .75, y + .25), (x + .15, y + .15))
 
     def arm(self, shirt: RGBA, skin: RGBA, shoulder: Point, elbow: Point, hand: Point) -> None:
+        self.arms.append((shoulder, elbow, hand))
         self.link(shirt, shoulder, elbow, 1.35, 1.0)
         self.link(darken(shirt, .83), elbow, hand, 1.0, .7)
         # Subtle sleeve cuff accent just above the hand
@@ -83,19 +111,38 @@ class Human:
         self.dot(brighten(shirt, 1.18), cuff_x, cuff_y, .72, .45)
         self.dot(skin, *hand, .8, .9)
 
-    def axe(self, wood: RGBA, metal: RGBA, hand: Point, tip: Point) -> None:
-        dx, dy = tip[0] - hand[0], tip[1] - hand[1]
-        length = hypot(dx, dy)
-        tx, ty = dx / length, dy / length
-
-        def blade(along: float, across: float) -> Point:
-            return tip[0] + tx * along - ty * across, tip[1] + ty * along + tx * across
-
-        self.link(wood, blade(-length - 1.3, 0), blade(.6, 0), .4, .42)
-        self.plane(darken(metal, .72), blade(-1.7, -.45), blade(.1, -.55),
-                   blade(1.25, 1.05), blade(1.45, 2.2), blade(.0, 2.7), blade(-1.55, 1.7))
-        self.plane(metal, blade(.15, .3), blade(1.15, 1.3),
-                   blade(1.2, 2.15), blade(.05, 2.4), blade(-.8, 1.9))
+    def axe(self, wood: RGBA, metal: RGBA, hand: Point, tip: Point) -> Point:
+        if self.morphology is not None:
+            morphology = self.morphology
+            mapped = morphology.point(hand)
+            delta = (round((mapped[0]-hand[0])*self.scale)/self.scale,
+                     round((mapped[1]-hand[1])*self.scale)/self.scale)
+            mapped = hand[0]+delta[0], hand[1]+delta[1]
+            mapped_tip = tip[0]+delta[0], tip[1]+delta[1]
+            handle, body, highlight = axe_geometry(mapped, mapped_tip)
+            points = tapered_polygon(handle[0], handle[1], .4, .42) + body + highlight
+            xs, ys = [point[0] for point in points], [point[1] for point in points]
+            shift_x = (ceil(max(0, 3-min(xs))*self.scale)-ceil(max(0, max(xs)-29)*self.scale))/self.scale
+            shift_y = (ceil(max(0, 2-min(ys))*self.scale)-ceil(max(0, max(ys)-29)*self.scale))/self.scale
+            mapped = mapped[0]+shift_x, mapped[1]+shift_y
+            self.equipment_fitted = abs(shift_x)+abs(shift_y) > 1e-9
+            pixel_delta = (round((mapped[0]-hand[0])*self.scale), round((mapped[1]-hand[1])*self.scale))
+            previous_offset = self.pixel_offset
+            self.pixel_offset = (previous_offset[0]+pixel_delta[0]*(-1 if self.mirror else 1), previous_offset[1]+pixel_delta[1])
+            self.morphology = None
+            try:
+                self.axe(wood, metal, hand, tip)
+            finally:
+                self.morphology = morphology
+                self.pixel_offset = previous_offset
+            target = ((round(hand[0]*self.scale)+pixel_delta[0])/self.scale,
+                      (round(hand[1]*self.scale)+pixel_delta[1])/self.scale)
+            return morphology.inverse_point(target)
+        handle, body, highlight = axe_geometry(hand, tip)
+        self.link(wood, handle[0], handle[1], .4, .42)
+        self.plane(darken(metal, .72), *body)
+        self.plane(metal, *highlight)
+        return hand
 
 
 def draw_topdown_human(canvas: Canvas, x: int, y: int, size: int, direction: str,
@@ -104,7 +151,14 @@ def draw_topdown_human(canvas: Canvas, x: int, y: int, size: int, direction: str
     """Draw one facing and one pose using 32px design coordinates."""
     side = direction in ("right", "left")
     back = direction == "up"
-    human = Human(canvas, x, y, size, direction == "left")
+    morphology = None
+    if "morphology" in op or "posture" in op:
+        from pixelai.morphology import Morphology
+        morphology = Morphology(op.get("morphology", {}))
+        if "posture" in op:
+            from pixelai.posture import PosturedBody
+            morphology = PosturedBody(morphology, op["posture"])
+    human = Human(canvas, x, y, size, direction == "left", morphology)
     p, d = human.plane, human.dot
 
     def color(key: str, name: str, fallback: str) -> RGBA:
@@ -237,7 +291,9 @@ def draw_topdown_human(canvas: Canvas, x: int, y: int, size: int, direction: str
     if working:
         hand, elbow, tip = (PROFILE_SWING if side else BACK_SWING if back else FRONT_SWING)[frame]
         hand, elbow, tip = ((px, py + bob) for px, py in (hand, elbow, tip))
-        human.axe(color("handle", "wood", "#9c603c"), color("tool", "stone_l", "#b5bfd1"), hand, tip)
+        old_hand = hand
+        hand = human.axe(color("handle", "wood", "#9c603c"), color("tool", "stone_l", "#b5bfd1"), hand, tip)
+        elbow = elbow[0]+(hand[0]-old_hand[0])*.5, elbow[1]+(hand[1]-old_hand[1])*.5
     elif side:
         elbow = 14.5 + travel * .72, 18.2 + bob
         hand = 14.8 + travel * 1.1, 20.9 + bob - abs(stride) * .55
@@ -251,6 +307,31 @@ def draw_topdown_human(canvas: Canvas, x: int, y: int, size: int, direction: str
     if "hat" in op:
         hat = parse_color(op["hat"], palette)
         _draw_hat(human, back, side, bob, hat, shade)
+    if morphology is not None:
+        nodes = [{"id": "ground", "parent": None, "point": list(human.point((15.5, 28))), "role": "ground", "radius": 0},
+                 {"id": "pelvis", "parent": "ground", "point": list(human.point((15.5, hip_y))), "role": "pelvis", "radius": 0},
+                 {"id": "chest", "parent": "pelvis", "point": list(human.point((15.5, shoulder_y))), "role": "chest", "radius": 0},
+                 {"id": "head", "parent": "chest", "point": list(human.point((15.5, 8.5+bob))), "role": "head", "radius": 0}]
+        for name, parent, point, role in (
+            ("head_left", "head", (10.6, 8.5+bob), "head_edge"),
+            ("head_right", "head", (20.8, 8.5+bob), "head_edge"),
+            ("waist_left", "pelvis", (left, 18.7+bob), "waist_edge"),
+            ("waist_right", "pelvis", (right, 18.7+bob), "waist_edge"),
+        ):
+            nodes.append({"id": name, "parent": parent, "point": list(human.point(point)), "role": role, "radius": 0})
+        for family, limbs, parent, roles in (("leg", human.legs, "pelvis", ("hip", "knee", "foot")),
+                                              ("arm", human.arms, "chest", ("shoulder", "elbow", "hand"))):
+            for index, points in enumerate(limbs):
+                previous = parent
+                for joint, point in zip(roles, points):
+                    name = f"{family}_{index}_{joint}"
+                    nodes.append({"id": name, "parent": previous, "point": list(human.point(point)), "role": joint, "radius": 0})
+                    previous = name
+        canvas.attachments.append({"type": "anatomy_graph", "schema_version": 1, "profile": morphology.body_plan,
+                                   "view": direction, "action": pose, "ground_anchor": list(human.point((15.5, 28))),
+                                   "proportions": morphology.values,
+                                   **({"posture": morphology.posture} if hasattr(morphology, "posture") else {}),
+                                   "equipment_fitted": human.equipment_fitted, "nodes": nodes})
 
 
 def _draw_head(human: Human, back: bool, side: bool, bob: float, skin: RGBA,
