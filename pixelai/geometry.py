@@ -3,6 +3,17 @@
 import math
 
 
+def tapered_polygon(start, end, root_radius, tip_radius):
+    """Return a tapered segment quad in the caller's coordinate space."""
+    dx, dy = end[0] - start[0], end[1] - start[1]
+    length = math.hypot(dx, dy) or 1
+    nx, ny = -dy / length, dx / length
+    return [(start[0] + nx * root_radius, start[1] + ny * root_radius),
+            (end[0] + nx * tip_radius, end[1] + ny * tip_radius),
+            (end[0] - nx * tip_radius, end[1] - ny * tip_radius),
+            (start[0] - nx * root_radius, start[1] - ny * root_radius)]
+
+
 def _cross(a, b, c):
     return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
 

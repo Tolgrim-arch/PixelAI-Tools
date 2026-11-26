@@ -133,6 +133,20 @@ def operate(project, action, task=None, response=None):
                             "latest_repair": json.loads(repair[0]) if repair else None, "approval_supported": False}
                 contract = db.execute("SELECT response FROM tasks WHERE stage='contract'").fetchone()
                 category = json.loads(contract[0]).get("category") if contract and contract[0] else None
+                inputs = {}
+                if row[1] == "contract":
+                    inputs["brief"] = json.loads((Path(project) / "brief.json").read_text(encoding="utf-8-sig"))
+                elif row[1] not in ("art_review", "context_review"):
+                    inputs["contract"] = {key: json.loads(contract[0]).get(key) for key in
+                                          ("category", "native_size", "art_direction", "functional_requirements", "delivery")}
+                if row[1] == "construction":
+                    alternatives = json.loads(db.execute("SELECT response FROM tasks WHERE stage='alternatives'").fetchone()[0])
+                    inputs["selected_proposal"] = next(proposal for proposal in alternatives["proposals"] if proposal["id"] == alternatives["selected_id"])
+                    inputs["proposal_comparisons"] = alternatives.get("proposal_comparisons", [])
+                    inputs["growth_comparisons"] = alternatives.get("growth_comparisons", [])
+                elif row[1] == "verification":
+                    construction = json.loads(db.execute("SELECT response FROM tasks WHERE stage='construction'").fetchone()[0])
+                    inputs["construction"] = {key: construction.get(key) for key in ("source_path", "image_path", "manifest_path", "revision_identity", "evidence")}
                 review_packet = None
                 if row[1] in ("art_review", "context_review"):
                     from pixelai.review_packet import prepare_packet
@@ -141,6 +155,7 @@ def operate(project, action, task=None, response=None):
                 return {"status": "needs_agent", "task_id": row[0], "stage": row[1], "guidance": row[2],
                         "required_output": REQUIREMENTS[row[1]], "usage": usage, "limits": limits,
                         "quality_protocol": task_guidance(category, row[1]),
+                        "inputs": inputs,
                         "review_packet": review_packet,
                         "latest_repair": json.loads(repair[0]) if repair and review_packet is None else None, "approval_supported": False}
             count = db.execute("SELECT count(*) FROM tasks").fetchone()[0]

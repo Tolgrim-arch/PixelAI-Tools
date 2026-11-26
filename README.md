@@ -231,6 +231,35 @@ verified by this command.
 See [AUTONOMOUS_ROADMAP.md](AUTONOMOUS_ROADMAP.md) for implemented capabilities,
 remaining stages and acceptance criteria.
 
+### Growth-driven broadleaf architecture
+
+For oak, fruit and sakura trees, opt into a growth graph:
+
+```json
+{"op":"nature_rig","kind":"tree","variant":"oak","w":64,"h":78,
+ "seed":41,"growth":{"profile":"forked","spread":1.0,"thickness":1.0,"root_span":1.0}}
+```
+
+Profiles are `upright`, `forked`, `multi_stem`, `gnarled`, `leaning` and
+`windswept`. The graph drives trunk bends, branch topology, roots and canopy
+supports together. Optional `lean` is in [-1,1], `spread` in [0.6,1.25],
+`thickness` in [0.6,1.8] and `root_span` in [0.6,1.5]. Explicit zero lean is
+honored. Native dimensions must be at least 32x40. Pine growth graphs are not
+implemented; unsupported combinations fail explicitly.
+
+Use `trunk_only:true` with `shadow:false` to inspect roots and boughs without
+foliage. `specs/growth_profiles.json` pairs all six full and trunk-only renders.
+Existing specs retain their legacy tree geometry unless `growth` is present.
+These profiles are structural alternatives, not commercial quality approvals.
+
+`pixelai structure first.json --compare second.json --json` compares rendered
+growth topology, normalized geometry and reflected geometry. `--full` includes
+graph records. Labels and palette changes do not count as structural changes;
+translation and integer scaling do not make a copied graph new. Managed
+proposal reports include these comparisons automatically when both proposals
+contain growth graphs. The current command does not yet analyze other asset
+families or certify visual originality.
+
 ### Named structural parts
 
 The `assembly` operation renders a graph of named parts. Each part declares

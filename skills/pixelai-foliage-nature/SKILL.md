@@ -48,6 +48,25 @@ Use the following design choices to interpret the brief. Use sensible defaults f
 
 ## Native generation quality protocol
 
+- For structural broadleaf alternatives, use `growth` on oak, fruit or sakura
+  trees. Available profiles are `upright`, `forked`, `multi_stem`, `gnarled`,
+  `leaning` and `windswept`. Native sizes must be at least 32x40. Pine growth
+  graphs are not implemented; do not claim that changing a pine seed provides
+  the new graph capability.
+- Render each growth candidate twice with the same seed and options: a full
+  tree and `trunk_only:true, shadow:false`. Compare forks, bends, roots and
+  canopy supports before discussing foliage color or details.
+- Use `pixelai structure candidate.json --compare prior.json --json` to
+  compare rendered graph topology and geometry. A different profile label,
+  recolor, translated graph or rescaled graph is not structural novelty.
+- `growth.lean` accepts [-1,1], `spread` [0.6,1.25], `thickness` [0.6,1.8] and
+  `root_span` [0.6,1.5]. Explicit zero lean is respected. Unknown options fail.
+  Keep seed and growth options fixed across wind frames.
+- Growth profiles are an initial structural system, not proof of natural
+  anatomy or commercial finish. Reject disconnected bead-like canopies,
+  identical root language and unconvincing load-bearing branches after viewing
+  actual pixels. Inspect the generated graph and revise the structure.
+
 - Start from a new JSON spec. Do not use `extends` or `load_png` by default. Never present rejected assets as new designs; reuse only when explicitly requested.
 - Set `w` and `h` to native asset dimensions when arranging several assets. Trees otherwise use canvas dimensions. Do not enlarge a 32px source into a nominal 128px asset.
 - `seed` controls deterministic tree geometry and foliage. Compare two seeds per requested species; require silhouette differences, not only color/noise. Keep the seed fixed across wind frames.

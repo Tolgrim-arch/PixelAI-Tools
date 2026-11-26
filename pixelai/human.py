@@ -5,6 +5,7 @@ from typing import Any
 
 from pixelai.canvas import Canvas
 from pixelai.color import RGBA, brighten, darken, ground_shadow_color, parse_color
+from pixelai.geometry import tapered_polygon
 
 Point = tuple[float, float]
 
@@ -53,13 +54,7 @@ class Human:
 
     def link(self, color: RGBA, start: Point, end: Point, root: float, tip: float) -> None:
         """Rasterize a tapered limb or handle along a pair of joints."""
-        dx, dy = end[0] - start[0], end[1] - start[1]
-        length = hypot(dx, dy) or 1
-        nx, ny = -dy / length, dx / length
-        self.plane(color, (start[0] + nx * root, start[1] + ny * root),
-                   (end[0] + nx * tip, end[1] + ny * tip),
-                   (end[0] - nx * tip, end[1] - ny * tip),
-                   (start[0] - nx * root, start[1] - ny * root))
+        self.plane(color, *tapered_polygon(start, end, root, tip))
 
     def boot(self, pants: RGBA, shoes: RGBA, hip: Point, knee: Point, foot: Point,
              side: bool, far: bool) -> None:

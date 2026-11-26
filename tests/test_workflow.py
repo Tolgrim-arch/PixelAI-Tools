@@ -135,6 +135,9 @@ class WorkflowTest(unittest.TestCase):
                 operate(project, "submit", 99, response)
             for _ in range(6):
                 task = operate(project, "next")
+                if task["stage"] == "construction":
+                    self.assertEqual(task["inputs"]["selected_proposal"]["id"], "0")
+                    self.assertEqual(len(task["inputs"]["proposal_comparisons"]), 15)
                 data = {"source_path": "source.json", "image_path": "art.png", "evidence": [{"path": "evidence.txt"}, {"path": "art.png"}, {"path": "source.json"}]}
                 if task["stage"] == "contract":
                     data.update(category="item", native_size=[32, 32], art_direction="Readable clean clusters", functional_requirements=[])

@@ -142,6 +142,11 @@ def draw_nature_rig(
     draw_shadow = bool(op.get("shadow", True))
     ground_base = str(op.get("ground_base", "none")).lower()
     frame = int(op.get("frame", frame_idx)) % 4
+    if "growth" in op or "trunk_only" in op:
+        if kind != "tree" or variant == "pine":
+            raise ValueError("growth controls currently support oak, fruit and sakura trees only")
+        if "growth" not in op:
+            raise ValueError("trunk_only requires an explicit growth graph configuration")
 
     if kind == "tree":
         drawer = conifer.draw_pine if variant == "pine" else broadleaf.draw_broadleaf

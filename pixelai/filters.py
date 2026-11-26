@@ -23,7 +23,8 @@ def _copy_meta(src: Canvas, dst: Canvas) -> None:
 def _transform_attachment_points(value, factor: int = 1, dx: int = 0, dy: int = 0):
     """Transform coordinate pairs in runtime attachment metadata."""
     if isinstance(value, dict):
-        return {key: _transform_attachment_points(item, factor, dx, dy) for key, item in value.items()}
+        return {key: (item * factor if key == "radius" and type(item) in (int, float)
+                      else _transform_attachment_points(item, factor, dx, dy)) for key, item in value.items()}
     if isinstance(value, list):
         if len(value) == 2 and all(type(item) in (int, float) for item in value):
             return [value[0] * factor + dx, value[1] * factor + dy]

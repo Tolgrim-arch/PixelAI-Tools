@@ -918,6 +918,19 @@ def build_parser() -> argparse.ArgumentParser:
     diff_p.add_argument("--json", action="store_true", help="Print diff metrics as JSON.")
     diff_p.set_defaults(func=_cmd_diff)
 
+    structure_p = sub.add_parser("structure", help="Inspect and compare rendered growth graphs independently of colors and labels.")
+    structure_p.add_argument("spec")
+    structure_p.add_argument("--compare", help="Optional second source specification.")
+    structure_p.add_argument("--frame", type=int, default=0)
+    structure_p.add_argument("--full", action="store_true", help="Include complete rendered graph records.")
+    structure_p.add_argument("--json", action="store_true")
+
+    def report_structure(args):
+        from pixelai.structure import analyze_structures
+        print(json.dumps(analyze_structures(_read_spec(args.spec), _read_spec(args.compare) if args.compare else None, args.frame, args.full)))
+        return 0
+
+    structure_p.set_defaults(func=report_structure)
     from pixelai.workflow import register
     register(sub)
     from pixelai.manifest import register as register_manifest

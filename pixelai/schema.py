@@ -176,7 +176,7 @@ _GENERATOR_FIELDS = {
     "portrait_rig": "x y width height style preset face_dir dir expression gesture hat scar beard hair_style headband cheek_marks fill_background skin skin_l skin_d hair hair_l hair_d shirt shirt_d garment garment_d accent eye_color hat_color hat_light hat_dark ink beard_color headband_color headband_plate headband_emblem background cheek_mark_color",
     "animal_rig": "x y species variant dir pose frame total_frames perspective body shade deep_shade nest_prop ground_prop emotes shadow_color",
     "item_rig": "x y kind item orientation size shine frame shadow_color color secondary_color glass_color cork_color fill_level state flame_color",
-    "nature_rig": "x y kind variant stage sway ground_base frame w h seed color trunk_color accent_color shadow_color foliage_color bark_ramp band_colors ramp fruit bush_ramp shape layout r style",
+    "nature_rig": "x y kind variant stage sway ground_base frame w h seed color trunk_color accent_color shadow_color foliage_color bark_ramp band_colors ramp fruit bush_ramp shape layout r style growth trunk_only",
     "ui_rig": "x y kind component theme state selected color count w h frame_width inner_fill fill value fill_color segmented filled",
     "tilemap": "x y tile_w tile_h mode map rows step_x step_y",
     "autotile": "x y tile_size inner outer lip seed",
@@ -190,6 +190,13 @@ _GENERATOR_FIELDS = {
 for _name, _fields in _GENERATOR_FIELDS.items():
     OP_SPECS[_name]["optional"] = sorted((set(OP_SPECS[_name]["optional"]) | set(_fields.split())) - set(OP_SPECS[_name]["required"]))
     OP_SPECS[_name].pop("flexible", None)
+
+OP_SPECS["nature_rig"]["notes"] = [
+    "Optional growth graph for oak/fruit/sakura: growth.profile = upright|forked|multi_stem|gnarled|leaning|windswept.",
+    "growth.lean [-1,1], spread [0.6,1.25], thickness [0.6,1.8], root_span [0.6,1.5]; unknown growth fields are errors.",
+    "Growth trees require native w>=32, h>=40. trunk_only:true requires growth and reveals the complete trunk/root structure for review.",
+    "The same graph drives trunk geometry and canopy supports. Inspect trunk-only and full renders; profile differences do not certify artistic quality.",
+]
 
 
 POST_OP_SPECS: dict[str, dict[str, Any]] = {
@@ -300,6 +307,7 @@ def format_op_guide(op_name: str) -> str:
             "Example:",
             json.dumps(meta["example"], indent=2),
         ]
+        lines.extend(["", *meta.get("notes", [])])
         return "\n".join(lines)
     if key in POST_OP_SPECS:
         meta = POST_OP_SPECS[key]

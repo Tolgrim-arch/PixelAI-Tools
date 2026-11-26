@@ -56,13 +56,14 @@ def verify_construction(project, submission, native_size=None):
     fps = spec.get("fps", 8)
     timings = durations_ms(len(frames), fps, spec.get("durations_ms"))
     clips = clips_by_index(len(frames), spec.get("clips"))
+    proof = {"frame_count": len(frames), "growth_graphs": [record for record in frames[0].attachments if record.get("type") == "growth_graph"]}
     if image_path.suffix.lower() == ".gif":
         with tempfile.TemporaryDirectory(prefix="pixelai-provenance-") as directory:
             expected = Path(directory) / "expected.gif"
             export_gif(frames, expected, fps=fps, durations_ms=timings)
             if _gif_sequence(image_path) != _gif_sequence(expected):
                 raise ValueError("GIF pixels or timing do not match the submitted source")
-        return
+        return proof
     if image_path.suffix.lower() != ".png":
         raise ValueError("Managed construction supports native PNG, atlas PNG and GIF previews")
     manifest_name = submission.get("manifest_path")
@@ -72,7 +73,7 @@ def verify_construction(project, submission, native_size=None):
         with Image.open(image_path) as image:
             if not _matches(image, frames[0]):
                 raise ValueError("Rendered image does not match the submitted source specification")
-        return
+        return proof
     if not isinstance(manifest_name, str) or manifest_name not in evidence:
         raise ValueError("manifest_path must identify submitted manifest evidence")
     manifest_path = root / manifest_name
@@ -104,3 +105,4 @@ def verify_construction(project, submission, native_size=None):
         raise ValueError("Manifest clips do not match the source actions")
     if "transitions" in spec and manifest.get("transitions", []) != spec["transitions"]:
         raise ValueError("Manifest transitions do not match the source")
+    return proof

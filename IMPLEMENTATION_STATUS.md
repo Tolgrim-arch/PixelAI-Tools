@@ -30,6 +30,9 @@
 - PNG metadata and Godot exports preserve explicit per-frame durations and named clips; GIF previews preserve holds within GIF timing limits.
 - Procedural library included in wheel/sdist builds and resolved from installed packages.
 - Named assembly parts with validated parent graphs, inherited offsets, deterministic draw order, material labels and transform-aware exported origins.
+- Optional versioned broadleaf growth graphs drive trunk, roots, forks and canopy supports for six distinct architectures. Trunk-only inspection and native-size/seed tests cover structure independently of foliage color; legacy trees remain unchanged without opt-in.
+- Growth graph topology/geometry/reflection comparisons ignore labels, translation and scale; managed proposal reports include these structural comparisons alongside silhouettes.
+- Pending tasks return their required brief, contract, selected proposal and comparison inputs, allowing an agent to resume without recovering previous chat messages. Reviewer tasks keep author-side inputs excluded.
 
 ## Current limits
 

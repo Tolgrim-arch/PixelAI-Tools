@@ -90,11 +90,13 @@ def validate_submission(stage, data, previous, project=None):
             raise ValueError("selected_id must identify one of the proposals")
         if project is not None:
             images = []
+            graphs = []
             contents = set()
             for proposal in proposals:
                 if not isinstance(proposal.get("image_path"), str) or Path(proposal["image_path"]).suffix.lower() != ".png":
                     raise ValueError("Each proposal requires native PNG image_path evidence")
-                verify_construction(project, {**proposal, "evidence": data["evidence"]}, previous.get("contract", {}).get("native_size"))
+                proof = verify_construction(project, {**proposal, "evidence": data["evidence"]}, previous.get("contract", {}).get("native_size"))
+                graphs.append((proposal["id"], proof["growth_graphs"]))
                 path = Path(project) / proposal["image_path"]
                 with Image.open(path) as image:
                     image = image.convert("RGBA")
@@ -110,6 +112,13 @@ def validate_submission(stage, data, previous, project=None):
                 {"first": first_id, "second": second_id, **compare_silhouettes(first_path, second_path)}
                 for index, (first_id, first_path) in enumerate(images)
                 for second_id, second_path in images[index+1:]
+            ]
+            from pixelai.structure import compare_growth
+            data["growth_comparisons"] = [
+                {"first": first_id, "second": second_id, "first_graph": i, "second_graph": j, **compare_growth(first, second)}
+                for index, (first_id, first_graphs) in enumerate(graphs)
+                for second_id, second_graphs in graphs[index+1:]
+                for i, first in enumerate(first_graphs) for j, second in enumerate(second_graphs)
             ]
     elif stage in ("art_review", "context_review"):
         construction = previous.get("construction")

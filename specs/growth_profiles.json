@@ -1,0 +1,21 @@
+{
+  "width": 384,
+  "height": 156,
+  "palette": "cozy24",
+  "style": "ext_outline",
+  "fresh": true,
+  "ops": [
+    {"op":"nature_rig","kind":"tree","variant":"oak","x":0,"y":0,"w":64,"h":78,"seed":41,"shadow":false,"growth":{"profile":"upright"}},
+    {"op":"nature_rig","kind":"tree","variant":"oak","x":64,"y":0,"w":64,"h":78,"seed":41,"shadow":false,"growth":{"profile":"forked"}},
+    {"op":"nature_rig","kind":"tree","variant":"oak","x":128,"y":0,"w":64,"h":78,"seed":41,"shadow":false,"growth":{"profile":"multi_stem"}},
+    {"op":"nature_rig","kind":"tree","variant":"oak","x":192,"y":0,"w":64,"h":78,"seed":41,"shadow":false,"growth":{"profile":"gnarled"}},
+    {"op":"nature_rig","kind":"tree","variant":"oak","x":256,"y":0,"w":64,"h":78,"seed":41,"shadow":false,"growth":{"profile":"leaning"}},
+    {"op":"nature_rig","kind":"tree","variant":"oak","x":320,"y":0,"w":64,"h":78,"seed":41,"shadow":false,"growth":{"profile":"windswept"}},
+    {"op":"nature_rig","kind":"tree","variant":"oak","x":0,"y":78,"w":64,"h":78,"seed":41,"shadow":false,"growth":{"profile":"upright"},"trunk_only":true},
+    {"op":"nature_rig","kind":"tree","variant":"oak","x":64,"y":78,"w":64,"h":78,"seed":41,"shadow":false,"growth":{"profile":"forked"},"trunk_only":true},
+    {"op":"nature_rig","kind":"tree","variant":"oak","x":128,"y":78,"w":64,"h":78,"seed":41,"shadow":false,"growth":{"profile":"multi_stem"},"trunk_only":true},
+    {"op":"nature_rig","kind":"tree","variant":"oak","x":192,"y":78,"w":64,"h":78,"seed":41,"shadow":false,"growth":{"profile":"gnarled"},"trunk_only":true},
+    {"op":"nature_rig","kind":"tree","variant":"oak","x":256,"y":78,"w":64,"h":78,"seed":41,"shadow":false,"growth":{"profile":"leaning"},"trunk_only":true},
+    {"op":"nature_rig","kind":"tree","variant":"oak","x":320,"y":78,"w":64,"h":78,"seed":41,"shadow":false,"growth":{"profile":"windswept"},"trunk_only":true}
+  ]
+}
