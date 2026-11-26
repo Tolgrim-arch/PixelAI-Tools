@@ -10,6 +10,7 @@ import math
 from pathlib import Path
 
 from PIL import Image
+from pixelai.geometry import validate_polygon
 
 
 def _integer(value, name, minimum=0):
@@ -73,12 +74,25 @@ def load_manifest(source):
             raise ValueError("frame.sockets must be an object")
         for name, point in sockets.items():
             _point(point, f"socket.{name}")
+        regions = frame.get("regions", [])
+        if not isinstance(regions, list):
+            raise ValueError("frame.regions must be an array")
+        region_ids = set()
+        for region in regions:
+            if not isinstance(region, dict) or not isinstance(region.get("id"), str) or not region["id"] or region["id"] in region_ids:
+                raise ValueError("Frame regions require unique nonempty ids")
+            region_ids.add(region["id"])
+            if region.get("role") not in ("collision", "hit", "hurt", "interaction", "occluder"):
+                raise ValueError("Region requires a supported functional role")
+            validate_polygon(region.get("polygon"))
     clips = data.get("clips")
     if not isinstance(clips, dict) or not clips:
         raise ValueError("clips must be a nonempty object")
     for name, clip in clips.items():
         if not isinstance(clip, dict) or type(clip.get("loop")) is not bool:
             raise ValueError(f"clip {name} requires an explicit loop boolean")
+        if "interruptible" in clip and type(clip["interruptible"]) is not bool:
+            raise ValueError("clip.interruptible must be a boolean")
         sequence = clip.get("frames")
         if not isinstance(sequence, list) or not sequence or any(f not in frame_ids for f in sequence):
             raise ValueError(f"clip {name} references missing frames")

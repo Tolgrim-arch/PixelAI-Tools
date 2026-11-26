@@ -7,10 +7,10 @@ trusted host isolation. Approval remains unavailable without those adapters.
 import json
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageSequence
 
 from pixelai.quality import CRITERIA
-from pixelai.runner import resolve_spec_paths, run_frames
+from pixelai.provenance import verify_construction
 
 
 CATEGORIES = ("human", "creature", "vegetation", "building", "rock", "item",
@@ -19,7 +19,7 @@ CATEGORIES = ("human", "creature", "vegetation", "building", "rock", "item",
 REQUIREMENTS = {
     "contract": ["category", "native_size", "art_direction", "functional_requirements"],
     "alternatives": ["proposals (six distinct structural descriptions)", "selected_id"],
-    "construction": ["source_path", "image_path", "source evidence", "matching native single-frame PNG evidence"],
+    "construction": ["source_path", "image_path", "source evidence", "matching PNG or GIF evidence", "manifest_path for atlas PNGs"],
     "art_review": ["context_id", "author_context_id", "criteria", "native_resolution", "integer_zoom"],
     "context_review": ["context_id", "author_context_id", "criteria", "native_resolution", "integer_zoom"],
     "verification": ["runtime evidence (not yet sufficient for approval)"],
@@ -40,37 +40,19 @@ def validate_submission(stage, data, previous, project=None):
             path = Path(project) / record["path"]
             if path.suffix.lower() in (".png", ".gif", ".webp"):
                 with Image.open(path) as image:
-                    if not image.convert("RGBA").getchannel("A").getbbox():
+                    if not any(frame.convert("RGBA").getchannel("A").getbbox() for frame in ImageSequence.Iterator(image)):
                         raise ValueError("Image evidence cannot be empty")
                     images.append(record)
             elif path.suffix.lower() == ".json":
                 source = json.loads(path.read_text())
-                if isinstance(source, dict) and "ops" in source:
+                if isinstance(source, dict) and "width" in source and "height" in source:
                     sources.append(record)
         if not images:
             raise ValueError("Construction and visual review require actual image evidence")
         if stage == "construction" and not sources:
             raise ValueError("Construction requires JSON source spec evidence")
         if stage == "construction":
-            source_record = data.get("source_path")
-            image_record = data.get("image_path")
-            if source_record not in {r["path"] for r in sources} or image_record not in {r["path"] for r in images}:
-                raise ValueError("source_path and image_path must identify submitted source and image evidence")
-            source_path = Path(project) / source_record
-            spec = json.loads(source_path.read_text())
-            spec.setdefault("style", "ext_outline")
-            spec["fresh"] = True
-            frames, _ = run_frames(resolve_spec_paths(spec, source_path.parent))
-            if len(frames) != 1 or Path(image_record).suffix.lower() != ".png":
-                raise ValueError("Managed provenance currently requires a single native PNG frame")
-            expected = frames[0]
-            with Image.open(Path(project) / image_record) as rendered:
-                actual = rendered.convert("RGBA")
-                getter = getattr(actual, "get_flattened_data", actual.getdata)
-                pixels = list(getter())
-                normalized = lambda values: [p if p[3] else (0, 0, 0, 0) for p in values]
-                if actual.size != (expected.width, expected.height) or normalized(pixels) != normalized(expected.pixels):
-                    raise ValueError("Rendered image does not match the submitted source specification")
+            verify_construction(project, data)
     if stage == "contract":
         if data.get("category") not in CATEGORIES:
             raise ValueError(f"category must be one of {', '.join(CATEGORIES)}")

@@ -8,7 +8,7 @@ import unittest
 
 from PIL import Image
 
-from pixelai.runtime import frame_at, render_scene
+from pixelai.runtime import actor_track, frame_at, render_scene
 
 
 class RuntimeTest(unittest.TestCase):
@@ -21,7 +21,8 @@ class RuntimeTest(unittest.TestCase):
             data = {"schema_version": 1, "asset_id": "test", "texture": "sheet.png",
                     "texture_sha256": hashlib.sha256((root / "sheet.png").read_bytes()).hexdigest(),
                     "frames": [{"id": str(i), "rect": [4*i, 0, 4, 4], "duration_ms": duration,
-                                "pivot": [2, 4], "sort_origin": [2, 4], "ground_anchor": [2, 4]}
+                                "pivot": [2, 4], "sort_origin": [2, 4], "ground_anchor": [2, 4],
+                                "regions": [{"id": "body", "role": "collision", "polygon": [[0, 0], [4, 0], [4, 4], [0, 4]]}]}
                                for i, duration in enumerate((100, 300))],
                     "clips": {"loop": {"frames": ["0", "1"], "loop": True},
                               "hold": {"frames": ["1"], "loop": False}}}
@@ -36,7 +37,27 @@ class RuntimeTest(unittest.TestCase):
             result = render_scene(root / "scene.json", root / "preview")
             self.assertEqual([a["actor"] for a in result["trace"][0]["actors"]], ["back", "front"])
             self.assertEqual(result["trace"][0]["actors"][0]["origin"], [8, 6])
+            self.assertEqual(len(result["trace"][0]["region_overlaps"]), 1)
+            self.assertEqual(result["trace"][0]["region_overlaps"][0]["first"]["role"], "collision")
             with Image.open(root / "preview/scene_0000.png") as image:
                 self.assertEqual(image.getpixel((9, 8)), (0, 255, 0, 255))
             with self.assertRaisesRegex(ValueError, "already exists"):
                 render_scene(root / "scene.json", root / "preview")
+
+    def test_declared_and_protected_transitions(self):
+        data = {"frames": [{"id": "0", "duration_ms": 100}],
+                "clips": {"idle": {"frames": ["0"], "loop": True},
+                          "attack": {"frames": ["0"], "loop": False, "interruptible": False}},
+                "transitions": [{"from": "idle", "to": "attack"}, {"from": "attack", "to": "idle"}]}
+        actor = {"clip": "idle", "position": [10, 10], "timeline": [
+            {"at_ms": 200, "clip": "attack"}, {"at_ms": 300, "clip": "idle", "position": [12, 10]}]}
+        track = actor_track(actor, data)
+        self.assertEqual(track[-1]["clip_started_ms"], 300)
+        self.assertEqual(track[-1]["position"], [12, 10])
+        actor["timeline"][1]["at_ms"] = 250
+        with self.assertRaisesRegex(ValueError, "protected action"):
+            actor_track(actor, data)
+        actor["timeline"][1]["at_ms"] = 300
+        data["transitions"] = []
+        with self.assertRaisesRegex(ValueError, "Undeclared transition"):
+            actor_track(actor, data)

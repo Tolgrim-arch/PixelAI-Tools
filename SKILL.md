@@ -11,8 +11,9 @@ For a managed production request, initialize a project and follow
 `pixelai workflow next PROJECT --json` until it requests the next action.
 Use the returned stage requirements and project-relative evidence paths.
 Never replace required image evidence with a written claim. Construction
-currently verifies fresh single-frame native PNG sources pixel-for-pixel;
-other output types still require the basic renderer and remain provisional.
+verifies fresh native PNG and atlas sources pixel-for-pixel, including atlas
+timing and clip definitions; provide manifest evidence for atlas construction.
+GIF previews are checked after palette conversion and timing quantization.
 Use separate contexts for artistic and contextual review. A score below 3/4
 requires repair; do not improve the score without changing or disproving the
 reported defect. Review pivot, collision, sorting, direction, transition,

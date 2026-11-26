@@ -19,6 +19,8 @@ def clips_by_index(count, clips=None):
     for name, clip in clips.items():
         if not isinstance(name, str) or not name or not isinstance(clip, dict) or type(clip.get("loop")) is not bool:
             raise ValueError("Each named clip requires a loop boolean")
+        if "interruptible" in clip and type(clip["interruptible"]) is not bool:
+            raise ValueError("clip.interruptible must be a boolean")
         indices = clip.get("frames")
         if not isinstance(indices, list) or not indices or any(type(i) is not int or not 0 <= i < count for i in indices):
             raise ValueError(f"Clip {name!r} references invalid frame indices")

@@ -8,7 +8,7 @@
 - Stage-specific contract fields, six distinct proposal descriptions and eleven-criterion review completeness.
 - Every pending task includes category-specific failure checks, a visual inspection protocol and targeted repair instructions; review tasks include the eleven-criterion rubric.
 - Nonempty image evidence for construction/review and JSON source evidence for construction.
-- Single-frame native PNG construction is rerendered from the submitted fresh source and compared pixel-for-pixel. Reviews must include that exact artifact evidence.
+- Native PNG and atlas construction is rerendered from the submitted fresh source and compared pixel-for-pixel; atlas manifests must preserve source timing and clips. GIF previews are verified after palette conversion and timing quantization. Reviews must include the exact constructed artifact evidence.
 - Declared reviewer-context separation; these declarations are not authenticated host isolation.
 - Failed review scores reopen construction and preserve review history and consumed budgets.
 - Three consecutive reviews with the same failing criteria reopen structural alternatives; budget-exhaustion diagnostics retain the latest defects.
@@ -16,6 +16,8 @@
 - Universal manifest validation of texture hashes, actual frame regions, anchors, timing and clip references.
 - Exported clip timing traces, explicitly reporting unverified runtime behaviors.
 - Reference scene compositor consumes only exported manifests/textures and emits native PNGs plus timing, pivot placement and stable Y-sort traces.
+- Validated convex functional regions distinguish collision, hit, hurt, interaction and occluder roles; contextual traces report positive-area overlaps without treating boundary contact as penetration.
+- Explicit actor timelines reject undeclared state changes and premature interruption of protected actions; position updates preserve clip timing unless a restart is requested.
 - Approximate silhouette comparison normalized for padding and scale, with reflection checks.
 - Empty artwork cannot pass style fidelity checks.
 - PNG metadata and Godot exports preserve explicit per-frame durations and named clips; GIF previews preserve holds within GIF timing limits.
@@ -24,11 +26,11 @@
 
 ## Current limits
 
-The managed queue never approves production. Provenance currently supports self-contained single-frame native PNGs; atlas and GIF construction verification remains pending. Distinct proposal descriptions do not yet establish visible structural diversity. Reviewer declarations do not prove isolated contexts or actual perception. The reference runtime renders pivot placement and sorting but does not yet simulate collision, acting, transition blending or tile seams. These checks remain necessary before enabling release.
+The managed queue never approves production. Distinct proposal descriptions do not yet establish visible structural diversity. Reviewer declarations do not prove isolated contexts or actual perception. The reference runtime renders pivot placement, sorting, functional-region overlap and declared state changes; it does not yet solve movement collisions, validate acting, blend transitions or verify tile seams. These checks remain necessary before enabling release.
 
 ## Next implementation priorities
 
-1. Strict renderer capability registry and atlas/animation source-to-image provenance.
+1. Strict renderer capability registry and complete versioned semantic contracts.
 2. Versioned semantic part graphs and transform-safe metadata.
 3. Host review adapters with artifact-bound observation events.
 4. Category-specific proposal images and part-level catalog comparisons.

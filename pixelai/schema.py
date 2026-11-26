@@ -282,6 +282,7 @@ def build_json_schema() -> dict[str, Any]:
             "material": {"type": "string"},
             "fps": {"type": "integer", "minimum": 1},
             "durations_ms": {"type": "array", "items": {"type": "integer", "minimum": 1}},
+            "transitions": {"type": "array", "items": {"type": "object", "required": ["from", "to"], "properties": {"from": {"type": "string"}, "to": {"type": "string"}}}},
             "clips": {"type": "object", "additionalProperties": {"type": "object", "required": ["frames", "loop"], "properties": {"frames": {"type": "array", "minItems": 1, "items": {"type": "integer", "minimum": 0}}, "loop": {"type": "boolean"}}}},
             "frame_count": {"type": "integer", "minimum": 1},
             "extends": {"type": "string"},

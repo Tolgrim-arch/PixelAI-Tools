@@ -129,6 +129,10 @@ the project, for example `{"evidence":[{"path":"art/sprite.png"}]}`. Changing
 accepted evidence reopens dependent tasks. Reviews below 3/4 request repair.
 Review context identities are currently declarations, not host-authenticated
 isolation. The experimental workflow never grants production approval.
+Construction submissions bind `source_path` and `image_path` to evidence
+files. Atlas PNGs also require `manifest_path`; each native frame, duration
+and named clip must match the source. GIF previews are checked after the
+renderer's palette and timing conversion.
 
 `pixelai simulate asset.manifest.json --json` validates exported regions,
 texture identity, coordinates and clip timing. It reports unverified runtime
@@ -148,7 +152,23 @@ and a `trace.json` report. A scene uses:
 
 Actor positions locate each frame's pivot in world pixels. Manifest and texture
 paths remain relative to their containing files. This reference compositor
-does not yet verify collision, transition blending, artistic quality or seams.
+does not yet resolve movement collision, transition blending, artistic quality or seams.
+
+Frames may declare `regions` containing `{id, role, polygon}` records. Supported
+roles are `collision`, `hit`, `hurt`, `interaction` and `occluder`. Polygons use
+native frame coordinates and must be finite, nondegenerate and convex; use
+multiple convex regions for a concave footprint. Scene traces report overlaps
+with roles preserved. Boundary contact is not penetration. Set
+`"debug_regions": true` for visual outlines. Overlap diagnostics do not resolve
+movement or prove a complete physics implementation.
+
+An actor's optional `timeline` is an ordered array of `{at_ms, clip, position}`
+events. Each event can change clip, position or both; times must increase
+strictly. Position-only changes keep clip phase. An explicit clip restarts its
+phase. Changes between different clips require an exported `transitions` edge
+such as `{"from":"idle","to":"attack"}`. A clip with
+`"interruptible": false` cannot be replaced or restarted before its duration.
+These checks validate declared state changes, not transition blending or acting.
 
 See [AUTONOMOUS_ROADMAP.md](AUTONOMOUS_ROADMAP.md) for implemented capabilities,
 remaining stages and acceptance criteria.
