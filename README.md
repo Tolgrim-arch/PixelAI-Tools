@@ -195,6 +195,14 @@ such as `{"from":"idle","to":"attack"}`. A clip with
 `"interruptible": false` cannot be replaced or restarted before its duration.
 These checks validate declared state changes, not transition blending or acting.
 
+`pixelai tilecheck atlas.png --mode wang16 --tile-size 16 --output tile-review`
+creates a legal-neighborhood mosaic at native and 4x size, comparison sheets
+for all 128 legal horizontal/vertical Wang16 edge pairs, and `seams.json` with
+comparison rectangles and premultiplied RGBA edge deltas. Use `--mode repeat`
+for a single bounded texture's repetition trial. Edge deltas are diagnostics;
+the result remains `needs_visual_review`. Temporal seams and Blob47 are not
+verified by this command.
+
 See [AUTONOMOUS_ROADMAP.md](AUTONOMOUS_ROADMAP.md) for implemented capabilities,
 remaining stages and acceptance criteria.
 

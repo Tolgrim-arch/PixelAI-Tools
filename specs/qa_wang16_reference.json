@@ -1,0 +1,10 @@
+{
+  "width": 64,
+  "height": 64,
+  "palette": "cozy24",
+  "style": "lineless",
+  "fresh": true,
+  "ops": [
+    {"op": "autotile", "tile_size": 16, "inner": "water", "outer": "grass", "lip": "soil_d", "seed": 42}
+  ]
+}
