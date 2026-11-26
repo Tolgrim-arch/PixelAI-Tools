@@ -215,16 +215,39 @@ and a `trace.json` report. A scene uses:
 ```
 
 Actor positions locate each frame's pivot in world pixels. Manifest and texture
-paths remain relative to their containing files. This reference compositor
-does not yet resolve movement collision, transition blending, artistic quality or seams.
+paths remain relative to their containing files. Transition blending, artistic
+quality and seams still require separate verification.
 
 Frames may declare `regions` containing `{id, role, polygon}` records. Supported
 roles are `collision`, `hit`, `hurt`, `interaction` and `occluder`. Polygons use
 native frame coordinates and must be finite, nondegenerate and convex; use
 multiple convex regions for a concave footprint. Scene traces report overlaps
 with roles preserved. Boundary contact is not penetration. Set
-`"debug_regions": true` for visual outlines. Overlap diagnostics do not resolve
-movement or prove a complete physics implementation.
+`"debug_regions": true` for visual outlines.
+
+Actors can declare `"velocity": [100, 0]` in pixels per second. Set the scene's
+`"collision_mode": "block"` to stop movement against collision-role regions;
+the default `"report"` permits movement and reports sampled overlaps. Blocking
+uses fixed 1ms ticks, stable actor-id order, X before Y, native integer steps
+and convex sweeps, independent of screenshot sampling. Blocked movement is
+discarded. Timeline position changes also attempt a swept move in blocking
+mode. Initial penetration and overlapping state geometry are errors. This is
+a reference grid solver without mass, impulses or gravity. Only collision-role
+regions block; interaction, hit, hurt and occluder regions remain diagnostic.
+`motion_budget` defaults to 10000 tick/step work units; exhaustion produces no
+output bundle. Contacts include the moving actor, obstacle and first/last times.
+
+Optional scene `expectations` assert sampled behavior, for example:
+
+```json
+[{"time_ms":400,"actor":"hero","position":[180,120],"clip":"idle",
+  "before":"tree","contacted":"wall"}]
+```
+
+Each assertion time must appear in `times_ms`. `before` checks draw order;
+`contacted` checks a recorded blocked movement on or before that time. A failed
+assertion returns CLI exit code 1 and preserves the evidence bundle with
+expected/actual diagnostics. Passing these assertions does not approve artwork.
 
 An actor's optional `timeline` is an ordered array of `{at_ms, clip, position}`
 events. Each event can change clip, position or both; times must increase

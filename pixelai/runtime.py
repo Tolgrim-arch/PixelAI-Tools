@@ -88,6 +88,8 @@ def render_scene(source, output):
         position = _point(actor.get("position"), "actor.position")
         if any(type(value) is not int for value in position):
             raise ValueError("Reference scene positions must use native integer pixels")
+        if "velocity" in actor:
+            _point(actor["velocity"], "actor.velocity")
         manifest = actor.get("manifest")
         if not isinstance(manifest, str) or Path(manifest).is_absolute():
             raise ValueError("Actor manifest must be scene-relative")
@@ -98,6 +100,17 @@ def render_scene(source, output):
         if actor.get("clip") not in data["clips"]:
             raise ValueError("Actor must select an existing clip")
         loaded.append((actor, data, image, actor_track(actor, data)))
+    collision_mode = scene.get("collision_mode", "report")
+    if collision_mode not in ("report", "block"):
+        raise ValueError("collision_mode must be report or block")
+    from pixelai.scenario import assess_scenario, validate_expectations
+    expectations = scene.get("expectations", [])
+    validate_expectations(expectations, times, {actor["id"]: data for actor, data, _, _ in loaded})
+    motion_positions, motion_report = None, None
+    if collision_mode == "block" or any("velocity" in actor for actor, _, _, _ in loaded):
+        from pixelai.motion import simulate_motion
+        motion_positions, motion_report = simulate_motion([(actor, data, track) for actor, data, _, track in loaded], times,
+                                                          frame_at, collision_mode, scene.get("motion_budget", 10000))
     destination = Path(output).resolve()
     if destination.exists():
         raise ValueError("Scene output directory already exists")
@@ -113,10 +126,10 @@ def render_scene(source, output):
                 state = next(state for state in reversed(track) if state["at_ms"] <= time)
                 frame = frame_at(data, state["clip"], time - state["clip_started_ms"])
                 px, py = frame["pivot"]
-                position = state["position"]
+                position = motion_positions[time][actor["id"]] if motion_positions is not None else state["position"]
                 origin = (round(position[0] - px), round(position[1] - py))
                 sort_y = position[1] - py + frame["sort_origin"][1]
-                posed.append((sort_y, actor["id"], {**actor, "clip": state["clip"]}, frame, image, origin))
+                posed.append((sort_y, actor["id"], {**actor, "clip": state["clip"], "world_position": position}, frame, image, origin))
             posed.sort(key=lambda value: (value[0], value[1]))
             actor_trace = []
             regions = []
@@ -126,7 +139,7 @@ def render_scene(source, output):
                 for region in world_regions(frame, origin):
                     regions.append({**region, "actor": actor_id})
                 actor_trace.append({"actor": actor_id, "frame": frame["id"], "clip": actor["clip"],
-                                    "origin": list(origin), "sort_y": sort_y})
+                                    "origin": list(origin), "world_position": actor["world_position"], "sort_y": sort_y})
             overlaps = []
             for i, first in enumerate(regions):
                 for second in regions[i+1:]:
@@ -142,21 +155,25 @@ def render_scene(source, output):
             trace.append({"time_ms": time, "image": filename, "actors": actor_trace,
                           "regions": regions, "region_overlaps": overlaps})
         report = {"schema_version": 1, "status": "rendered", "trace": trace,
-                  "verification_scope": "exported playback, pivot placement, stable Y sorting and declared convex-region overlap",
-                  "unverified": ["collision behavior", "transition blending", "artistic quality", "tile seams", "engine integration"]}
+                  "motion": motion_report,
+                  "scenario": assess_scenario(expectations, trace, motion_report),
+                  "verification_scope": "exported playback, pivot placement, stable Y sorting, convex regions and explicit scenario assertions; motion mode recorded separately",
+                  "unverified": (["collision behavior"] if collision_mode != "block" else ["mass/impulse physics beyond the reference native-grid solver"])
+                                  + ["transition blending", "artistic quality", "tile seams", "engine integration"]}
         (bundle / "trace.json").write_text(json.dumps(report, indent=2))
         bundle.rename(destination)
     return {**report, "output": str(destination)}
 
 
 def register(sub):
-    parser = sub.add_parser("scene", help="Render a reference scene from exported manifests, preserving pivots and Y sorting.")
+    parser = sub.add_parser("scene", help="Render exported scenes with optional grid collision response and behavioral assertions.")
     parser.add_argument("source")
     parser.add_argument("--output", required=True)
     parser.add_argument("--json", action="store_true")
 
     def run(args):
-        print(json.dumps(render_scene(args.source, args.output)))
-        return 0
+        report = render_scene(args.source, args.output)
+        print(json.dumps(report))
+        return 1 if report["scenario"]["status"] == "failed" else 0
 
     parser.set_defaults(func=run)

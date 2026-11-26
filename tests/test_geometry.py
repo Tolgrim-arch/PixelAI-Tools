@@ -2,10 +2,19 @@
 
 import unittest
 
-from pixelai.geometry import overlap, validate_polygon, world_regions
+from pixelai.geometry import overlap, swept_overlap, validate_polygon, world_regions
 
 
 class GeometryTest(unittest.TestCase):
+    def test_sweep_detects_thin_obstacles_without_blocking_boundary_contact(self):
+        moving = [[0, 0], [.1, 0], [.1, 1], [0, 1]]
+        needle = [[.5, 0], [.6, 0], [.6, 1], [.5, 1]]
+        self.assertFalse(overlap(moving, needle))
+        self.assertTrue(swept_overlap(moving, needle, [1, 0]))
+        self.assertFalse(swept_overlap(moving, needle, [.4, 0]))
+        touching = [[.4, 0], [.5, 0], [.5, 1], [.4, 1]]
+        self.assertFalse(swept_overlap(touching, needle, [-1, 0]))
+
     def test_overlap_contact_and_containment(self):
         a = validate_polygon([[0, 0], [4, 0], [4, 4], [0, 4]])
         self.assertTrue(overlap(a, [[1, 1], [2, 1], [2, 2], [1, 2]]))

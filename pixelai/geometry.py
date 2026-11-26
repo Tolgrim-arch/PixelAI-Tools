@@ -57,3 +57,25 @@ def overlap(first, second):
 def world_regions(frame, origin):
     return [{**region, "polygon": [[point[0] + origin[0], point[1] + origin[1]] for point in region["polygon"]]}
             for region in frame.get("regions", [])]
+
+
+def swept_overlap(first, second, delta):
+    """Detect positive-area overlap during a convex polygon's linear sweep."""
+    enter, leave = -math.inf, math.inf
+    for polygon in (first, second):
+        for index, a in enumerate(polygon):
+            b = polygon[(index+1) % len(polygon)]
+            axis = a[1]-b[1], b[0]-a[0]
+            pa = [point[0]*axis[0]+point[1]*axis[1] for point in first]
+            pb = [point[0]*axis[0]+point[1]*axis[1] for point in second]
+            velocity = delta[0]*axis[0]+delta[1]*axis[1]
+            if abs(velocity) < 1e-12:
+                if max(pa) <= min(pb)+1e-9 or max(pb) <= min(pa)+1e-9:
+                    return False
+                continue
+            start, end = (min(pb)-max(pa))/velocity, (max(pb)-min(pa))/velocity
+            enter = max(enter, min(start, end))
+            leave = min(leave, max(start, end))
+            if enter >= leave-1e-12:
+                return False
+    return max(enter, 0) < min(leave, 1)-1e-12
