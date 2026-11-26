@@ -12,6 +12,7 @@ from pathlib import Path
 from PIL import Image
 from pixelai.geometry import validate_polygon
 from pixelai.animation_contract import validate_transitions
+from pixelai.animation_score import validate_scores, score_beats
 
 
 def build_manifest(spec, frames, texture_path, manifest_path, columns, timings, clips):
@@ -133,6 +134,7 @@ def load_manifest(source):
         if not isinstance(sequence, list) or not sequence or any(f not in frame_ids for f in sequence):
             raise ValueError(f"clip {name} references missing frames")
     validate_transitions(data.get("transitions", []), clips)
+    validate_scores(clips, {frame["id"]: frame for frame in frames})
     return data, image
 
 
@@ -152,7 +154,8 @@ def simulate(source):
     return {"schema_version": 1, "asset_id": data["asset_id"], "status": "validated",
             "verification_scope": "exported regions, content identity, timing and state references",
             "unverified": ["collision behavior", "sorting behavior", "visual readability", "acting", "tile continuity", "engine integration"],
-            "texture_size": list(image.size), "trace": traces}
+            "texture_size": list(image.size), "trace": traces,
+            "score_beats": {name: score_beats(clip, frames) for name, clip in data["clips"].items()}}
 
 
 def register(sub):

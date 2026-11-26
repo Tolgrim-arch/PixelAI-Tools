@@ -1,8 +1,9 @@
 """Shared export timing and named-clip validation."""
 
+import math
 
 def durations_ms(count, fps=8, values=None):
-    if type(fps) not in (int, float) or fps <= 0:
+    if type(fps) not in (int, float) or not math.isfinite(fps) or fps <= 0:
         raise ValueError("fps must be positive")
     if values is None:
         return [max(1, round(1000 / fps))] * count

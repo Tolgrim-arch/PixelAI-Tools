@@ -56,6 +56,8 @@ def verify_construction(project, submission, native_size=None):
     fps = spec.get("fps", 8)
     timings = durations_ms(len(frames), fps, spec.get("durations_ms"))
     clips = clips_by_index(len(frames), spec.get("clips"))
+    from pixelai.animation_score import source_records, validate_scores
+    validate_scores(clips, source_records(frames, timings))
     proof = {"frame_count": len(frames), "growth_graphs": [record for record in frames[0].attachments if record.get("type") == "growth_graph"],
              "anatomy_graphs": [record for record in frames[0].attachments if record.get("type") == "anatomy_graph"]}
     if image_path.suffix.lower() == ".gif":
@@ -99,8 +101,7 @@ def verify_construction(project, submission, native_size=None):
                 if record.get(field, default) != runtime[0].get(field, default):
                     raise ValueError(f"Atlas frame {index} runtime {field} does not match the source")
     ids = [frame["id"] for frame in manifest["frames"]]
-    expected_clips = {name: {"frames": [ids[index] for index in clip["frames"]], "loop": clip["loop"],
-                            **({"interruptible": clip["interruptible"]} if "interruptible" in clip else {})}
+    expected_clips = {name: {**clip, "frames": [ids[index] for index in clip["frames"]]}
                       for name, clip in clips.items()}
     if manifest["clips"] != expected_clips:
         raise ValueError("Manifest clips do not match the source actions")

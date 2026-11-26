@@ -190,6 +190,34 @@ frames reachable from exported clips count. When requested, distinct views
 cannot consist of identical frame-content sets. These checks establish
 coverage, not correct anatomy, state semantics or animation quality.
 
+For deliberate animation planning, each named clip may include a versioned
+`score`. Beat `start`/`end` values address positions in that clip's frame
+sequence, with an exclusive end; they do not address global atlas frame IDs.
+Beats must cover the entire sequence in order without gaps or overlap. Holds
+and repeated frame IDs are allowed. For a three-slot strike:
+
+```json
+{"frames":[0,1,2],"loop":false,"score":{
+ "schema_version":1,"intent":"A heavy strike followed by a slow recovery",
+ "beats":[
+  {"name":"anticipation","purpose":"Shift weight before committing","start":0,"end":1},
+  {"name":"impact","purpose":"Drive the tool into its target","start":1,"end":2},
+  {"name":"recovery","purpose":"Regain balance","start":2,"end":3}],
+ "events":[{"id":"hit","name":"damage","at_ms":100,"socket":"tool_tip"}]}}
+```
+
+Events need unique IDs and ordered nonnegative `at_ms` values below the clip's
+actual duration. An optional socket must exist in the active exported frame.
+Scores are validated before CLI export and checked against source during
+managed provenance verification. Godot exports retain clip timing; gameplay
+event handling remains the engine adapter's responsibility.
+
+A delivery contract can require
+`"animation_scores":{"strike":{"beats":["anticipation","impact","recovery"],"events":["hit"]}}`.
+Missing scores or required names block construction. Naming a beat does not
+prove visible anticipation or weight. Contextual review packets expose timing
+and event metadata while withholding the author's intent/purpose explanations.
+
 Rejected managed constructions cannot be resubmitted unchanged under the same
 delivery contract merely to obtain another review. Renaming, PNG metadata and
 transparent padding do not make new visual content. Artistic defects require
@@ -248,6 +276,14 @@ Each assertion time must appear in `times_ms`. `before` checks draw order;
 `contacted` checks a recorded blocked movement on or before that time. A failed
 assertion returns CLI exit code 1 and preserves the evidence bundle with
 expected/actual diagnostics. Passing these assertions does not approve artwork.
+
+An expectation can also assert `"event":"hit"` at its exact `time_ms`.
+Scene `animation_events` traces include all occurrences, even between sampled
+screenshots. Loop events repeat; nonlooping events emit once; interruptions
+exclude old-clip events at the transition boundary; position-only updates keep
+clip phase. `event_budget` defaults to 10000 occurrences and fails before
+publishing a bundle on exhaustion. These traces describe declared gameplay
+events, not an engine callback or a visually verified impact.
 
 Use scene `planted_contacts` to declare continuous intervals where a named
 exported socket must remain fixed in world space:

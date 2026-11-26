@@ -102,6 +102,9 @@ def export_spritesheet(
     fw, fh = frames[0].width, frames[0].height
     timings = validate_durations(len(frames), values=durations_ms) if durations_ms is not None else None
     named_clips = clips_by_index(len(frames), clips) if clips is not None else None
+    if named_clips is not None:
+        from pixelai.animation_score import source_records, validate_scores
+        validate_scores(named_clips, source_records(frames, timings or validate_durations(len(frames))))
     cols = columns if (columns and columns > 0) else len(frames)
     rows = math.ceil(len(frames) / cols)
 
@@ -164,6 +167,8 @@ def export_godot_tres(
     fw, fh = frames[0].width, frames[0].height
     timings = validate_durations(len(frames), fps, durations_ms)
     named_clips = clips_by_index(len(frames), clips)
+    from pixelai.animation_score import source_records, validate_scores
+    validate_scores(named_clips, source_records(frames, timings))
     cols = columns if (columns and columns > 0) else len(frames)
     sheet = Path(sheet_path).resolve()
     out = Path(tres_path)

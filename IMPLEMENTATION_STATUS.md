@@ -30,6 +30,7 @@
 - Generator help and field linting share explicit parameter declarations; managed sources reject unknown operations/fields throughout frames, definitions, parts and post-processing, including expanded imports.
 - Fresh generation rechecks imported definitions, so imports cannot smuggle in load_png or inheritance reuse.
 - PNG metadata and Godot exports preserve explicit per-frame durations and named clips; GIF previews preserve holds within GIF timing limits.
+- Optional animation scores bind complete beat coverage, performance intent and timed socket events to actual clip durations. Managed delivery contracts can require specific scores/beats/events; exported provenance rejects score tampering. Reference scenes trace bounded event occurrences across loops/restarts/interruptions and support exact-time event assertions. Context review exposes neutral timing metadata while withholding author intent/purpose text.
 - Procedural library included in wheel/sdist builds and resolved from installed packages.
 - Named assembly parts with validated parent graphs, inherited offsets, deterministic draw order, material labels and transform-aware exported origins.
 - Optional versioned broadleaf growth graphs drive trunk, roots, forks and canopy supports for six distinct architectures. Trunk-only inspection and native-size/seed tests cover structure independently of foliage color; legacy trees remain unchanged without opt-in.

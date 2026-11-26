@@ -7,15 +7,17 @@ def validate_expectations(expectations, times, actors):
     if not isinstance(expectations, list):
         raise ValueError("expectations must be an array")
     for item in expectations:
-        if not isinstance(item, dict) or set(item) - {"time_ms", "actor", "position", "clip", "before", "contacted"}:
+        if not isinstance(item, dict) or set(item) - {"time_ms", "actor", "position", "clip", "before", "contacted", "event"}:
             raise ValueError("Scenario expectation contains unsupported fields")
         _integer(item.get("time_ms"), "expectation.time_ms")
         if item["time_ms"] not in times:
             raise ValueError("Expectation time must be included in times_ms")
         if not isinstance(item.get("actor"), str) or item["actor"] not in actors:
             raise ValueError("Expectation references a missing actor")
-        if not set(item) & {"position", "clip", "before", "contacted"}:
-            raise ValueError("Expectation must assert position, clip, draw order or prior contact")
+        if not set(item) & {"position", "clip", "before", "contacted", "event"}:
+            raise ValueError("Expectation must assert position, clip, draw order, prior contact or event")
+        if "event" in item and (not isinstance(item["event"], str) or not item["event"].strip()):
+            raise ValueError("expectation.event must be a nonempty score event id")
         if "position" in item:
             point = _point(item["position"], "expectation.position")
             if any(type(value) is not int for value in point):
@@ -27,13 +29,17 @@ def validate_expectations(expectations, times, actors):
                 raise ValueError(f"expectation.{name} must reference another actor")
 
 
-def assess_scenario(expectations, trace, motion=None):
+def assess_scenario(expectations, trace, motion=None, events=()):
     failures, assertions = [], 0
     by_time = {frame["time_ms"]: frame for frame in trace}
     for item in expectations:
         frame = by_time[item["time_ms"]]
         actors = {actor["actor"]: actor for actor in frame["actors"]}
         actual = actors[item["actor"]]
+        if "event" in item:
+            assertions += 1
+            if not any(event["actor"] == item["actor"] and event["id"] == item["event"] and event["time_ms"] == item["time_ms"] for event in events):
+                failures.append({"time_ms": item["time_ms"], "actor": item["actor"], "field": "event", "expected": item["event"], "actual": False})
         for key, actual_key in (("position", "world_position"), ("clip", "clip")):
             if key in item:
                 assertions += 1

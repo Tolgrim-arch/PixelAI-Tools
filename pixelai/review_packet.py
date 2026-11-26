@@ -3,6 +3,7 @@
 import hashlib
 import io
 import json
+from copy import deepcopy
 from pathlib import Path
 
 from PIL import Image, ImageSequence
@@ -57,11 +58,20 @@ def prepare_packet(project, contract, construction, role):
                     output.write(payload)
             views.append({"frame": frame_id, "zoom": zoom, "path": path.relative_to(root).as_posix(),
                           "sha256": hashlib.sha256(payload).hexdigest()})
+    timing = {}
+    neutral_manifest = deepcopy(manifest)
+    if neutral_manifest is not None:
+        from pixelai.animation_score import score_beats
+        records = {frame["id"]: frame for frame in manifest["frames"]}
+        for name, clip in neutral_manifest["clips"].items():
+            timing[name] = {"beats": score_beats(clip, records), "events": deepcopy(clip.get("score", {}).get("events", []))}
+            clip.pop("score", None)
     return {"schema_version": 1, "packet_id": identity, "role": role,
             "category": contract.get("category"), "art_direction": contract.get("art_direction"),
             "functional_requirements": contract.get("functional_requirements", []),
             "delivery": contract.get("delivery", {}),
             "artifact": image_record, "views": views,
-            "runtime_manifest": manifest if role == "context_review" else None,
+            "runtime_manifest": neutral_manifest if role == "context_review" else None,
+            "animation_timing": timing if role == "context_review" else {},
             "observation_status": "not_attested",
             "host_requirements": ["Use a context separate from the author and the other reviewer", "Inspect every native and zoomed frame", "Do not import author justifications or another review's scores"]}

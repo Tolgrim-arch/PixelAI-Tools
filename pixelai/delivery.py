@@ -7,7 +7,7 @@ TAGS = ("view", "action", "state")
 
 
 def validate_delivery(delivery):
-    if not isinstance(delivery, dict) or set(delivery) - {"views", "actions", "states", "required_combinations", "distinct_views"}:
+    if not isinstance(delivery, dict) or set(delivery) - {"views", "actions", "states", "required_combinations", "distinct_views", "animation_scores"}:
         raise ValueError("delivery contains unsupported fields")
     for plural in ("views", "actions", "states"):
         names = delivery.get(plural, [])
@@ -25,6 +25,16 @@ def validate_delivery(delivery):
             raise ValueError("Required combinations must specify view, action and/or state")
         if any(not isinstance(value, str) or not value.strip() for value in combination.values()):
             raise ValueError("Required combination tags must be nonempty names")
+    scores = delivery.get("animation_scores", {})
+    if not isinstance(scores, dict):
+        raise ValueError("delivery.animation_scores must be an object keyed by clip name")
+    for name, requirement in scores.items():
+        if not isinstance(name, str) or not name.strip() or not isinstance(requirement, dict) or set(requirement) - {"beats", "events"}:
+            raise ValueError("Animation score requirements accept beats and events only")
+        for field in ("beats", "events"):
+            values = requirement.get(field, [])
+            if not isinstance(values, list) or any(not isinstance(value, str) or not value.strip() for value in values) or len(set(values)) != len(values):
+                raise ValueError(f"Animation score required {field} must contain unique nonempty names")
 
 
 def verify_delivery(manifest_path, delivery):
@@ -33,6 +43,15 @@ def verify_delivery(manifest_path, delivery):
     reachable = {name for clip in data["clips"].values() for name in clip["frames"]}
     frames = [frame for frame in data["frames"] if frame["id"] in reachable]
     failures = []
+    for name, requirement in delivery.get("animation_scores", {}).items():
+        score = data["clips"].get(name, {}).get("score")
+        if score is None:
+            failures.append(f"Missing animation score for clip {name}")
+            continue
+        for field, key in (("beats", "name"), ("events", "id")):
+            missing = set(requirement.get(field, [])) - {item[key] for item in score.get(field, [])}
+            if missing:
+                failures.append(f"Missing score {field} in {name}: {', '.join(sorted(missing))}")
     for tag, plural in zip(TAGS, ("views", "actions", "states")):
         actual = {frame.get(tag) for frame in frames}
         missing = set(delivery.get(plural, [])) - actual

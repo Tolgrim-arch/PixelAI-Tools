@@ -355,7 +355,21 @@ def build_json_schema() -> dict[str, Any]:
             "fps": {"type": "integer", "minimum": 1},
             "durations_ms": {"type": "array", "items": {"type": "integer", "minimum": 1}},
             "transitions": {"type": "array", "items": {"type": "object", "required": ["from", "to"], "properties": {"from": {"type": "string"}, "to": {"type": "string"}}}},
-            "clips": {"type": "object", "additionalProperties": {"type": "object", "required": ["frames", "loop"], "properties": {"frames": {"type": "array", "minItems": 1, "items": {"type": "integer", "minimum": 0}}, "loop": {"type": "boolean"}}}},
+            "clips": {"type": "object", "additionalProperties": {"type": "object", "required": ["frames", "loop"], "properties": {
+                "frames": {"type": "array", "minItems": 1, "items": {"type": "integer", "minimum": 0}},
+                "loop": {"type": "boolean"}, "interruptible": {"type": "boolean"},
+                "score": {"type": "object", "additionalProperties": False, "required": ["schema_version", "intent", "beats"], "properties": {
+                    "schema_version": {"const": 1}, "intent": {"type": "string", "minLength": 1},
+                    "beats": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": False,
+                        "required": ["name", "purpose", "start", "end"], "properties": {
+                            "name": {"type": "string", "minLength": 1}, "purpose": {"type": "string", "minLength": 1},
+                            "start": {"type": "integer", "minimum": 0}, "end": {"type": "integer", "minimum": 1}}}},
+                    "events": {"type": "array", "items": {"type": "object", "additionalProperties": False,
+                        "required": ["id", "name", "at_ms"], "properties": {
+                            "id": {"type": "string", "minLength": 1}, "name": {"type": "string", "minLength": 1},
+                            "at_ms": {"type": "integer", "minimum": 0}, "socket": {"type": "string", "minLength": 1}}}}
+                }}
+            }}},
             "frame_count": {"type": "integer", "minimum": 1},
             "extends": {"type": "string"},
             "imports": {"type": "array", "items": {"type": "string"}},

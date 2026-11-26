@@ -26,6 +26,8 @@ RUNTIME_CHECKS = [
     "For actions with planted feet or fixed tool contact, declare planted_contacts intervals on exported sockets and inspect every episode's world-space drift; do not omit intermediate frames or silently loosen tolerances to pass.",
     "Inspect sorting both in front of and behind occluders.",
     "Inspect required direction/action/state combinations, transitions and interruptions.",
+    "For contracted scored clips, author complete beat coverage with a concrete performance purpose and timed gameplay events; require these through delivery.animation_scores so missing beats/events block construction.",
+    "Use scenario event assertions to verify exact occurrence times across loops, restarts and interruptions. Beat labels and timing alone cannot prove anticipation, impact or recovery are visible.",
     "Passing grid collision or planted-socket checks does not establish weight, anticipation, recovery, personality or physical support; inspect those visually and report missing verification.",
     "Compare scale and readability together with the project catalog on real backgrounds.",
     "Treat seamless tiles, nine-slice UI, static illustrations and particles according to their own contracts; do not impose character-only rules.",

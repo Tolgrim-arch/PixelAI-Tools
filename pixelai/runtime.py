@@ -106,6 +106,8 @@ def render_scene(source, output):
     from pixelai.scenario import assess_scenario, validate_expectations
     expectations = scene.get("expectations", [])
     validate_expectations(expectations, times, {actor["id"]: data for actor, data, _, _ in loaded})
+    from pixelai.animation_score import timeline_events
+    events = timeline_events([(actor, data, track) for actor, data, _, track in loaded], max(times), scene.get("event_budget", 10000))
     from pixelai.contact import assess_contacts, contact_times
     contact_actors = {actor["id"]: (actor, data, track) for actor, data, _, track in loaded}
     windows = scene.get("planted_contacts", [])
@@ -161,7 +163,8 @@ def render_scene(source, output):
                           "regions": regions, "region_overlaps": overlaps})
         report = {"schema_version": 1, "status": "rendered", "trace": trace,
                   "motion": motion_report,
-                  "scenario": assess_scenario(expectations, trace, motion_report),
+                  "animation_events": events,
+                  "scenario": assess_scenario(expectations, trace, motion_report, events),
                   "planted_contacts": contact_report,
                   "verification_scope": "exported playback, pivot placement, stable Y sorting, convex regions and explicit scenario assertions; motion mode recorded separately",
                   "unverified": (["collision behavior"] if collision_mode != "block" else ["mass/impulse physics beyond the reference native-grid solver"])

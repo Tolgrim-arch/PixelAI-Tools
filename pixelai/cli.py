@@ -196,6 +196,8 @@ def _cmd_render(args: argparse.Namespace) -> int:
     from pixelai.animation_contract import durations_ms, clips_by_index, validate_transitions
     timings = durations_ms(len(frames), fps, spec.get("durations_ms"))
     clips = clips_by_index(len(frames), spec.get("clips"))
+    from pixelai.animation_score import source_records, validate_scores
+    validate_scores(clips, source_records(frames, timings))
     validate_transitions(spec.get("transitions", []), clips)
     manifest = None
     if args.manifest:
