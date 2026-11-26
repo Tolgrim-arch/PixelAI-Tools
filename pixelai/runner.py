@@ -1027,6 +1027,7 @@ def _merge_frame_ops_into_base(
 def run_frames(spec: dict[str, Any]) -> tuple[list[Canvas], list[str]]:
     """Execute a spec into one or more post-processed frames and their names."""
     spec = _resolve_style_ref(_resolve_extends(spec))
+    from pixelai.runtime_contract import attach_runtime
     width = int(spec["width"])
     height = int(spec["height"])
     palette = resolve_palette(spec.get("palette"), spec.get("palette_ext"))
@@ -1072,6 +1073,7 @@ def run_frames(spec: dict[str, Any]) -> tuple[list[Canvas], list[str]]:
     if not raw_frames:
         canvas = Canvas(width, height, fill=bg)
         _execute_ops(canvas, _merge_frame_ops_into_base([], base_ops), palette, defs, frame_idx=0, total_frames=1)
+        attach_runtime(canvas, spec, 0, 1)
         base_frame = _apply_post(canvas, post_ops, palette)
         if fx_list:
             fx_frames = fx.apply_fx_pipeline(
@@ -1094,6 +1096,7 @@ def run_frames(spec: dict[str, Any]) -> tuple[list[Canvas], list[str]]:
             else list(fspec.get("ops", []))
         )
         _execute_ops(canvas, effective_ops, palette, defs, frame_idx=idx, total_frames=total)
+        attach_runtime(canvas, spec, idx, total)
         frames.append(_apply_post(canvas, post_ops, palette))
         names.append(fspec.get("name", f"frame_{idx}"))
     if fx_list:

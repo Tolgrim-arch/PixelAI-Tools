@@ -272,6 +272,8 @@ def build_json_schema() -> dict[str, Any]:
         "properties": {
             "width": {"type": "integer", "minimum": 1},
             "height": {"type": "integer", "minimum": 1},
+            "asset_id": {"type": "string", "minLength": 1},
+            "runtime": {"type": "object", "required": ["pivot", "ground_anchor", "sort_origin"]},
             "palette": {"oneOf": [{"type": "string", "enum": palette_names}, {"type": "object"}]},
             "palette_ext": {"type": "object", "additionalProperties": {"type": "string"}},
             "style": {"type": "string", "enum": ["ext_outline", "lineless"]},

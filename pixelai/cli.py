@@ -153,6 +153,11 @@ def _cmd_validate(args: argparse.Namespace) -> int:
 
 
 def _cmd_render(args: argparse.Namespace) -> int:
+    targets = [Path(value).resolve() for value in (args.output, args.meta, args.manifest, args.godot, args.ruler, args.contact_sheet) if value]
+    if len(targets) != len(set(targets)):
+        raise ValueError("Render artifact paths must be distinct")
+    if args.spec != "-" and Path(args.spec).resolve() in targets:
+        raise ValueError("Render output cannot overwrite its source specification")
     spec = _read_spec(args.spec)
     if args.fresh:
         spec["fresh"] = True
@@ -181,16 +186,21 @@ def _cmd_render(args: argparse.Namespace) -> int:
     fps = args.fps if args.fps is not None else int(spec.get("fps", 8))
     cols = args.columns if args.columns is not None else spec.get("columns")
 
-    if is_gif and (args.sheet or args.meta or args.godot):
-        raise ValueError("GIF output cannot be combined with --sheet, --meta, or --godot")
+    if is_gif and (args.sheet or args.meta or args.godot or args.manifest):
+        raise ValueError("GIF output cannot be combined with --sheet, --meta, --godot or --manifest")
     if fps <= 0:
         raise ValueError("fps: expected a positive value")
     if cols is not None and (not isinstance(cols, int) or cols <= 0):
         raise ValueError("columns: expected a positive integer")
 
-    from pixelai.animation_contract import durations_ms, clips_by_index
+    from pixelai.animation_contract import durations_ms, clips_by_index, validate_transitions
     timings = durations_ms(len(frames), fps, spec.get("durations_ms"))
     clips = clips_by_index(len(frames), spec.get("clips"))
+    validate_transitions(spec.get("transitions", []), clips)
+    manifest = None
+    if args.manifest:
+        from pixelai.manifest import build_manifest
+        manifest = build_manifest(spec, frames, out_path, args.manifest, cols, timings, clips)
 
     if is_gif:
         out = export_gif(frames, out_path, fps=fps, durations_ms=timings)
@@ -212,6 +222,13 @@ def _cmd_render(args: argparse.Namespace) -> int:
         report(f"Rendered {frames[0].width}x{frames[0].height} -> {out}")
 
     artifacts["image"] = str(out.resolve())
+    if manifest is not None:
+        import hashlib
+        manifest["texture_sha256"] = hashlib.sha256(out.read_bytes()).hexdigest()
+        manifest_path = Path(args.manifest)
+        manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        manifest_path.write_text(json.dumps(manifest, indent=2))
+        artifacts["manifest"] = str(manifest_path.resolve())
     if args.meta:
         artifacts["metadata"] = str(Path(args.meta).resolve())
 
@@ -639,6 +656,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional output path for spritesheet JSON metadata.",
     )
+    render_p.add_argument("--manifest", help="Export a universal asset manifest; requires spec.asset_id and explicit spec.runtime coordinates.")
     render_p.add_argument(
         "--godot",
         default=None,

@@ -11,6 +11,39 @@ from pathlib import Path
 
 from PIL import Image
 from pixelai.geometry import validate_polygon
+from pixelai.animation_contract import validate_transitions
+
+
+def build_manifest(spec, frames, texture_path, manifest_path, columns, timings, clips):
+    """Build a universal manifest from actual rendered frames and explicit runtime data."""
+    texture_path, manifest_path = Path(texture_path).resolve(), Path(manifest_path).resolve()
+    if not texture_path.is_relative_to(manifest_path.parent):
+        raise ValueError("Manifest texture must be inside the manifest directory")
+    asset_id = spec.get("asset_id")
+    if not isinstance(asset_id, str) or not asset_id.strip():
+        raise ValueError("Universal manifest export requires spec.asset_id")
+    columns = columns or len(frames)
+    records = []
+    for index, frame in enumerate(frames):
+        if (frame.width, frame.height) != (frames[0].width, frames[0].height):
+            raise ValueError("Universal atlas frames must have consistent dimensions")
+        if not any(pixel[3] for pixel in frame.pixels):
+            raise ValueError("Universal atlas frames cannot be empty")
+        runtime = [item for item in frame.attachments if item.get("type") == "runtime"]
+        if len(runtime) != 1:
+            raise ValueError("Universal manifest export requires explicit spec.runtime coordinates")
+        record = {key: value for key, value in runtime[0].items() if key != "type"}
+        for name in ("pivot", "ground_anchor", "sort_origin"):
+            x, y = _point(record.get(name), f"runtime.{name}")
+            if not 0 <= x <= frame.width or not 0 <= y <= frame.height:
+                raise ValueError(f"runtime.{name} is outside the rendered frame")
+        record.update(id=str(index), rect=[index % columns * frame.width, index // columns * frame.height, frame.width, frame.height], duration_ms=timings[index])
+        records.append(record)
+    return {"schema_version": 1, "asset_id": asset_id,
+            "texture": texture_path.relative_to(manifest_path.parent).as_posix(),
+            "frames": records,
+            "clips": {name: {**clip, "frames": [str(index) for index in clip["frames"]]} for name, clip in clips.items()},
+            "transitions": validate_transitions(spec.get("transitions", []), clips)}
 
 
 def _integer(value, name, minimum=0):
@@ -96,12 +129,7 @@ def load_manifest(source):
         sequence = clip.get("frames")
         if not isinstance(sequence, list) or not sequence or any(f not in frame_ids for f in sequence):
             raise ValueError(f"clip {name} references missing frames")
-    transitions = data.get("transitions", [])
-    if not isinstance(transitions, list):
-        raise ValueError("transitions must be an array")
-    for transition in transitions:
-        if not isinstance(transition, dict) or transition.get("from") not in clips or transition.get("to") not in clips:
-            raise ValueError("Transition references a missing clip")
+    validate_transitions(data.get("transitions", []), clips)
     return data, image
 
 

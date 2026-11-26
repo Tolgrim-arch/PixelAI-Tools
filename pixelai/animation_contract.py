@@ -25,3 +25,12 @@ def clips_by_index(count, clips=None):
         if not isinstance(indices, list) or not indices or any(type(i) is not int or not 0 <= i < count for i in indices):
             raise ValueError(f"Clip {name!r} references invalid frame indices")
     return clips
+
+
+def validate_transitions(transitions, clips):
+    if not isinstance(transitions, list):
+        raise ValueError("transitions must be an array")
+    for edge in transitions:
+        if not isinstance(edge, dict) or not isinstance(edge.get("from"), str) or not isinstance(edge.get("to"), str) or edge["from"] not in clips or edge["to"] not in clips:
+            raise ValueError("Transition references a missing clip")
+    return transitions

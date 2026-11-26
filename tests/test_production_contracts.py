@@ -22,6 +22,11 @@ class ProductionContractsTest(unittest.TestCase):
             spec["ops"][0]["color"] = "#00ff00"
             (root / "source.json").write_text(json.dumps(spec))
             validate_submission("construction", data, {}, root)
+            with self.assertRaisesRegex(ValueError, "native_size"):
+                validate_submission("construction", data, {"contract": {"native_size": [8, 8]}}, root)
+            proposals = [{"id": str(i), "structure": f"Claimed structure {i}", "source_path": "source.json", "image_path": "sprite.png"} for i in range(6)]
+            with self.assertRaisesRegex(ValueError, "identical rendered"):
+                validate_submission("alternatives", {"proposals": proposals, "selected_id": "0", "evidence": data["evidence"]}, {}, root)
 
     def test_invalid_contract_and_duplicate_proposals(self):
         with self.assertRaises(ValueError):

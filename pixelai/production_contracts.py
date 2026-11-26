@@ -11,6 +11,7 @@ from PIL import Image, ImageSequence
 
 from pixelai.quality import CRITERIA
 from pixelai.provenance import verify_construction
+from pixelai.diversity import compare_silhouettes
 
 
 CATEGORIES = ("human", "creature", "vegetation", "building", "rock", "item",
@@ -18,7 +19,7 @@ CATEGORIES = ("human", "creature", "vegetation", "building", "rock", "item",
 
 REQUIREMENTS = {
     "contract": ["category", "native_size", "art_direction", "functional_requirements"],
-    "alternatives": ["proposals (six distinct structural descriptions)", "selected_id"],
+    "alternatives": ["proposals (six distinct descriptions with source_path and image_path evidence)", "selected_id"],
     "construction": ["source_path", "image_path", "source evidence", "matching PNG or GIF evidence", "manifest_path for atlas PNGs"],
     "art_review": ["context_id", "author_context_id", "criteria", "native_resolution", "integer_zoom"],
     "context_review": ["context_id", "author_context_id", "criteria", "native_resolution", "integer_zoom"],
@@ -52,7 +53,7 @@ def validate_submission(stage, data, previous, project=None):
         if stage == "construction" and not sources:
             raise ValueError("Construction requires JSON source spec evidence")
         if stage == "construction":
-            verify_construction(project, data)
+            verify_construction(project, data, previous.get("contract", {}).get("native_size"))
     if stage == "contract":
         if data.get("category") not in CATEGORIES:
             raise ValueError(f"category must be one of {', '.join(CATEGORIES)}")
@@ -79,6 +80,29 @@ def validate_submission(stage, data, previous, project=None):
             raise ValueError("Proposal ids and structural descriptions must be distinct")
         if data.get("selected_id") not in ids:
             raise ValueError("selected_id must identify one of the proposals")
+        if project is not None:
+            images = []
+            contents = set()
+            for proposal in proposals:
+                if not isinstance(proposal.get("image_path"), str) or Path(proposal["image_path"]).suffix.lower() != ".png":
+                    raise ValueError("Each proposal requires native PNG image_path evidence")
+                verify_construction(project, {**proposal, "evidence": data["evidence"]}, previous.get("contract", {}).get("native_size"))
+                path = Path(project) / proposal["image_path"]
+                with Image.open(path) as image:
+                    image = image.convert("RGBA")
+                    if not image.getchannel("A").getbbox():
+                        raise ValueError("Proposal images cannot be empty")
+                    getter = getattr(image, "get_flattened_data", image.getdata)
+                    signature = image.size, tuple(pixel if pixel[3] else (0, 0, 0, 0) for pixel in getter())
+                    if signature in contents:
+                        raise ValueError("Structural proposals cannot repeat identical rendered images")
+                    contents.add(signature)
+                images.append((proposal["id"], path))
+            data["proposal_comparisons"] = [
+                {"first": first_id, "second": second_id, **compare_silhouettes(first_path, second_path)}
+                for index, (first_id, first_path) in enumerate(images)
+                for second_id, second_path in images[index+1:]
+            ]
     elif stage in ("art_review", "context_review"):
         construction = previous.get("construction")
         if construction:

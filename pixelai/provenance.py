@@ -31,7 +31,7 @@ def _gif_sequence(path):
         return loop, frames
 
 
-def verify_construction(project, submission):
+def verify_construction(project, submission, native_size=None):
     """Validate source-to-pixel provenance for PNG, atlas PNG and GIF previews."""
     root = Path(project).resolve()
     evidence = {record["path"] for record in submission["evidence"]}
@@ -47,6 +47,8 @@ def verify_construction(project, submission):
     spec.setdefault("style", "ext_outline")
     spec["fresh"] = True
     frames, _ = run_frames(resolve_spec_paths(spec, source_path.parent))
+    if native_size is not None and any([frame.width, frame.height] != native_size for frame in frames):
+        raise ValueError("Rendered frame dimensions violate the managed native_size contract")
     fps = spec.get("fps", 8)
     timings = durations_ms(len(frames), fps, spec.get("durations_ms"))
     clips = clips_by_index(len(frames), spec.get("clips"))
@@ -84,6 +86,12 @@ def verify_construction(project, submission):
             raise ValueError(f"Atlas frame {index} does not match the source")
         if record["duration_ms"] != timings[index]:
             raise ValueError(f"Atlas frame {index} duration does not match the source")
+        runtime = [item for item in expected.attachments if item.get("type") == "runtime"]
+        if runtime:
+            for field in ("pivot", "ground_anchor", "sort_origin", "regions", "sockets"):
+                default = [] if field == "regions" else {} if field == "sockets" else None
+                if record.get(field, default) != runtime[0].get(field, default):
+                    raise ValueError(f"Atlas frame {index} runtime {field} does not match the source")
     ids = [frame["id"] for frame in manifest["frames"]]
     expected_clips = {name: {"frames": [ids[index] for index in clip["frames"]], "loop": clip["loop"],
                             **({"interruptible": clip["interruptible"]} if "interruptible" in clip else {})}

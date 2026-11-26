@@ -134,6 +134,24 @@ files. Atlas PNGs also require `manifest_path`; each native frame, duration
 and named clip must match the source. GIF previews are checked after the
 renderer's palette and timing conversion.
 
+The alternatives stage requires six proposal records with distinct `id` and
+`structure` values plus `source_path` and `image_path` evidence. Every proposal
+is rerendered and must match the contracted native dimensions. Identical
+rendered proposals are rejected; pairwise silhouette diagnostics are recorded
+for review. Pixel differences alone do not establish meaningful design variety.
+
+Generate universal metadata directly with
+`pixelai render source.json -o art/sheet.png --manifest asset.json --json`.
+The source must declare `asset_id` and a `runtime` object with explicit
+`pivot`, `ground_anchor` and `sort_origin` coordinate pairs. Optional `regions`
+and `sockets` use the same native coordinates. `runtime.frame_overrides` maps
+rendered frame index strings to coordinate/region/socket overrides.
+Coordinates are attached before post-processing and follow padding and integer
+scaling automatically. The output texture must be inside the manifest's
+directory. Metadata includes actual atlas regions, the texture hash, durations,
+clips and declared transitions. Output artifacts cannot share a path or
+overwrite the source specification.
+
 `pixelai simulate asset.manifest.json --json` validates exported regions,
 texture identity, coordinates and clip timing. It reports unverified runtime
 behaviors explicitly. `pixelai diversity first.png second.png --json` provides

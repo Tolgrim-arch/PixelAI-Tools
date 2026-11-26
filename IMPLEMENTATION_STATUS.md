@@ -5,7 +5,7 @@
 - Persistent SQLite tasks, restart-safe ordering, idempotent start and audit events.
 - Project-relative evidence files with SHA-256 identity and downstream reopening after changes.
 - Content-addressed evidence snapshots preserve previous bytes after working files change; changing the brief reopens tasks without resetting consumed budgets.
-- Stage-specific contract fields, six distinct proposal descriptions and eleven-criterion review completeness.
+- Stage-specific contract fields, six source-verified PNG proposals with distinct rendered content and pairwise silhouette diagnostics, and eleven-criterion review completeness. Proposal and construction dimensions must match the managed native_size contract.
 - Every pending task includes category-specific failure checks, a visual inspection protocol and targeted repair instructions; review tasks include the eleven-criterion rubric.
 - Nonempty image evidence for construction/review and JSON source evidence for construction.
 - Native PNG and atlas construction is rerendered from the submitted fresh source and compared pixel-for-pixel; atlas manifests must preserve source timing and clips. GIF previews are verified after palette conversion and timing quantization. Reviews must include the exact constructed artifact evidence.
@@ -14,6 +14,7 @@
 - Three consecutive reviews with the same failing criteria reopen structural alternatives; budget-exhaustion diagnostics retain the latest defects.
 - Construction/review submission quotas and explicit blocked status on exhaustion.
 - Universal manifest validation of texture hashes, actual frame regions, anchors, timing and clip references.
+- Direct `render --manifest` export derives atlas layout, texture hashes, timing and clips from rendered output, requiring explicit runtime anchors. Per-frame overrides, sockets and functional regions follow padding/scaling; provenance verifies those transformed coordinates too.
 - Exported clip timing traces, explicitly reporting unverified runtime behaviors.
 - Reference scene compositor consumes only exported manifests/textures and emits native PNGs plus timing, pivot placement and stable Y-sort traces.
 - Validated convex functional regions distinguish collision, hit, hurt, interaction and occluder roles; contextual traces report positive-area overlaps without treating boundary contact as penetration.
@@ -26,7 +27,7 @@
 
 ## Current limits
 
-The managed queue never approves production. Distinct proposal descriptions do not yet establish visible structural diversity. Reviewer declarations do not prove isolated contexts or actual perception. The reference runtime renders pivot placement, sorting, functional-region overlap and declared state changes; it does not yet solve movement collisions, validate acting, blend transitions or verify tile seams. These checks remain necessary before enabling release.
+The managed queue never approves production. Proposal pixel differences and similarity diagnostics do not establish meaningful structural diversity; that still requires visual review. Reviewer declarations do not prove isolated contexts or actual perception. The reference runtime renders pivot placement, sorting, functional-region overlap and declared state changes; it does not yet solve movement collisions, validate acting, blend transitions or verify tile seams. These checks remain necessary before enabling release.
 
 ## Next implementation priorities
 

@@ -25,7 +25,7 @@ def _transform_attachment_points(value, factor: int = 1, dx: int = 0, dy: int = 
     if isinstance(value, dict):
         return {key: _transform_attachment_points(item, factor, dx, dy) for key, item in value.items()}
     if isinstance(value, list):
-        if len(value) == 2 and all(isinstance(item, int) for item in value):
+        if len(value) == 2 and all(type(item) in (int, float) for item in value):
             return [value[0] * factor + dx, value[1] * factor + dy]
         return [_transform_attachment_points(item, factor, dx, dy) for item in value]
     return value

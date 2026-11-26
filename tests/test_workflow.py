@@ -9,6 +9,21 @@ from PIL import Image
 
 from pixelai.workflow import initialize, operate
 from pixelai.quality import CRITERIA
+from pixelai.exporter import export_png
+from pixelai.runner import run_spec
+
+
+def alternatives(project, size):
+    proposals, evidence = [], []
+    for index, (width, height) in enumerate(((1, 1), (1, 2), (1, 3), (2, 1), (2, 3), (3, 2))):
+        source_name, image_name = f"proposal_{index}.json", f"proposal_{index}.png"
+        source = {"width": size, "height": size, "style": "lineless", "ops": [
+            {"op": "rect", "x": 0, "y": 0, "w": width, "h": height, "color": "#448855"}]}
+        (project / source_name).write_text(json.dumps(source))
+        export_png(run_spec(source), project / image_name)
+        proposals.append({"id": str(index), "structure": f"Structural proposal {index}", "source_path": source_name, "image_path": image_name})
+        evidence.extend([{"path": source_name}, {"path": image_name}])
+    return {"proposals": proposals, "selected_id": "0", "evidence": evidence}
 
 
 class WorkflowTest(unittest.TestCase):
@@ -31,7 +46,7 @@ class WorkflowTest(unittest.TestCase):
                 return operate(project, "submit", task["task_id"], response)
 
             submit({"category": "item", "native_size": [4, 4], "art_direction": "Compact shapes", "functional_requirements": []})
-            submit({"proposals": [{"id": str(i), "structure": f"Structure {i}"} for i in range(6)], "selected_id": "0"})
+            submit(alternatives(project, 4))
             for _ in range(3):
                 submit({})
                 result = submit({"context_id": "reviewer", "author_context_id": "author", "native_resolution": True, "integer_zoom": 3,
@@ -61,7 +76,7 @@ class WorkflowTest(unittest.TestCase):
             base = {"source_path": "source.json", "image_path": "art.png", "evidence": [{"path": "evidence.txt"}, {"path": "art.png"}, {"path": "source.json"}]}
             for extra in (
                 {"category": "item", "native_size": [32, 32], "art_direction": "Clear masses", "functional_requirements": []},
-                {"proposals": [{"id": str(i), "structure": f"Structure {i}"} for i in range(6)], "selected_id": "0"},
+                alternatives(project, 32),
                 {},
             ):
                 response.write_text(json.dumps({**base, **extra}))
@@ -102,7 +117,7 @@ class WorkflowTest(unittest.TestCase):
                 if task["stage"] == "contract":
                     data.update(category="item", native_size=[32, 32], art_direction="Readable clean clusters", functional_requirements=[])
                 elif task["stage"] == "alternatives":
-                    data.update(proposals=[{"id": str(i), "structure": f"Distinct structural proposal {i}"} for i in range(6)], selected_id="0")
+                    data.update(alternatives(project, 32))
                 elif task["stage"] in ("art_review", "context_review"):
                     data.update(context_id=task["stage"], author_context_id="author", native_resolution=True, integer_zoom=3,
                                 criteria={name: {"score": 3, "observation": "Synthetic test observation", "evidence_indices": [0]} for name in CRITERIA})
