@@ -138,6 +138,28 @@ approximate silhouette similarity diagnostics, not artistic approval.
 See [AUTONOMOUS_ROADMAP.md](AUTONOMOUS_ROADMAP.md) for implemented capabilities,
 remaining stages and acceptance criteria.
 
+### Named structural parts
+
+The `assembly` operation renders a graph of named parts. Each part declares
+`id`, native `width`/`height`, local drawing `ops`, an optional `parent` id,
+integer `offset`, `z` draw order and a descriptive `material`. Child offsets
+are relative to the parent's origin. Moving a parent moves its children.
+Part origins survive padding and integer scaling in exported attachments.
+Missing parents, cycles, duplicate IDs and unknown part fields are errors.
+
+```json
+{"op":"assembly","parts":[
+  {"id":"torso","width":12,"height":16,"offset":[10,8],
+   "ops":[{"op":"rect","x":0,"y":0,"w":12,"h":16,"color":"#448855"}]},
+  {"id":"arm","parent":"torso","width":4,"height":10,"offset":[12,2],
+   "ops":[{"op":"rect","x":0,"y":0,"w":4,"h":10,"color":"#669966"}]}
+]}
+```
+
+This initial assembly contract supports translation and draw order. It does
+not yet solve anatomical constraints, rotations, contact physics or automatic
+structural diversity. Use explicit `frame_count` for animation nested in parts.
+
 New artwork can enforce generation without imported assets:
 
 ```powershell

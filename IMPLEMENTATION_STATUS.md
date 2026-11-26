@@ -16,6 +16,7 @@
 - Empty artwork cannot pass style fidelity checks.
 - PNG metadata and Godot exports preserve explicit per-frame durations and named clips; GIF previews preserve holds within GIF timing limits.
 - Procedural library included in wheel/sdist builds and resolved from installed packages.
+- Named assembly parts with validated parent graphs, inherited offsets, deterministic draw order, material labels and transform-aware exported origins.
 
 ## Current limits
 

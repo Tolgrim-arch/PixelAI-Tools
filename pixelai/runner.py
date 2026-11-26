@@ -13,6 +13,7 @@ from pixelai import autotile, building, creatures, deform, filters, fx, iso, ite
 
 
 _GENERATOR_OPS = frozenset({
+    "assembly",
     "animal_rig", "char_rig", "nature_rig", "item_rig",
     "building", "portrait_rig", "ui_rig", "autotile",
     "tilemap", "iso_structure", "material", "spine_rig",
@@ -65,7 +66,24 @@ def _execute_ops_unchecked(canvas, ops, palette, defs, frame_idx, total_frames):
 
         canvas.clip_to_opaque = bool(op.get("inside", op.get("clip", False)))
 
-        if kind == "pixel":
+        if kind == "assembly":
+            from pixelai.assembly import resolve_parts
+            for part, (px, py) in resolve_parts(op["parts"]):
+                local = Canvas(part["width"], part["height"])
+                _execute_ops(local, part["ops"], palette, defs, frame_idx, total_frames)
+                ox, oy = int(op.get("x", 0)) + px, int(op.get("y", 0)) + py
+                canvas.blit(local, ox, oy)
+                canvas.clipped_pixels += local.clipped_pixels
+                canvas.warnings.extend(f"part[{part['id']}]: {warning}" for warning in local.warnings)
+                for field in ("shadow_pixels", "no_outline"):
+                    destination = getattr(canvas, field)
+                    for index in getattr(local, field):
+                        x, y = ox + index % local.width, oy + index // local.width
+                        if canvas.in_bounds(x, y):
+                            destination.add(y * canvas.width + x)
+                canvas.attachments.append({"type": "part", "name": part["id"], "parent": part.get("parent"),
+                                           "origin": [ox, oy], "material": part.get("material")})
+        elif kind == "pixel":
             canvas.set_pixel(op["x"], op["y"], parse_color(op["color"], palette))
         elif kind == "line":
             canvas.draw_line(

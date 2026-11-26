@@ -10,6 +10,11 @@ from pixelai.palettes import list_palettes
 UNIVERSAL_OP_FIELDS: frozenset[str] = frozenset({"op", "z", "inside", "clip", "outline", "shadow"})
 
 OP_SPECS: dict[str, dict[str, Any]] = {
+    "assembly": {
+        "summary": "Render named parented native-pixel parts with stable ids, offsets and draw order.",
+        "required": ["parts"], "optional": ["x", "y"],
+        "example": {"op": "assembly", "parts": [{"id": "body", "width": 8, "height": 8, "offset": [4, 4], "ops": [{"op": "rect", "x": 0, "y": 0, "w": 8, "h": 8, "color": "#448855"}]}]},
+    },
     "pixel": {
         "summary": "Set a single pixel at (x, y).",
         "required": ["x", "y", "color"],
