@@ -10,6 +10,7 @@
 - Nonempty image evidence for construction/review and JSON source evidence for construction.
 - Native PNG and atlas construction is rerendered from the submitted fresh source and compared pixel-for-pixel; atlas manifests must preserve source timing and clips. GIF previews are verified after palette conversion and timing quantization. Reviews must include the exact constructed artifact evidence.
 - Declared reviewer-context separation; these declarations are not authenticated host isolation.
+- Artifact-bound reviewer packets expose native and 4x views for every frame without author or peer-review arguments. Submissions must identify the current packet, cover every view and include its hash-bound evidence; coverage declarations are not host observation attestations.
 - Failed review scores reopen construction and preserve review history and consumed budgets.
 - Three consecutive reviews with the same failing criteria reopen structural alternatives; budget-exhaustion diagnostics retain the latest defects.
 - Construction/review submission quotas and explicit blocked status on exhaustion.

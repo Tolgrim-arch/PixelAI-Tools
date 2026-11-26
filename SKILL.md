@@ -21,6 +21,12 @@ background, scale, gameplay state and seamless-tile requirements where applicabl
 The experimental workflow cannot grant production approval yet. Report its
 blocked state honestly and preserve the project for resumption.
 
+Review tasks return role-specific `review_packet` data. Supply that packet's
+`packet_id`, all generated view paths in `inspected_views` and each view's
+path/hash in `evidence`. Inspect every native and 4x frame. The generated
+packet deliberately excludes author arguments and the other reviewer's scores.
+Packet coverage is a completeness check, not authenticated host observation.
+
 Use `assembly` for named parented parts and structural edits. Use `diversity`
 to compare individual silhouettes, recognizing legitimate shared shapes.
 Specify `durations_ms` and named `clips` for holds and distinct actions;

@@ -122,10 +122,16 @@ def operate(project, action, task=None, response=None):
                             "latest_repair": json.loads(repair[0]) if repair else None, "approval_supported": False}
                 contract = db.execute("SELECT response FROM tasks WHERE stage='contract'").fetchone()
                 category = json.loads(contract[0]).get("category") if contract and contract[0] else None
+                review_packet = None
+                if row[1] in ("art_review", "context_review"):
+                    from pixelai.review_packet import prepare_packet
+                    construction = db.execute("SELECT response FROM tasks WHERE stage='construction'").fetchone()
+                    review_packet = prepare_packet(project, json.loads(contract[0]), json.loads(construction[0]), row[1])
                 return {"status": "needs_agent", "task_id": row[0], "stage": row[1], "guidance": row[2],
                         "required_output": REQUIREMENTS[row[1]], "usage": usage, "limits": limits,
                         "quality_protocol": task_guidance(category, row[1]),
-                        "latest_repair": json.loads(repair[0]) if repair else None, "approval_supported": False}
+                        "review_packet": review_packet,
+                        "latest_repair": json.loads(repair[0]) if repair and review_packet is None else None, "approval_supported": False}
             count = db.execute("SELECT count(*) FROM tasks").fetchone()[0]
             return {"status": "blocked", "reason": "Artifact verification and host review adapters are not implemented" if count else "Start the workflow first", "approval_supported": False}
     finally:

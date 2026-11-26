@@ -21,8 +21,8 @@ REQUIREMENTS = {
     "contract": ["category", "native_size", "art_direction", "functional_requirements"],
     "alternatives": ["proposals (six distinct descriptions with source_path and image_path evidence)", "selected_id"],
     "construction": ["source_path", "image_path", "source evidence", "matching PNG or GIF evidence", "manifest_path for atlas PNGs"],
-    "art_review": ["context_id", "author_context_id", "criteria", "native_resolution", "integer_zoom"],
-    "context_review": ["context_id", "author_context_id", "criteria", "native_resolution", "integer_zoom"],
+    "art_review": ["context_id", "author_context_id", "packet_id", "inspected_views", "criteria", "native_resolution", "integer_zoom"],
+    "context_review": ["context_id", "author_context_id", "packet_id", "inspected_views", "criteria", "native_resolution", "integer_zoom"],
     "verification": ["runtime evidence (not yet sufficient for approval)"],
 }
 
@@ -110,6 +110,18 @@ def validate_submission(stage, data, previous, project=None):
             expected = next(r for r in construction["evidence"] if r["path"] == rendered_path)
             if expected not in data["evidence"]:
                 raise ValueError("Review must include the exact constructed artifact evidence")
+            if project is not None:
+                from pixelai.review_packet import prepare_packet
+                packet = prepare_packet(project, previous["contract"], construction, stage)
+                if data.get("packet_id") != packet["packet_id"]:
+                    raise ValueError("Review must identify the current visual packet")
+                inspected = data.get("inspected_views")
+                required_views = {view["path"] for view in packet["views"]}
+                if not isinstance(inspected, list) or any(not isinstance(path, str) for path in inspected) or set(inspected) != required_views or len(inspected) != len(required_views):
+                    raise ValueError("Review must cover every native and integer-zoom frame view")
+                for view in packet["views"]:
+                    if {"path": view["path"], "sha256": view["sha256"]} not in data["evidence"]:
+                        raise ValueError("Review view is missing from hash-bound evidence")
         context, author = data.get("context_id"), data.get("author_context_id")
         _text(context, "context_id")
         _text(author, "author_context_id")

@@ -26,6 +26,12 @@ def alternatives(project, size):
     return {"proposals": proposals, "selected_id": "0", "evidence": evidence}
 
 
+def review_coverage(task, data):
+    packet = task["review_packet"]
+    return {**data, "packet_id": packet["packet_id"], "inspected_views": [view["path"] for view in packet["views"]],
+            "evidence": data["evidence"] + [{"path": view["path"], "sha256": view["sha256"]} for view in packet["views"]]}
+
+
 class WorkflowTest(unittest.TestCase):
     def test_three_repeated_rejections_require_new_alternatives(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -41,8 +47,11 @@ class WorkflowTest(unittest.TestCase):
             response = root / "response.json"
 
             def submit(extra):
-                response.write_text(json.dumps({**base, **extra}))
                 task = operate(project, "next")
+                data = {**base, **extra}
+                if task["stage"] in ("art_review", "context_review"):
+                    data = review_coverage(task, data)
+                response.write_text(json.dumps(data))
                 return operate(project, "submit", task["task_id"], response)
 
             submit({"category": "item", "native_size": [4, 4], "art_direction": "Compact shapes", "functional_requirements": []})
@@ -84,8 +93,14 @@ class WorkflowTest(unittest.TestCase):
                 operate(project, "submit", task["task_id"], response)
             review = {**base, "context_id": "reviewer", "author_context_id": "author", "native_resolution": True, "integer_zoom": 3,
                       "criteria": {name: {"score": 2, "observation": "Visible structural defect", "evidence_indices": [0]} for name in CRITERIA}}
-            response.write_text(json.dumps(review))
             task = operate(project, "next")
+            covered = review_coverage(task, review)
+            incomplete = {**covered, "inspected_views": covered["inspected_views"][:-1]}
+            response.write_text(json.dumps(incomplete))
+            with self.assertRaisesRegex(ValueError, "every native"):
+                operate(project, "submit", task["task_id"], response)
+            self.assertEqual(operate(project, "status")["usage"]["visual_reviews"], 0)
+            response.write_text(json.dumps(covered))
             result = operate(project, "submit", task["task_id"], response)
             self.assertEqual(result["status"], "blocked")
             self.assertEqual(result["usage"]["rendered_revisions"], 1)
@@ -121,6 +136,7 @@ class WorkflowTest(unittest.TestCase):
                 elif task["stage"] in ("art_review", "context_review"):
                     data.update(context_id=task["stage"], author_context_id="author", native_resolution=True, integer_zoom=3,
                                 criteria={name: {"score": 3, "observation": "Synthetic test observation", "evidence_indices": [0]} for name in CRITERIA})
+                    data = review_coverage(task, data)
                 response.write_text(json.dumps(data))
                 operate(project, "submit", task["task_id"], response)
             final = operate(project, "status")

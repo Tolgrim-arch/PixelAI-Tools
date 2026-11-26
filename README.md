@@ -129,6 +129,13 @@ the project, for example `{"evidence":[{"path":"art/sprite.png"}]}`. Changing
 accepted evidence reopens dependent tasks. Reviews below 3/4 request repair.
 Review context identities are currently declarations, not host-authenticated
 isolation. The experimental workflow never grants production approval.
+
+Review tasks provide a `review_packet` with every frame at native size and
+4x nearest-neighbor zoom. Use a separate context for each reviewer and supply
+its `packet_id`, every view path in `inspected_views`, and the view records in
+the submission's `evidence` array. Missing views or stale packet identities
+cannot advance the task. Packets omit author justifications and peer scores;
+creating or declaring coverage of a packet does not attest actual observation.
 Construction submissions bind `source_path` and `image_path` to evidence
 files. Atlas PNGs also require `manifest_path`; each native frame, duration
 and named clip must match the source. GIF previews are checked after the
