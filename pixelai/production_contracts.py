@@ -94,6 +94,7 @@ def validate_submission(stage, data, previous, project=None):
             anatomies = []
             architectures = []
             fractures = []
+            interfaces = []
             contents = set()
             for proposal in proposals:
                 if not isinstance(proposal.get("image_path"), str) or Path(proposal["image_path"]).suffix.lower() != ".png":
@@ -105,6 +106,7 @@ def validate_submission(stage, data, previous, project=None):
                 anatomies.append((proposal["id"], proof["anatomy_graphs"]))
                 architectures.append((proposal["id"], proof["architecture_graphs"]))
                 fractures.append((proposal["id"], proof["fracture_graphs"]))
+                interfaces.append((proposal["id"], proof["ui_graphs"]))
                 path = Path(project) / proposal["image_path"]
                 with Image.open(path) as image:
                     image = image.convert("RGBA")
@@ -144,6 +146,12 @@ def validate_submission(stage, data, previous, project=None):
                 {"first": first_id, "second": second_id, "first_graph": i, "second_graph": j, **compare_graphs(first, second)}
                 for index, (first_id, first_graphs) in enumerate(fractures)
                 for second_id, second_graphs in fractures[index+1:]
+                for i, first in enumerate(first_graphs) for j, second in enumerate(second_graphs)
+            ]
+            data["ui_comparisons"] = [
+                {"first": first_id, "second": second_id, "first_graph": i, "second_graph": j, **compare_graphs(first, second)}
+                for index, (first_id, first_graphs) in enumerate(interfaces)
+                for second_id, second_graphs in interfaces[index+1:]
                 for i, first in enumerate(first_graphs) for j, second in enumerate(second_graphs)
             ]
     elif stage in ("art_review", "context_review"):

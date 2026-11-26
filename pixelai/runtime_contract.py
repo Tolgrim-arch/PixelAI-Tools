@@ -22,9 +22,9 @@ def attach_runtime(canvas, spec, index, count):
     if "derive" in runtime:
         if runtime["derive"] != "structure":
             raise ValueError("runtime.derive currently accepts structure only")
-        graphs = [item for item in canvas.attachments if item.get("type") in ("anatomy_graph", "growth_graph", "architecture_graph", "fracture_graph")]
+        graphs = [item for item in canvas.attachments if item.get("type") in ("anatomy_graph", "growth_graph", "architecture_graph", "fracture_graph", "ui_graph")]
         if len(graphs) != 1:
-            raise ValueError("runtime.derive requires exactly one rendered anatomy, growth, architecture or fracture graph; enable structural generation and render one asset per spec")
+            raise ValueError("runtime.derive requires exactly one rendered structural graph; enable semantic generation and render one asset/component per spec")
         graph = graphs[0]
         record = {"pivot": deepcopy(graph["ground_anchor"]), "ground_anchor": deepcopy(graph["ground_anchor"]),
                   "sort_origin": deepcopy(graph["ground_anchor"]),

@@ -177,7 +177,7 @@ _GENERATOR_FIELDS = {
     "animal_rig": "x y species variant dir pose frame total_frames perspective body shade deep_shade nest_prop ground_prop emotes shadow_color",
     "item_rig": "x y kind item orientation size shine frame shadow_color color secondary_color glass_color cork_color fill_level state flame_color",
     "nature_rig": "x y kind variant stage sway ground_base frame w h seed color trunk_color accent_color shadow_color foliage_color bark_ramp band_colors ramp fruit bush_ramp shape layout r style growth trunk_only fracture fracture_only deposit",
-    "ui_rig": "x y kind component theme state selected color count w h frame_width inner_fill fill value fill_color segmented filled",
+    "ui_rig": "x y kind component theme state selected color count w h frame_width inner_fill fill value fill_color segmented filled composition",
     "tilemap": "x y tile_w tile_h mode map rows step_x step_y",
     "autotile": "x y tile_size inner outer lip seed",
     "emote": "x y kind frame",
@@ -212,6 +212,12 @@ OP_SPECS["building"]["notes"] = [
     "architecture.rotation = 0|90|180|270; wall_height [0.8,1.2], roof_pitch [0.7,1.3]. Unknown or inactive legacy controls fail explicitly.",
     "massing_only:true requires architecture and removes doors/windows. Compare projected footprint corners, roof ridges and connected masses independently of palette and ornament.",
     "Architecture uses a fixed oblique projection and depth-tested faces; this is not a navigable interior, collision proof or commercial-quality certification.",
+]
+OP_SPECS["ui_rig"]["notes"] = [
+    "Optional composition for panel/button/slot: profile = quiet|brackets|header|sidebar|footer|tab; native w>=32,h>=24 subject to content/cap clearance.",
+    "Composition border integer [2,6], padding [2,8], motif = facet|stud|chevron (inactive for quiet), ornament_budget [0,4], content_min positive [width,height]. Unsupported legacy controls fail.",
+    "All six states are explicit: normal|hover|pressed|selected|disabled|focus. Protected content remains clear; sparse motifs stay inside fixed corner caps for nine-slice resizing.",
+    "Universal manifests export a source-bound UI contract for a single composition per frame. Use uicheck on actual exported pixels; preserved caps do not prove text fit, focus behavior or artistic quality.",
 ]
 
 

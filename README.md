@@ -266,6 +266,34 @@ from a single graph. Collision regions remain separately authored. Inspect
 Seed/cut changes inside one silhouette do not establish meaningful catalog
 variety. These primitives do not certify geological realism or artistic finish.
 
+UI panels/buttons/slots can opt into `"composition":{"profile":"header"}`.
+Profiles are `quiet`, `brackets`, `header`, `sidebar`, `footer` and `tab`.
+They allocate chrome and protected content differently, with at most four
+ornament anchors in fixed corner caps. Border accepts integer [2,6], padding
+[2,8], ornament_budget [0,4], and content_min a positive [width,height] pair.
+Motifs are `facet`, `stud` and `chevron`; motif is inactive for quiet layouts.
+Native dimensions start at 32x24 but must fit fixed caps and required content.
+Unsupported legacy controls fail explicitly. Normal, hover, pressed, selected,
+disabled and focus states retain the same protected geometry. The legacy UI
+renderer remains available without composition.
+
+Single-composition universal frames export a source-bound `ui` contract with
+bounds, protected content, cuts and ornament anchors. Coordinates follow
+offsets/padding/scaling; a runtime state tag cannot contradict the rendered
+UI state. UI graph comparisons cover layout geometry rather than recoloring.
+`specs/ui_compositions.json` shows the six profiles; `specs/ui_states.json`
+exports six named states using `runtime.derive:structure` and a layout-origin
+pivot. UI components do not need character collision or foot-contact checks.
+
+`pixelai uicheck menu.manifest.json --frame 5 --size 64x32 --size 144x64 --output ui-review --json`
+reads the actual atlas frame, validates fixed-cap geometry, resizes nine regions
+with nearest-neighbor sampling, and emits native/4x images plus corner-preservation
+and content-coordinate diagnostics. Component bounds exclude surrounding canvas
+padding. The output directory must be new; invalid target sizes publish no bundle.
+Checks accept up to 16 targets within a four-million-native-pixel budget. The
+result remains `needs_visual_review`: text fit/localization, focus/input behavior,
+hierarchy and engine integration are unverified.
+
 `pixelai structure SOURCE.json --motion --json` analyzes named clip sequences
 using the actual rendered anatomy graphs. It requires exactly one character
 graph per frame with consistent joint IDs, roles and parents. Diagnostics

@@ -39,6 +39,13 @@ def build_manifest(spec, frames, texture_path, manifest_path, columns, timings, 
             if not 0 <= x <= frame.width or not 0 <= y <= frame.height:
                 raise ValueError(f"runtime.{name} is outside the rendered frame")
         record.update(id=str(index), rect=[index % columns * frame.width, index // columns * frame.height, frame.width, frame.height], duration_ms=timings[index])
+        from pixelai.nine_slice import ui_contract,validate_ui
+        ui = ui_contract(frame.attachments)
+        if ui is not None:
+            validate_ui(ui,frame.width,frame.height)
+            if "state" in record and record["state"] != ui["state"]:
+                raise ValueError("UI runtime state must match the rendered composition state")
+            record["ui"] = ui
         records.append(record)
     return {"schema_version": 1, "asset_id": asset_id,
             "texture": texture_path.relative_to(manifest_path.parent).as_posix(),
@@ -102,6 +109,11 @@ def load_manifest(source):
         if not image.crop((x, y, x + w, y + h)).getchannel("A").getbbox():
             raise ValueError("Exported frame is empty")
         _integer(frame.get("duration_ms"), "frame.duration_ms", 1)
+        if "ui" in frame:
+            from pixelai.nine_slice import validate_ui
+            validate_ui(frame["ui"],w,h)
+            if "state" in frame and frame["state"] != frame["ui"]["state"]:
+                raise ValueError("UI runtime state must match the rendered composition state")
         for name in ("pivot", "ground_anchor", "sort_origin"):
             px, py = _point(frame.get(name), f"frame.{name}")
             if not 0 <= px <= w or not 0 <= py <= h:

@@ -1,0 +1,17 @@
+{
+  "asset_id":"menu_panel","width":96,"height":48,"style":"lineless","fresh":true,
+  "runtime":{"derive":"structure"},
+  "frames":[
+    {"ops":[{"op":"ui_rig","w":96,"h":48,"theme":"gold","state":"normal","composition":{"profile":"header"}}]},
+    {"ops":[{"op":"ui_rig","w":96,"h":48,"theme":"gold","state":"hover","composition":{"profile":"header"}}]},
+    {"ops":[{"op":"ui_rig","w":96,"h":48,"theme":"gold","state":"pressed","composition":{"profile":"header"}}]},
+    {"ops":[{"op":"ui_rig","w":96,"h":48,"theme":"gold","state":"selected","composition":{"profile":"header"}}]},
+    {"ops":[{"op":"ui_rig","w":96,"h":48,"theme":"gold","state":"disabled","composition":{"profile":"header"}}]},
+    {"ops":[{"op":"ui_rig","w":96,"h":48,"theme":"gold","state":"focus","composition":{"profile":"header"}}]}
+  ],
+  "clips":{
+    "normal":{"frames":[0],"loop":true},"hover":{"frames":[1],"loop":true},
+    "pressed":{"frames":[2],"loop":true},"selected":{"frames":[3],"loop":true},
+    "disabled":{"frames":[4],"loop":true},"focus":{"frames":[5],"loop":true}
+  }
+}

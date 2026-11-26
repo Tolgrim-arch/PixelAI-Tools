@@ -942,6 +942,8 @@ def build_parser() -> argparse.ArgumentParser:
     register_diversity(sub)
     from pixelai.runtime import register as register_runtime
     register_runtime(sub)
+    from pixelai.nine_slice import register as register_ui
+    register_ui(sub)
     from pixelai.tileqa import register as register_tileqa
     register_tileqa(sub)
     return parser

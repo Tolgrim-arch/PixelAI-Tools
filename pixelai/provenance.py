@@ -61,7 +61,8 @@ def verify_construction(project, submission, native_size=None):
     proof = {"frame_count": len(frames), "growth_graphs": [record for record in frames[0].attachments if record.get("type") == "growth_graph"],
              "anatomy_graphs": [record for record in frames[0].attachments if record.get("type") == "anatomy_graph"],
              "architecture_graphs": [record for record in frames[0].attachments if record.get("type") == "architecture_graph"],
-             "fracture_graphs": [record for record in frames[0].attachments if record.get("type") == "fracture_graph"]}
+             "fracture_graphs": [record for record in frames[0].attachments if record.get("type") == "fracture_graph"],
+             "ui_graphs": [record for record in frames[0].attachments if record.get("type") == "ui_graph"]}
     proof["motion_diagnostics"] = {"status": "unavailable", "reason": "Requires one anatomy graph per frame"}
     if all(sum(item.get("type") == "anatomy_graph" for item in frame.attachments) == 1 for frame in frames):
         from pixelai.motion_analysis import analyze_motion
@@ -103,6 +104,9 @@ def verify_construction(project, submission, native_size=None):
             raise ValueError(f"Atlas frame {index} does not match the source")
         if record["duration_ms"] != timings[index]:
             raise ValueError(f"Atlas frame {index} duration does not match the source")
+        from pixelai.nine_slice import ui_contract
+        if record.get("ui") != ui_contract(expected.attachments):
+            raise ValueError(f"Atlas frame {index} UI contract does not match the source")
         runtime = [item for item in expected.attachments if item.get("type") == "runtime"]
         if runtime:
             for field in ("pivot", "ground_anchor", "sort_origin", "regions", "sockets", "view", "action", "state"):

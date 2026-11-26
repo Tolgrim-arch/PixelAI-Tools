@@ -44,7 +44,7 @@ def analyze_structures(spec, other=None, frame=0, full=False, motion=False):
     frames, _ = run_frames(spec)
     if type(frame) is not int or not 0 <= frame < len(frames):
         raise ValueError("Requested structure frame is outside the rendered sequence")
-    graphs = [record for record in frames[frame].attachments if record.get("type") in ("growth_graph", "anatomy_graph", "architecture_graph", "fracture_graph")]
+    graphs = [record for record in frames[frame].attachments if record.get("type") in ("growth_graph", "anatomy_graph", "architecture_graph", "fracture_graph", "ui_graph")]
     summaries = [{"index": index, "type": graph["type"], "profile": graph["profile"], "node_count": len(graph["nodes"]),
                   "root_count": sum(node["role"] == "root" for node in graph["nodes"]),
                   "ground_anchor": graph["ground_anchor"], **({"graph": graph} if full else {})}
@@ -54,7 +54,7 @@ def analyze_structures(spec, other=None, frame=0, full=False, motion=False):
         other_frames, _ = run_frames(other)
         if frame >= len(other_frames):
             raise ValueError("Comparison structure frame is outside the rendered sequence")
-        other_graphs = [record for record in other_frames[frame].attachments if record.get("type") in ("growth_graph", "anatomy_graph", "architecture_graph", "fracture_graph")]
+        other_graphs = [record for record in other_frames[frame].attachments if record.get("type") in ("growth_graph", "anatomy_graph", "architecture_graph", "fracture_graph", "ui_graph")]
         comparisons = [{"first": i, "second": j, **compare_graphs(first, second)}
                        for i, first in enumerate(graphs) for j, second in enumerate(other_graphs) if first["type"] == second["type"]]
     motion_report = None
@@ -65,4 +65,4 @@ def analyze_structures(spec, other=None, frame=0, full=False, motion=False):
                                        clips_by_index(len(frames), spec.get("clips")), full)
     return {"schema_version": 1, "frame": frame, "structures": summaries, "comparisons": comparisons,
             "motion": motion_report,
-            "limitations": ["Growth, top-down anatomy, architecture and fracture graphs only", "Structural inequality does not establish artistic quality or originality"]}
+            "limitations": ["Growth, top-down anatomy, architecture, fracture and UI graphs only", "Structural inequality does not establish artistic quality or originality"]}
