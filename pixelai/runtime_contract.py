@@ -10,7 +10,7 @@ def attach_runtime(canvas, spec, index, count):
     runtime = spec.get("runtime")
     if runtime is None:
         return
-    allowed = {"pivot", "ground_anchor", "sort_origin", "regions", "sockets"}
+    allowed = {"pivot", "ground_anchor", "sort_origin", "regions", "sockets", "view", "action", "state"}
     if not isinstance(runtime, dict) or set(runtime) - allowed - {"frame_overrides"}:
         raise ValueError("runtime contains unknown fields")
     overrides = runtime.get("frame_overrides", {})
@@ -21,6 +21,9 @@ def attach_runtime(canvas, spec, index, count):
     if not isinstance(override, dict) or set(override) - allowed:
         raise ValueError("Runtime frame override contains unknown fields")
     record.update(deepcopy(override))
+    for tag in ("view", "action", "state"):
+        if tag in record and (not isinstance(record[tag], str) or not record[tag].strip()):
+            raise ValueError(f"runtime.{tag} must be a nonempty name")
     for name in ("pivot", "ground_anchor", "sort_origin"):
         _point(record.get(name), f"runtime.{name}")
     if not isinstance(record.get("sockets", {}), dict):

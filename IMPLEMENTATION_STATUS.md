@@ -20,6 +20,7 @@
 - Reference scene compositor consumes only exported manifests/textures and emits native PNGs plus timing, pivot placement and stable Y-sort traces.
 - Validated convex functional regions distinguish collision, hit, hurt, interaction and occluder roles; contextual traces report positive-area overlaps without treating boundary contact as penetration.
 - Explicit actor timelines reject undeclared state changes and premature interruption of protected actions; position updates preserve clip timing unless a restart is requested.
+- Optional structured delivery contracts require named views/actions/states and explicit valid combinations in reachable manifest frames. Distinct-view checks reject identical view frame sets when requested; unreachable atlas content cannot satisfy delivery coverage.
 - Tile diagnostics produce native/4x repetition mosaics, every legal Wang16 edge-pair comparison and premultiplied edge-delta reports. Spatial visual continuity, temporal seams and Blob47 coverage remain unverified.
 - Approximate silhouette comparison normalized for padding and scale, with reflection checks.
 - Empty artwork cannot pass style fidelity checks.

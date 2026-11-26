@@ -159,6 +159,23 @@ directory. Metadata includes actual atlas regions, the texture hash, durations,
 clips and declared transitions. Output artifacts cannot share a path or
 overwrite the source specification.
 
+Managed contracts can declare a structured `delivery` object containing
+`views`, `actions`, `states`, `required_combinations` and `distinct_views`.
+Runtime frame records carry explicit `view`, `action` and `state` tags through
+`runtime` defaults or per-frame overrides. For example:
+
+```json
+{"views":["down","up","left","right"],"actions":["idle","walk"],
+ "states":["healthy","hurt"],"distinct_views":true,
+ "required_combinations":[{"view":"down","action":"walk","state":"healthy"}]}
+```
+
+Coverage checks require the named tags and each explicitly valid combination;
+they do not invent a Cartesian product of incompatible gameplay states. Only
+frames reachable from exported clips count. When requested, distinct views
+cannot consist of identical frame-content sets. These checks establish
+coverage, not correct anatomy, state semantics or animation quality.
+
 `pixelai simulate asset.manifest.json --json` validates exported regions,
 texture identity, coordinates and clip timing. It reports unverified runtime
 behaviors explicitly. `pixelai diversity first.png second.png --json` provides

@@ -92,7 +92,7 @@ def verify_construction(project, submission, native_size=None):
             raise ValueError(f"Atlas frame {index} duration does not match the source")
         runtime = [item for item in expected.attachments if item.get("type") == "runtime"]
         if runtime:
-            for field in ("pivot", "ground_anchor", "sort_origin", "regions", "sockets"):
+            for field in ("pivot", "ground_anchor", "sort_origin", "regions", "sockets", "view", "action", "state"):
                 default = [] if field == "regions" else {} if field == "sockets" else None
                 if record.get(field, default) != runtime[0].get(field, default):
                     raise ValueError(f"Atlas frame {index} runtime {field} does not match the source")

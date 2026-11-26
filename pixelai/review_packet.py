@@ -32,8 +32,9 @@ def prepare_packet(project, contract, construction, role):
         manifest = None
         with Image.open(image_path) as source:
             frames = [(str(index), frame.convert("RGBA")) for index, frame in enumerate(ImageSequence.Iterator(source))]
+    review_contract = {key: contract.get(key) for key in ("category", "native_size", "art_direction", "functional_requirements", "delivery")}
     identity = hashlib.sha256(json.dumps({"protocol": 1, "role": role, "artifact": image_record,
-                                          "manifest": manifest, "contract": contract.get("native_size")}, sort_keys=True).encode()).hexdigest()
+                                          "manifest": manifest, "contract": review_contract}, sort_keys=True).encode()).hexdigest()
     directory = root / ".pixelai" / "review_frames" / identity
     if not directory.resolve().is_relative_to(root):
         raise ValueError("Review frame directory must remain inside the project")
@@ -59,6 +60,7 @@ def prepare_packet(project, contract, construction, role):
     return {"schema_version": 1, "packet_id": identity, "role": role,
             "category": contract.get("category"), "art_direction": contract.get("art_direction"),
             "functional_requirements": contract.get("functional_requirements", []),
+            "delivery": contract.get("delivery", {}),
             "artifact": image_record, "views": views,
             "runtime_manifest": manifest if role == "context_review" else None,
             "observation_status": "not_attested",

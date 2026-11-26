@@ -12,13 +12,14 @@ from PIL import Image, ImageSequence
 from pixelai.quality import CRITERIA
 from pixelai.provenance import verify_construction
 from pixelai.diversity import compare_silhouettes
+from pixelai.delivery import validate_delivery, verify_delivery
 
 
 CATEGORIES = ("human", "creature", "vegetation", "building", "rock", "item",
               "material", "tile", "ui", "portrait", "background", "illustration", "vfx")
 
 REQUIREMENTS = {
-    "contract": ["category", "native_size", "art_direction", "functional_requirements"],
+    "contract": ["category", "native_size", "art_direction", "functional_requirements", "delivery (optional structured view/action/state coverage)"],
     "alternatives": ["proposals (six distinct descriptions with source_path and image_path evidence)", "selected_id"],
     "construction": ["source_path", "image_path", "source evidence", "matching PNG or GIF evidence", "manifest_path for atlas PNGs"],
     "art_review": ["context_id", "author_context_id", "packet_id", "inspected_views", "criteria", "native_resolution", "integer_zoom"],
@@ -54,6 +55,11 @@ def validate_submission(stage, data, previous, project=None):
             raise ValueError("Construction requires JSON source spec evidence")
         if stage == "construction":
             verify_construction(project, data, previous.get("contract", {}).get("native_size"))
+            delivery = previous.get("contract", {}).get("delivery")
+            if delivery:
+                if not isinstance(data.get("manifest_path"), str):
+                    raise ValueError("Structured delivery requirements require manifest_path evidence")
+                verify_delivery(Path(project) / data["manifest_path"], delivery)
     if stage == "contract":
         if data.get("category") not in CATEGORIES:
             raise ValueError(f"category must be one of {', '.join(CATEGORIES)}")
@@ -64,6 +70,8 @@ def validate_submission(stage, data, previous, project=None):
         requirements = data.get("functional_requirements")
         if not isinstance(requirements, list) or any(not isinstance(r, str) or not r.strip() for r in requirements):
             raise ValueError("functional_requirements must be an array of nonempty strings")
+        if "delivery" in data:
+            validate_delivery(data["delivery"])
     elif stage == "alternatives":
         proposals = data.get("proposals")
         if not isinstance(proposals, list) or len(proposals) != 6:

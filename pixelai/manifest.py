@@ -89,6 +89,9 @@ def load_manifest(source):
         if frame["id"] in frame_ids:
             raise ValueError("Frame ids must be unique")
         frame_ids.add(frame["id"])
+        for tag in ("view", "action", "state"):
+            if tag in frame and (not isinstance(frame[tag], str) or not frame[tag].strip()):
+                raise ValueError(f"frame.{tag} must be a nonempty name")
         rect = frame.get("rect")
         if not isinstance(rect, list) or len(rect) != 4:
             raise ValueError("frame.rect must be [x,y,width,height]")
