@@ -254,6 +254,9 @@ are clipped to actual facets and existing stone pixels; deposits preserve
 the silhouette and structural comparison signature. Inspect
 `specs/fracture_deposits.json` for ore/moss/bare comparisons. These simple
 geometric models do not establish convincing mineralogy or mature material art.
+`specs/fracture_runtime.json` is a reproducible padded/scaled ore export with
+a derived ground anchor and an explicit `rich` state tag. The tag does not
+implement depletion, collection, destruction or other resource behavior.
 
 `fracture_graph` stores the actual mass outlines, facet polygons and ground
 anchor, following offset/padding/scaling. Structure diagnostics and managed

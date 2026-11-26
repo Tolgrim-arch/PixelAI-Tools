@@ -1,0 +1,8 @@
+{
+  "asset_id":"ore",
+  "width":48,"height":48,"style":"ext_outline","fresh":true,
+  "runtime":{"derive":"structure","state":"rich"},
+  "ops":[{"op":"nature_rig","kind":"rock","variant":"ore","w":48,"h":48,"shadow":false,
+          "fracture":{"profile":"block"},"deposit":{"pattern":"network","seams":3}}],
+  "post":[{"op":"pad","size":2},{"op":"scale","factor":2}]
+}

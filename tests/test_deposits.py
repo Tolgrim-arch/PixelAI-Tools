@@ -81,10 +81,7 @@ class DepositTest(unittest.TestCase):
                       "fracture": {"cuts": 1}, "deposit": {"pattern": "junction"}}]})
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            spec = {"asset_id": "ore", "width": 48, "height": 48, "style": "ext_outline", "runtime": {"derive": "structure", "state": "rich"},
-                    "ops": [{"op": "nature_rig", "kind": "rock", "variant": "ore", "w": 48, "h": 48, "shadow": False,
-                             "fracture": {"profile": "block"}, "deposit": {"pattern": "network", "seams": 3}}],
-                    "post": [{"op": "pad", "size": 2}, {"op": "scale", "factor": 2}]}
+            spec = json.loads((Path(__file__).resolve().parents[1] / "specs/fracture_runtime.json").read_text())
             (root / "source.json").write_text(json.dumps(spec))
             with redirect_stdout(io.StringIO()):
                 self.assertEqual(main(["render", str(root / "source.json"), "-o", str(root / "ore.png"), "--manifest", str(root / "ore.json")]), 0)
