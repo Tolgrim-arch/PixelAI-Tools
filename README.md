@@ -230,6 +230,23 @@ Recoloring or removing decoration cannot change this graph. Inspect
 `specs/architecture_profiles.json` for six full/massing pairs. These are
 structural building primitives, not verified interiors or finished commercial art.
 
+Rocks can opt into geometric fracture with
+`{"op":"nature_rig","kind":"rock","variant":"boulder","w":48,"h":48,"shadow":false,"fracture":{"profile":"block","cuts":3,"angle":-25}}`.
+Profiles are `slab`, `spire`, `wedge`, `block`, `shard` and `twin`. Native width
+and height must be at least 32; cuts accept integers [1,5] and angle accepts
+[-75,75] degrees. Seeded half-plane cuts partition each mass into convex
+facets with a bounded cut budget. Broad color planes follow the facets;
+there is no per-pixel noise or internal dark outline. Unsupported legacy
+controls fail explicitly. This first fracture mode supports bare boulders.
+
+`fracture_graph` stores the actual mass outlines, facet polygons and ground
+anchor, following offset/padding/scaling. Structure diagnostics and managed
+proposals compare these graphs; runtime anchors may be explicitly derived
+from a single graph. Collision regions remain separately authored. Inspect
+`specs/fracture_profiles.json` for mass profiles and alternate cut layouts.
+Seed/cut changes inside one silhouette do not establish meaningful catalog
+variety. These primitives do not certify geological realism or artistic finish.
+
 `pixelai structure SOURCE.json --motion --json` analyzes named clip sequences
 using the actual rendered anatomy graphs. It requires exactly one character
 graph per frame with consistent joint IDs, roles and parents. Diagnostics
