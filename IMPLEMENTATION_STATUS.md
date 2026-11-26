@@ -47,14 +47,10 @@
 - Polygon fill half-ties use translation-invariant rounding to prevent rigid equipment changing raster coverage after integer movement; legacy edge pixels can change under this correction.
 - Pending tasks return their required brief, contract, selected proposal and comparison inputs, allowing an agent to resume without recovering previous chat messages. Reviewer tasks keep author-side inputs excluded.
 
-## Current limits
+- UI composition provides six layout profiles with protected content, bounded corner ornament and six explicit states. Source-bound UI slice contracts follow transforms; uicheck emits hash-identified exported-pixel resize evidence and fixed-corner checks. Tests cover 108 native size/profile/state cases and 108 resize trials. Managed proposals compare layout graphs independently of theme.
+- Explicit delivery.ui requirements enforce slice presence in reachable frames, stable component geometry, minimum native/resized content capacity and requested exported state distinctions. Missing slices, undersized content and relabeled duplicate states block construction; verified reports survive into verification task inputs. Text/localization fit, interaction behavior and artistic hierarchy remain unverified.
 
-UI composition now has six layout profiles with protected content, bounded
-corner ornament and six explicit states. Source-bound UI slice contracts follow
-transforms; uicheck emits exported-pixel resize evidence and fixed-corner checks.
-Tests cover 108 native size/profile/state cases and 108 resize trials. These
-checks do not establish text/localization fit, interaction behavior or artistic
-hierarchy. Managed UI proposal reports compare layout graphs independently of theme.
+## Current limits
 
 The managed queue never approves production. Proposal pixel differences and similarity diagnostics do not establish meaningful structural diversity; that still requires visual review. Reviewer declarations do not prove isolated contexts or actual perception. The reference runtime renders pivot placement, sorting, functional-region overlap and declared state changes. Its deterministic native-grid solver blocks swept movement against convex collision regions, with contact traces and explicit position/clip/order/contact assertions. It does not implement mass/impulse physics, validate acting, blend transitions or verify tile seams. These checks remain necessary before enabling release.
 

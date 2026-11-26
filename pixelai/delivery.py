@@ -7,7 +7,7 @@ TAGS = ("view", "action", "state")
 
 
 def validate_delivery(delivery):
-    if not isinstance(delivery, dict) or set(delivery) - {"views", "actions", "states", "required_combinations", "distinct_views", "animation_scores"}:
+    if not isinstance(delivery, dict) or set(delivery) - {"views", "actions", "states", "required_combinations", "distinct_views", "animation_scores", "ui"}:
         raise ValueError("delivery contains unsupported fields")
     for plural in ("views", "actions", "states"):
         names = delivery.get(plural, [])
@@ -35,6 +35,9 @@ def validate_delivery(delivery):
             values = requirement.get(field, [])
             if not isinstance(values, list) or any(not isinstance(value, str) or not value.strip() for value in values) or len(set(values)) != len(values):
                 raise ValueError(f"Animation score required {field} must contain unique nonempty names")
+    if "ui" in delivery:
+        from pixelai.ui_delivery import validate_ui_delivery
+        validate_ui_delivery(delivery["ui"],delivery.get("states",[]))
 
 
 def verify_delivery(manifest_path, delivery):
@@ -79,4 +82,8 @@ def verify_delivery(manifest_path, delivery):
                         failures.append(f"Views {name}/{other} contain identical frame content for {group}")
     if failures:
         raise ValueError("; ".join(failures))
-    return {"status": "covered", "asset_id": data["asset_id"], "delivery": delivery}
+    ui_report = None
+    if "ui" in delivery:
+        from pixelai.ui_delivery import verify_ui_delivery
+        ui_report = verify_ui_delivery(frames,texture,delivery["ui"],delivery.get("states",[]))
+    return {"status": "covered", "asset_id": data["asset_id"], "delivery": delivery,"ui_checks":ui_report}

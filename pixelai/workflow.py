@@ -150,7 +150,7 @@ def operate(project, action, task=None, response=None):
                     inputs["ui_comparisons"] = alternatives.get("ui_comparisons", [])
                 elif row[1] == "verification":
                     construction = json.loads(db.execute("SELECT response FROM tasks WHERE stage='construction'").fetchone()[0])
-                    inputs["construction"] = {key: construction.get(key) for key in ("source_path", "image_path", "manifest_path", "revision_identity", "evidence")}
+                    inputs["construction"] = {key: construction.get(key) for key in ("source_path", "image_path", "manifest_path", "revision_identity", "evidence", "delivery_verification")}
                 review_packet = None
                 if row[1] in ("art_review", "context_review"):
                     from pixelai.review_packet import prepare_packet

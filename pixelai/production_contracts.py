@@ -59,7 +59,7 @@ def validate_submission(stage, data, previous, project=None):
             if delivery:
                 if not isinstance(data.get("manifest_path"), str):
                     raise ValueError("Structured delivery requirements require manifest_path evidence")
-                verify_delivery(Path(project) / data["manifest_path"], delivery)
+                data["delivery_verification"] = verify_delivery(Path(project) / data["manifest_path"], delivery)
     if stage == "contract":
         if data.get("category") not in CATEGORIES:
             raise ValueError(f"category must be one of {', '.join(CATEGORIES)}")

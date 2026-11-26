@@ -294,6 +294,26 @@ Checks accept up to 16 targets within a four-million-native-pixel budget. The
 result remains `needs_visual_review`: text fit/localization, focus/input behavior,
 hierarchy and engine integration are unverified.
 
+Managed delivery contracts can require these technical properties:
+
+```json
+{"states":["normal","hover","pressed","selected","disabled","focus"],
+ "ui":{"target_sizes":[[64,32],[144,64]],"content_min":[40,12],"distinct_states":true}}
+```
+
+Every reachable frame must then have a UI slice contract. The checks enforce
+stable bounds/content/cuts/ornament geometry within each component group,
+minimum native and resized content capacity, and preserved corners. Requested
+distinct states must be present for each profile/view/action group and cannot
+contain identical exported component pixel sets. Transparent padding and
+renamed states cannot provide that distinction. Missing slices, insufficient
+space or relabeled duplicate states block managed construction; results are
+recorded in `delivery_verification` and returned with verification task inputs.
+Frame/target work is bounded to four million native and target pixels each.
+These checks still do not establish text fit, runtime interaction or artistic quality.
+`specs/ui_delivery.json` supplies the reusable requirement object for the six-state
+example. Put it under a managed contract's `delivery` field.
+
 `pixelai structure SOURCE.json --motion --json` analyzes named clip sequences
 using the actual rendered anatomy graphs. It requires exactly one character
 graph per frame with consistent joint IDs, roles and parents. Diagnostics
