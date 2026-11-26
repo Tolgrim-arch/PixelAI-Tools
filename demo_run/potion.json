@@ -1,0 +1,10 @@
+{
+  "width": 32,
+  "height": 32,
+  "palette": "cozy24",
+  "style": "ext_outline",
+  "ops": [
+    {"op": "item_rig", "kind": "potion", "x": 4, "y": 3, "size": 24, "fill_level": 0.72, "shine": true, "shadow": true}
+  ],
+  "post": [{"op": "outline", "color": "ink"}]
+}
