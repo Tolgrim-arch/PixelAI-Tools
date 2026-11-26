@@ -23,7 +23,7 @@ DEFAULT_BUDGETS = {"rendered_revisions": 36, "visual_reviews": 24}
 
 
 def _budgets(project):
-    brief = json.loads((Path(project) / "brief.json").read_text())
+    brief = json.loads((Path(project) / "brief.json").read_text(encoding="utf-8-sig"))
     configured = brief.get("budgets", {})
     if not isinstance(configured, dict) or set(configured) - DEFAULT_BUDGETS.keys():
         raise ValueError("budgets accepts rendered_revisions and visual_reviews only")
@@ -61,7 +61,7 @@ def connect(project):
 
 
 def initialize(project, brief):
-    data = json.loads(Path(brief).read_text())
+    data = json.loads(Path(brief).read_text(encoding="utf-8-sig"))
     if not isinstance(data, dict) or not isinstance(data.get("goal"), str) or not data["goal"].strip():
         raise ValueError("Brief requires a nonempty goal")
     root = Path(project).resolve()
@@ -93,7 +93,7 @@ def operate(project, action, task=None, response=None):
                 budget_key = "visual_reviews" if current[1] in ("art_review", "context_review") else "rendered_revisions" if current[1] == "construction" else None
                 if budget_key and _usage(db)[budget_key] >= limits[budget_key]:
                     raise ValueError(f"Budget exhausted: {budget_key}")
-                data = json.loads(Path(response).read_text())
+                data = json.loads(Path(response).read_text(encoding="utf-8-sig"))
                 if not isinstance(data, dict) or not isinstance(data.get("evidence"), list) or not data["evidence"]:
                     raise ValueError("Response requires a nonempty evidence array")
                 data["evidence"] = bind_evidence(project, data["evidence"])

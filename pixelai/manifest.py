@@ -63,7 +63,7 @@ def _point(value, name):
 def load_manifest(source):
     """Read and validate actual exported pixels, regions, timing and state links."""
     path = Path(source).resolve()
-    data = json.loads(path.read_text(encoding="utf-8"))
+    data = json.loads(path.read_text(encoding="utf-8-sig"))
     if not isinstance(data, dict) or data.get("schema_version") != 1:
         raise ValueError("Manifest requires schema_version 1")
     if not isinstance(data.get("asset_id"), str) or not data["asset_id"].strip():

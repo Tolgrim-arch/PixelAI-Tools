@@ -67,7 +67,7 @@ def actor_track(actor, data):
 def render_scene(source, output):
     """Produce native contextual frames and sorting traces; no quality approval."""
     scene_path = Path(source).resolve()
-    scene = json.loads(scene_path.read_text())
+    scene = json.loads(scene_path.read_text(encoding="utf-8-sig"))
     if not isinstance(scene, dict) or scene.get("schema_version") != 1:
         raise ValueError("Scene requires schema_version 1")
     width = _integer(scene.get("width"), "scene.width", 1)

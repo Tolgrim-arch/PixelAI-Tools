@@ -829,6 +829,8 @@ def _resolve_import_path(ref: str) -> Path:
         if not rel.endswith(".json"):
             rel += ".json"
         candidate = _LIBRARY_ROOT / rel
+        if not candidate.resolve().is_relative_to(_LIBRARY_ROOT.resolve()):
+            raise ValueError("Library imports must remain inside the built-in library")
         if not candidate.exists():
             raise ValueError(f"Unknown library import {ref!r} (expected {candidate})")
         return candidate
@@ -887,7 +889,9 @@ def _resolve_extends(spec: dict[str, Any]) -> dict[str, Any]:
     """Merge parent spec from 'extends' (.png with embedded spec or .json file) and 'imports'."""
     _check_fresh(spec)
     if "extends" not in spec:
-        return _resolve_imports(spec)
+        resolved = _resolve_imports(spec)
+        _check_fresh(resolved)
+        return resolved
     parent_path = Path(spec["extends"])
     if parent_path.suffix.lower() == ".png":
         parent = extract_spec_from_png(parent_path)
@@ -907,7 +911,9 @@ def _resolve_extends(spec: dict[str, Any]) -> dict[str, Any]:
         else:
             merged[k] = v
     _check_fresh(merged)
-    return _resolve_imports(merged)
+    resolved = _resolve_imports(merged)
+    _check_fresh(resolved)
+    return resolved
 
 
 _TWEEN_KEYS = ("x", "y", "cx", "cy", "rx", "ry", "r", "w", "h", "angle", "x0", "y0", "x1", "y1")

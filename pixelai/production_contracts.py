@@ -45,7 +45,7 @@ def validate_submission(stage, data, previous, project=None):
                         raise ValueError("Image evidence cannot be empty")
                     images.append(record)
             elif path.suffix.lower() == ".json":
-                source = json.loads(path.read_text())
+                source = json.loads(path.read_text(encoding="utf-8-sig"))
                 if isinstance(source, dict) and "width" in source and "height" in source:
                     sources.append(record)
         if not images:

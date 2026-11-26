@@ -9,7 +9,8 @@ from PIL import Image, ImageSequence
 from pixelai.animation_contract import clips_by_index, durations_ms
 from pixelai.exporter import export_gif
 from pixelai.manifest import load_manifest
-from pixelai.runner import resolve_spec_paths, run_frames
+from pixelai.runner import _resolve_extends, resolve_spec_paths, run_frames
+from pixelai.schema import validate_managed_fields
 
 
 def _pixels(image):
@@ -41,12 +42,15 @@ def verify_construction(project, submission, native_size=None):
     source_path, image_path = root / source_name, root / image_name
     if not source_path.resolve().is_relative_to(root) or not image_path.resolve().is_relative_to(root):
         raise ValueError("Construction inputs must stay inside the project")
-    spec = json.loads(source_path.read_text())
+    spec = json.loads(source_path.read_text(encoding="utf-8-sig"))
     if not isinstance(spec, dict):
         raise ValueError("Source specification must be an object")
+    validate_managed_fields(spec)
     spec.setdefault("style", "ext_outline")
     spec["fresh"] = True
-    frames, _ = run_frames(resolve_spec_paths(spec, source_path.parent))
+    expanded = _resolve_extends(resolve_spec_paths(spec, source_path.parent))
+    validate_managed_fields(expanded)
+    frames, _ = run_frames(expanded)
     if native_size is not None and any([frame.width, frame.height] != native_size for frame in frames):
         raise ValueError("Rendered frame dimensions violate the managed native_size contract")
     fps = spec.get("fps", 8)

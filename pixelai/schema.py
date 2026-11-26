@@ -167,6 +167,31 @@ OP_SPECS: dict[str, dict[str, Any]] = {
     "iso_structure": {"summary": "Depth-sorted multi-part 2:1 isometric structure with per-pixel Z-buffer.", "required": ["items"], "optional": ["origin_x", "origin_y", "step_x", "step_y", "bevel", "ground_shadow"], "flexible": True, "example": {"op": "iso_structure", "origin_x": 32, "origin_y": 30, "items": []}},
 }
 
+# Generator fields are explicit so ignored agent inventions cannot masquerade
+# as supported anatomy/material controls. This registry also drives help/lint.
+_GENERATOR_FIELDS = {
+    "material": "x y w h seed color colors kind",
+    "building": "x y w h roof_style variant seed shadow_color wall_color roof_color trim_color foundation_color depth roof_h foundation_h ground_shadow shadow_opacity shadow_dx shadow_dy windows timber_frame door dormer chimney smoke name",
+    "char_rig": "x y size dir pose perspective frame skin hair eye shirt pants shoes hat tool handle shadow_color hair_style outfit trim",
+    "portrait_rig": "x y width height style preset face_dir dir expression gesture hat scar beard hair_style headband cheek_marks fill_background skin skin_l skin_d hair hair_l hair_d shirt shirt_d garment garment_d accent eye_color hat_color hat_light hat_dark ink beard_color headband_color headband_plate headband_emblem background cheek_mark_color",
+    "animal_rig": "x y species variant dir pose frame total_frames perspective body shade deep_shade nest_prop ground_prop emotes shadow_color",
+    "item_rig": "x y kind item orientation size shine frame shadow_color color secondary_color glass_color cork_color fill_level state flame_color",
+    "nature_rig": "x y kind variant stage sway ground_base frame w h seed color trunk_color accent_color shadow_color foliage_color bark_ramp band_colors ramp fruit bush_ramp shape layout r style",
+    "ui_rig": "x y kind component theme state selected color count w h frame_width inner_fill fill value fill_color segmented filled",
+    "tilemap": "x y tile_w tile_h mode map rows step_x step_y",
+    "autotile": "x y tile_size inner outer lip seed",
+    "emote": "x y kind frame",
+    "iso_tile": "cx cy rx ry color border",
+    "iso_box": "cx cy rx ry h top left right bevel ground_shadow door windows window roof",
+    "iso_roof": "cx cy rx ry h left right style gable eave_shadow bevel chimney",
+    "iso_wall_rect": "face x y w h color arch recessed role",
+    "iso_structure": "origin_x origin_y items step_x step_y bevel ground_shadow",
+}
+for _name, _fields in _GENERATOR_FIELDS.items():
+    OP_SPECS[_name]["optional"] = sorted((set(OP_SPECS[_name]["optional"]) | set(_fields.split())) - set(OP_SPECS[_name]["required"]))
+    OP_SPECS[_name].pop("flexible", None)
+
+
 POST_OP_SPECS: dict[str, dict[str, Any]] = {
     "outline": {"required": ["color"], "optional": ["selout", "selout_amount", "auto_pad", "directional_selout", "clean_jaggies"]},
     "recolor_material": {"required": ["material"], "optional": ["target_colors", "reflectance", "recolor_outline"]},
@@ -210,6 +235,36 @@ def lint_post_fields(post: dict[str, Any]) -> list[str]:
             hint = f"; did you mean {match[0]!r}?" if match else ""
             warnings.append(f"Unknown field {key!r} in post op {kind!r}{hint}")
     return warnings
+
+
+def validate_managed_fields(spec: dict[str, Any]) -> None:
+    """Reject unknown operation fields throughout a managed source spec."""
+    def visit(value, path):
+        if isinstance(value, dict):
+            for key, child in value.items():
+                if key in ("palette", "palette_ext", "colors", "map", "runtime", "clips"):
+                    continue
+                if key == "defs" and isinstance(child, dict):
+                    for name, definition in child.items():
+                        visit(definition, f"{path}.defs[{name}]")
+                    continue
+                if key in ("ops", "post"):
+                    if not isinstance(child, list):
+                        raise ValueError(f"{path}.{key} must be an array")
+                    for index, operation in enumerate(child):
+                        if not isinstance(operation, dict):
+                            raise ValueError(f"{path}.{key}[{index}] must be an operation object")
+                        registry = POST_OP_SPECS if key == "post" else OP_SPECS
+                        if operation.get("op") not in registry:
+                            raise ValueError(f"{path}.{key}[{index}]: unknown operation")
+                        warnings = lint_post_fields(operation) if key == "post" else lint_op_fields(operation)
+                        if warnings:
+                            raise ValueError(f"{path}.{key}[{index}]: {'; '.join(warnings)}")
+                visit(child, f"{path}.{key}")
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                visit(child, f"{path}[{index}]")
+    visit(spec, "spec")
 
 
 def format_op_list() -> str:

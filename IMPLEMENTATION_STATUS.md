@@ -21,6 +21,8 @@
 - Explicit actor timelines reject undeclared state changes and premature interruption of protected actions; position updates preserve clip timing unless a restart is requested.
 - Approximate silhouette comparison normalized for padding and scale, with reflection checks.
 - Empty artwork cannot pass style fidelity checks.
+- Generator help and field linting share explicit parameter declarations; managed sources reject unknown operations/fields throughout frames, definitions, parts and post-processing, including expanded imports.
+- Fresh generation rechecks imported definitions, so imports cannot smuggle in load_png or inheritance reuse.
 - PNG metadata and Godot exports preserve explicit per-frame durations and named clips; GIF previews preserve holds within GIF timing limits.
 - Procedural library included in wheel/sdist builds and resolved from installed packages.
 - Named assembly parts with validated parent graphs, inherited offsets, deterministic draw order, material labels and transform-aware exported origins.
