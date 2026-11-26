@@ -8,6 +8,7 @@ from pathlib import Path
 from pixelai.evidence import bind_evidence, verify_evidence
 from pixelai.production_contracts import REQUIREMENTS, validate_submission
 from pixelai.production_guidance import task_guidance
+from pixelai.revisions import check_rejected_revision, construction_identity, contract_identity
 
 
 STAGES = (
@@ -96,14 +97,24 @@ def operate(project, action, task=None, response=None):
                 data = json.loads(Path(response).read_text(encoding="utf-8-sig"))
                 if not isinstance(data, dict) or not isinstance(data.get("evidence"), list) or not data["evidence"]:
                     raise ValueError("Response requires a nonempty evidence array")
+                data.pop("event", None)
                 data["evidence"] = bind_evidence(project, data["evidence"])
                 previous = {stage: json.loads(payload) for stage, payload in db.execute("SELECT stage,response FROM tasks WHERE response IS NOT NULL")}
                 validate_submission(current[1], data, previous, project)
+                if current[1] == "construction":
+                    data["revision_identity"] = construction_identity(project, data)
+                    scope = contract_identity(previous["contract"])
+                    rejections = [json.loads(payload) for (payload,) in db.execute("SELECT payload FROM events WHERE json_extract(payload,'$.event')='construction_rejected'")
+                                  if json.loads(payload).get("contract_sha256") == scope]
+                    check_rejected_revision(data["revision_identity"], rejections)
                 db.execute("UPDATE tasks SET response=? WHERE id=?", (json.dumps(data), task))
                 db.execute("INSERT INTO events(task_id,payload) VALUES (?,?)", (task, json.dumps(data)))
                 if current[1] in ("art_review", "context_review"):
                     defects = {name: result for name, result in data["criteria"].items() if result["score"] < 3}
                     if defects:
+                        identity = previous["construction"].get("revision_identity") or construction_identity(project, previous["construction"])
+                        db.execute("INSERT INTO events(task_id,payload) VALUES (?,?)", (task, json.dumps({"event": "construction_rejected", "identity": identity, "defects": defects,
+                                                                                                       "contract_sha256": contract_identity(previous["contract"])})))
                         construction = db.execute("SELECT id FROM tasks WHERE stage='construction'").fetchone()[0]
                         db.execute("UPDATE tasks SET response=NULL WHERE id>=?", (construction,))
                         db.execute("INSERT INTO events(task_id,payload) VALUES (?,?)", (construction, json.dumps({"event": "repair_required", "defects": defects})))

@@ -41,6 +41,7 @@ class WorkflowTest(unittest.TestCase):
             project = root / "project"
             initialize(project, brief)
             operate(project, "start")
+            (project / "contract.txt").write_text("Stable project contract evidence")
             Image.new("RGBA", (4, 4), (255, 0, 0, 255)).save(project / "sprite.png")
             (project / "source.json").write_text(json.dumps({"width": 4, "height": 4, "style": "lineless", "ops": [{"op": "rect", "x": 0, "y": 0, "w": 4, "h": 4, "color": "#ff0000"}]}))
             base = {"source_path": "source.json", "image_path": "sprite.png", "evidence": [{"path": "sprite.png"}, {"path": "source.json"}]}
@@ -54,9 +55,15 @@ class WorkflowTest(unittest.TestCase):
                 response.write_text(json.dumps(data))
                 return operate(project, "submit", task["task_id"], response)
 
-            submit({"category": "item", "native_size": [4, 4], "art_direction": "Compact shapes", "functional_requirements": []})
+            submit({"category": "item", "native_size": [4, 4], "art_direction": "Compact shapes", "functional_requirements": [], "evidence": [{"path": "contract.txt"}]})
             submit(alternatives(project, 4))
-            for _ in range(3):
+            for attempt in range(3):
+                if attempt:
+                    color = (255 - attempt, 0, 0, 255)
+                    Image.new("RGBA", (4, 4), color).save(project / "sprite.png")
+                    source = json.loads((project / "source.json").read_text())
+                    source["ops"][0]["color"] = f"#{255-attempt:02x}0000"
+                    (project / "source.json").write_text(json.dumps(source))
                 submit({})
                 result = submit({"context_id": "reviewer", "author_context_id": "author", "native_resolution": True, "integer_zoom": 3,
                                  "criteria": {name: {"score": 2, "observation": "Same unresolved defect", "evidence_indices": [0]} for name in CRITERIA}})

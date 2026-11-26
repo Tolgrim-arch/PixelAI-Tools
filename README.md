@@ -176,6 +176,14 @@ frames reachable from exported clips count. When requested, distinct views
 cannot consist of identical frame-content sets. These checks establish
 coverage, not correct anatomy, state semantics or animation quality.
 
+Rejected managed constructions cannot be resubmitted unchanged under the same
+delivery contract merely to obtain another review. Renaming, PNG metadata and
+transparent padding do not make new visual content. Artistic defects require
+changed pixels; purely technical/game-readiness defects can be repaired through
+changed runtime metadata while preserving artwork. Keep contract evidence
+separate from mutable construction files so normal iteration does not reopen
+the initial contract unnecessarily.
+
 `pixelai simulate asset.manifest.json --json` validates exported regions,
 texture identity, coordinates and clip timing. It reports unverified runtime
 behaviors explicitly. `pixelai diversity first.png second.png --json` provides

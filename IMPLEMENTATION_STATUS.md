@@ -13,6 +13,7 @@
 - Artifact-bound reviewer packets expose native and 4x views for every frame without author or peer-review arguments. Submissions must identify the current packet, cover every view and include its hash-bound evidence; coverage declarations are not host observation attestations.
 - Failed review scores reopen construction and preserve review history and consumed budgets.
 - Three consecutive reviews with the same failing criteria reopen structural alternatives; budget-exhaustion diagnostics retain the latest defects.
+- Repair-aware revision identities block unchanged rejected content and metadata-only responses to artistic defects under the same delivery contract. Genuine runtime-only repairs remain possible for technical/game-readiness defects; filenames, PNG text and transparent padding do not create new visual content.
 - Construction/review submission quotas and explicit blocked status on exhaustion.
 - Universal manifest validation of texture hashes, actual frame regions, anchors, timing and clip references.
 - Direct `render --manifest` export derives atlas layout, texture hashes, timing and clips from rendered output, requiring explicit runtime anchors. Per-frame overrides, sockets and functional regions follow padding/scaling; provenance verifies those transformed coordinates too.
