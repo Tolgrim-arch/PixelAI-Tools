@@ -120,6 +120,8 @@ def draw_architecture(canvas, palette, op):
     from pixelai.building import _resolve
     from pixelai.schema import UNIVERSAL_OP_FIELDS
     supported = {"x", "y", "w", "h", "architecture", "massing_only", "wall_color", "roof_color", "trim_color", "windows", "door"}
+    if "shadow" in op:
+        raise ValueError("architecture shadow is not implemented; omit this inactive field")
     if set(op) - supported - UNIVERSAL_OP_FIELDS:
         raise ValueError("Architecture mode has inactive/unsupported fields: " + ", ".join(sorted(set(op)-supported-UNIVERSAL_OP_FIELDS)))
     for flag in ("massing_only", "windows", "door"):

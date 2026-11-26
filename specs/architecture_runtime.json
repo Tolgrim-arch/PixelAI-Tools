@@ -1,0 +1,6 @@
+{
+  "asset_id": "courtyard",
+  "width": 96, "height": 96, "style": "ext_outline", "fresh": true,
+  "runtime": {"derive":"structure","regions_from_structure":"footprints","action":"idle","state":"solid"},
+  "ops": [{"op":"building","w":96,"h":96,"architecture":{"profile":"courtyard"}}]
+}

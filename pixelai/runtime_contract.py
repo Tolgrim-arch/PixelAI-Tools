@@ -11,8 +11,10 @@ def attach_runtime(canvas, spec, index, count):
     if runtime is None:
         return
     allowed = {"pivot", "ground_anchor", "sort_origin", "regions", "sockets", "view", "action", "state"}
-    if not isinstance(runtime, dict) or set(runtime) - allowed - {"frame_overrides", "derive"}:
+    if not isinstance(runtime, dict) or set(runtime) - allowed - {"frame_overrides", "derive", "regions_from_structure"}:
         raise ValueError("runtime contains unknown fields")
+    if "regions_from_structure" in runtime and (runtime["regions_from_structure"] != "footprints" or runtime.get("derive") != "structure"):
+        raise ValueError("runtime.regions_from_structure requires footprints and derive:structure")
     overrides = runtime.get("frame_overrides", {})
     if not isinstance(overrides, dict) or any(not isinstance(key, str) or key not in {str(i) for i in range(count)} for key in overrides):
         raise ValueError("runtime.frame_overrides must use rendered frame index strings")
@@ -20,13 +22,17 @@ def attach_runtime(canvas, spec, index, count):
     if "derive" in runtime:
         if runtime["derive"] != "structure":
             raise ValueError("runtime.derive currently accepts structure only")
-        graphs = [item for item in canvas.attachments if item.get("type") in ("anatomy_graph", "growth_graph")]
+        graphs = [item for item in canvas.attachments if item.get("type") in ("anatomy_graph", "growth_graph", "architecture_graph")]
         if len(graphs) != 1:
-            raise ValueError("runtime.derive requires exactly one rendered anatomy or growth graph; enable morphology/growth and render one asset per spec")
+            raise ValueError("runtime.derive requires exactly one rendered anatomy, growth or architecture graph; enable morphology/growth/architecture and render one asset per spec")
         graph = graphs[0]
         record = {"pivot": deepcopy(graph["ground_anchor"]), "ground_anchor": deepcopy(graph["ground_anchor"]),
                   "sort_origin": deepcopy(graph["ground_anchor"]),
-                  "sockets": {node["id"]: deepcopy(node["point"]) for node in graph["nodes"] if node["role"] in ("hand", "foot", "tip")}}
+                  "sockets": {node["id"]: deepcopy(node["point"]) for node in graph["nodes"] if node["role"] in ("hand", "foot", "tip", "entrance")}}
+        if "regions_from_structure" in runtime:
+            if graph["type"] != "architecture_graph":
+                raise ValueError("Footprint region derivation requires an architecture graph")
+            record["regions"] = [{"id": f"footprint_{item['id']}", "role": "collision", "polygon": deepcopy(item["polygon"])} for item in graph["footprints"]]
         for tag in ("view", "action", "state"):
             if tag in graph:
                 record[tag] = graph[tag]

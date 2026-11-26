@@ -157,7 +157,7 @@ Generate universal metadata directly with
 `pixelai render source.json -o art/sheet.png --manifest asset.json --json`.
 The source must declare `asset_id` and a `runtime` object with explicit
 `pivot`, `ground_anchor` and `sort_origin` coordinate pairs, or
-`"derive":"structure"` for a single rendered anatomy/growth graph. Optional `regions`
+`"derive":"structure"` for a single rendered anatomy/growth/architecture graph. Optional `regions`
 and `sockets` use the same native coordinates. `runtime.frame_overrides` maps
 rendered frame index strings to coordinate/region/socket overrides.
 Coordinates are attached before post-processing and follow padding and integer
@@ -172,6 +172,18 @@ Anatomy graphs also supply view/action tags. Explicit runtime values override
 derived values; frame overrides win last. Socket dictionaries merge at each
 step. Multiple graphs are ambiguous and require separate asset specs or
 explicit coordinates. Collision regions are never guessed from the silhouette.
+
+For architecture only, explicitly request
+`"runtime":{"derive":"structure","regions_from_structure":"footprints"}`
+to export one convex collision region per modeled mass footprint. Derivation
+preserves L-shaped and courtyard gaps instead of filling a bounding rectangle.
+It also exposes the entrance socket and uses that ground point for pivot and
+sorting. Explicit regions and per-frame overrides retain precedence. These
+footprints describe solid masses; they do not implement traversable doors,
+interiors, destruction or engine-specific collision layers. Omit
+`regions_from_structure` to author collision geometry separately. The reusable
+`specs/architecture_runtime.json` demonstrates this export; managed provenance
+checks the resulting regions against the actual generated source.
 
 Top-down `char_rig` at native sizes of at least 32 accepts optional
 `"posture":{"lean":-0.15,"crouch":1.2}`. Lean ranges from -0.15 to 0.15;
@@ -399,12 +411,12 @@ Existing specs retain their legacy tree geometry unless `growth` is present.
 These profiles are structural alternatives, not commercial quality approvals.
 
 `pixelai structure first.json --compare second.json --json` compares rendered
-growth topology, normalized geometry and reflected geometry. `--full` includes
+growth, anatomy and architecture topology, normalized geometry and reflected geometry. `--full` includes
 graph records. Labels and palette changes do not count as structural changes;
 translation and integer scaling do not make a copied graph new. Managed
 proposal reports include these comparisons automatically when both proposals
-contain growth graphs. The current command does not yet analyze other asset
-families or certify visual originality.
+contain compatible graphs. Other asset families and visual originality remain
+outside this diagnostic's verification scope.
 
 ### Top-down body proportions
 

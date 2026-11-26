@@ -83,5 +83,7 @@ class ArchitectureTest(unittest.TestCase):
             build_architecture(32, 32, {})
         with self.assertRaisesRegex(ValueError, "inactive/unsupported"):
             render("tower", chimney=True)
+        with self.assertRaisesRegex(ValueError, "inactive field"):
+            render("tower", shadow=True)
         with self.assertRaisesRegex(ValueError, "requires architecture"):
             run_spec({"width": 96, "height": 96, "ops": [{"op": "building", "massing_only": True}]})
