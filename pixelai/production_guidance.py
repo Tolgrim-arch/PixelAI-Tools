@@ -22,8 +22,11 @@ DOMAIN_CHECKS = {
 RUNTIME_CHECKS = [
     "Pivot, ground anchor and sort origin must be explicit and stable through frames and atlas extraction.",
     "Collision, hit, hurt and interaction regions have different roles; validate each required role.",
+    "Use exported reference scenes with collision_mode block and explicit position/contact assertions for required obstacle behavior; inspect the contact trace and failed assertions.",
+    "For actions with planted feet or fixed tool contact, declare planted_contacts intervals on exported sockets and inspect every episode's world-space drift; do not omit intermediate frames or silently loosen tolerances to pass.",
     "Inspect sorting both in front of and behind occluders.",
     "Inspect required direction/action/state combinations, transitions and interruptions.",
+    "Passing grid collision or planted-socket checks does not establish weight, anticipation, recovery, personality or physical support; inspect those visually and report missing verification.",
     "Compare scale and readability together with the project catalog on real backgrounds.",
     "Treat seamless tiles, nine-slice UI, static illustrations and particles according to their own contracts; do not impose character-only rules.",
 ]

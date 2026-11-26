@@ -249,6 +249,23 @@ Each assertion time must appear in `times_ms`. `before` checks draw order;
 assertion returns CLI exit code 1 and preserves the evidence bundle with
 expected/actual diagnostics. Passing these assertions does not approve artwork.
 
+Use scene `planted_contacts` to declare continuous intervals where a named
+exported socket must remain fixed in world space:
+
+```json
+[{"actor":"hero","socket":"left_foot","start_ms":100,"end_ms":180,"tolerance_px":0}]
+```
+
+Every millisecond is inspected, including frames omitted from screenshots.
+Drift is measured from the interval's first world position, accounting for
+the rendered pivot and actual blocked movement. Each episode reports its
+maximum Euclidean drift, peak position/time and observation count. Excess
+drift makes the CLI return 1 with evidence preserved. Missing sockets are
+errors. Intervals require `start_ms < end_ms` within scene duration. The
+`contact_budget` defaults to 10000 observations, counting overlapping episodes
+separately; budget errors publish no bundle. These checks require explicit
+plant declarations and do not establish physical contact, weight or acting.
+
 An actor's optional `timeline` is an ordered array of `{at_ms, clip, position}`
 events. Each event can change clip, position or both; times must increase
 strictly. Position-only changes keep clip phase. An explicit clip restarts its

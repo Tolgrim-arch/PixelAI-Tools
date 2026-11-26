@@ -106,11 +106,16 @@ def render_scene(source, output):
     from pixelai.scenario import assess_scenario, validate_expectations
     expectations = scene.get("expectations", [])
     validate_expectations(expectations, times, {actor["id"]: data for actor, data, _, _ in loaded})
+    from pixelai.contact import assess_contacts, contact_times
+    contact_actors = {actor["id"]: (actor, data, track) for actor, data, _, track in loaded}
+    windows = scene.get("planted_contacts", [])
+    observations = contact_times(windows, contact_actors, max(times), scene.get("contact_budget", 10000))
     motion_positions, motion_report = None, None
     if collision_mode == "block" or any("velocity" in actor for actor, _, _, _ in loaded):
         from pixelai.motion import simulate_motion
-        motion_positions, motion_report = simulate_motion([(actor, data, track) for actor, data, _, track in loaded], times,
+        motion_positions, motion_report = simulate_motion([(actor, data, track) for actor, data, _, track in loaded], sorted(set(times) | observations),
                                                           frame_at, collision_mode, scene.get("motion_budget", 10000))
+    contact_report = assess_contacts(windows, contact_actors, frame_at, motion_positions)
     destination = Path(output).resolve()
     if destination.exists():
         raise ValueError("Scene output directory already exists")
@@ -157,6 +162,7 @@ def render_scene(source, output):
         report = {"schema_version": 1, "status": "rendered", "trace": trace,
                   "motion": motion_report,
                   "scenario": assess_scenario(expectations, trace, motion_report),
+                  "planted_contacts": contact_report,
                   "verification_scope": "exported playback, pivot placement, stable Y sorting, convex regions and explicit scenario assertions; motion mode recorded separately",
                   "unverified": (["collision behavior"] if collision_mode != "block" else ["mass/impulse physics beyond the reference native-grid solver"])
                                   + ["transition blending", "artistic quality", "tile seams", "engine integration"]}
@@ -174,6 +180,6 @@ def register(sub):
     def run(args):
         report = render_scene(args.source, args.output)
         print(json.dumps(report))
-        return 1 if report["scenario"]["status"] == "failed" else 0
+        return 1 if any(report[key]["status"] == "failed" for key in ("scenario", "planted_contacts")) else 0
 
     parser.set_defaults(func=run)

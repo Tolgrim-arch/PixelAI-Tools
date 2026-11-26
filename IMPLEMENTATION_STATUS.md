@@ -20,6 +20,8 @@
 - Exported clip timing traces, explicitly reporting unverified runtime behaviors.
 - Reference scene compositor consumes only exported manifests/textures and emits native PNGs plus timing, pivot placement and stable Y-sort traces.
 - Validated convex functional regions distinguish collision, hit, hurt, interaction and occluder roles; contextual traces report positive-area overlaps without treating boundary contact as penetration.
+- Deterministic bounded native-grid movement uses convex sweeps, stable actor order and fixed 1ms steps; role-aware blocking and explicit position/clip/order/contact assertions produce failure evidence and CLI exit code 1.
+- Declared planted-socket episodes are monitored every millisecond in world space, including frames between screenshots. Reports include maximum drift and peak time; excess drift fails the scene command. Missing sockets and exhausted observation budgets are errors. Managed runtime guidance directs agents to both collision and contact checks.
 - Explicit actor timelines reject undeclared state changes and premature interruption of protected actions; position updates preserve clip timing unless a restart is requested.
 - Optional structured delivery contracts require named views/actions/states and explicit valid combinations in reachable manifest frames. Distinct-view checks reject identical view frame sets when requested; unreachable atlas content cannot satisfy delivery coverage.
 - Tile diagnostics produce native/4x repetition mosaics, every legal Wang16 edge-pair comparison and premultiplied edge-delta reports. Spatial visual continuity, temporal seams and Blob47 coverage remain unverified.
@@ -41,6 +43,10 @@
 ## Current limits
 
 The managed queue never approves production. Proposal pixel differences and similarity diagnostics do not establish meaningful structural diversity; that still requires visual review. Reviewer declarations do not prove isolated contexts or actual perception. The reference runtime renders pivot placement, sorting, functional-region overlap and declared state changes. Its deterministic native-grid solver blocks swept movement against convex collision regions, with contact traces and explicit position/clip/order/contact assertions. It does not implement mass/impulse physics, validate acting, blend transitions or verify tile seams. These checks remain necessary before enabling release.
+
+Planted-socket checks detect declared contact sliding; contact intent, physical
+support, weight and expressive acting remain unverified. Omitting an episode
+does not prove the corresponding action has valid contacts.
 
 ## Next implementation priorities
 
