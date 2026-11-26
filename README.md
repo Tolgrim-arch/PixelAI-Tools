@@ -192,6 +192,17 @@ Copy `specs/acting_strike.scene.json` to that output directory and run
 to inspect the exact damage-event time and both planted feet during loading.
 The example illustrates controls and checks, not a commercial-quality benchmark.
 
+`pixelai structure SOURCE.json --motion --json` analyzes named clip sequences
+using the actual rendered anatomy graphs. It requires exactly one character
+graph per frame with consistent joint IDs, roles and parents. Diagnostics
+separate chest/head/pelvis movement from limb movement, report ground travel,
+and include loop joins, repeated-frame holds, joint path lengths and spans.
+Add `--full` for ground-relative joint paths. Root translation alone does not
+count as body posing. Managed review packets recompute these diagnostics from
+verified construction sources; unavailable analysis is explicit. Limb-only
+transitions are review signals, since they may be intentional. View changes
+and large displacement cannot establish convincing acting or weight.
+
 Managed contracts can declare a structured `delivery` object containing
 `views`, `actions`, `states`, `required_combinations` and `distinct_views`.
 Runtime frame records carry explicit `view`, `action` and `state` tags through

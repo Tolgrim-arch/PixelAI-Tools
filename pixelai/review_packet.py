@@ -33,9 +33,13 @@ def prepare_packet(project, contract, construction, role):
         manifest = None
         with Image.open(image_path) as source:
             frames = [(str(index), frame.convert("RGBA")) for index, frame in enumerate(ImageSequence.Iterator(source))]
+    motion = {"status": "unavailable", "reason": "No construction source supplied"}
+    if construction.get("source_path"):
+        from pixelai.provenance import verify_construction
+        motion = verify_construction(root, construction, contract.get("native_size"))["motion_diagnostics"]
     review_contract = {key: contract.get(key) for key in ("category", "native_size", "art_direction", "functional_requirements", "delivery")}
-    identity = hashlib.sha256(json.dumps({"protocol": 1, "role": role, "artifact": image_record,
-                                          "manifest": manifest, "contract": review_contract}, sort_keys=True).encode()).hexdigest()
+    identity = hashlib.sha256(json.dumps({"protocol": 2, "role": role, "artifact": image_record,
+                                          "manifest": manifest, "contract": review_contract, "motion": motion}, sort_keys=True).encode()).hexdigest()
     directory = root / ".pixelai" / "review_frames" / identity
     if not directory.resolve().is_relative_to(root):
         raise ValueError("Review frame directory must remain inside the project")
@@ -73,5 +77,6 @@ def prepare_packet(project, contract, construction, role):
             "artifact": image_record, "views": views,
             "runtime_manifest": neutral_manifest if role == "context_review" else None,
             "animation_timing": timing if role == "context_review" else {},
+            "motion_diagnostics": motion,
             "observation_status": "not_attested",
             "host_requirements": ["Use a context separate from the author and the other reviewer", "Inspect every native and zoomed frame", "Do not import author justifications or another review's scores"]}

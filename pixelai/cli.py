@@ -925,11 +925,12 @@ def build_parser() -> argparse.ArgumentParser:
     structure_p.add_argument("--compare", help="Optional second source specification.")
     structure_p.add_argument("--frame", type=int, default=0)
     structure_p.add_argument("--full", action="store_true", help="Include complete rendered graph records.")
+    structure_p.add_argument("--motion", action="store_true", help="Trace body/limb movement across named clips; requires one consistent anatomy graph per frame.")
     structure_p.add_argument("--json", action="store_true")
 
     def report_structure(args):
         from pixelai.structure import analyze_structures
-        print(json.dumps(analyze_structures(_read_spec(args.spec), _read_spec(args.compare) if args.compare else None, args.frame, args.full)))
+        print(json.dumps(analyze_structures(_read_spec(args.spec), _read_spec(args.compare) if args.compare else None, args.frame, args.full, args.motion)))
         return 0
 
     structure_p.set_defaults(func=report_structure)

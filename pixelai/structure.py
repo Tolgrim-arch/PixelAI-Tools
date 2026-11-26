@@ -40,7 +40,7 @@ growth_signature = graph_signature
 compare_growth = compare_graphs
 
 
-def analyze_structures(spec, other=None, frame=0, full=False):
+def analyze_structures(spec, other=None, frame=0, full=False, motion=False):
     frames, _ = run_frames(spec)
     if type(frame) is not int or not 0 <= frame < len(frames):
         raise ValueError("Requested structure frame is outside the rendered sequence")
@@ -57,5 +57,12 @@ def analyze_structures(spec, other=None, frame=0, full=False):
         other_graphs = [record for record in other_frames[frame].attachments if record.get("type") in ("growth_graph", "anatomy_graph")]
         comparisons = [{"first": i, "second": j, **compare_graphs(first, second)}
                        for i, first in enumerate(graphs) for j, second in enumerate(other_graphs) if first["type"] == second["type"]]
+    motion_report = None
+    if motion:
+        from pixelai.animation_contract import clips_by_index, durations_ms
+        from pixelai.motion_analysis import analyze_motion
+        motion_report = analyze_motion(frames, durations_ms(len(frames), spec.get("fps", 8), spec.get("durations_ms")),
+                                       clips_by_index(len(frames), spec.get("clips")), full)
     return {"schema_version": 1, "frame": frame, "structures": summaries, "comparisons": comparisons,
+            "motion": motion_report,
             "limitations": ["Growth and top-down anatomy graphs only", "Structural inequality does not establish artistic quality or originality"]}

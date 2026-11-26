@@ -67,6 +67,10 @@ class PostureTest(unittest.TestCase):
         for foot in ("leg_0_foot", "leg_1_foot"):
             self.assertEqual(first[foot], second[foot])
         self.assertNotEqual(frames[0].pixels, frames[1].pixels)
+        from pixelai.motion_analysis import analyze_motion
+        motion = analyze_motion(frames, spec["durations_ms"], spec["clips"])
+        self.assertTrue(motion["clips"]["strike"]["body_motion_detected"])
+        self.assertEqual(motion["clips"]["strike"]["transitions"][0]["ground_delta_px"], 0)
 
     def test_invalid_and_unsupported_posture(self):
         for value in ({"lean": .16}, {"crouch": -1}, {"lean": True}, {"crouch": float("nan")}, {"magic": 1}):

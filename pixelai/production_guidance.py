@@ -29,6 +29,7 @@ RUNTIME_CHECKS = [
     "For contracted scored clips, author complete beat coverage with a concrete performance purpose and timed gameplay events; require these through delivery.animation_scores so missing beats/events block construction.",
     "Use scenario event assertions to verify exact occurrence times across loops, restarts and interruptions. Beat labels and timing alone cannot prove anticipation, impact or recovery are visible.",
     "For supported top-down humans, author posture lean/crouch changes per beat and inspect chest/head/pelvis movement alongside hands/tools. Verify declared plants; a tool-only change cannot satisfy a requested whole-body performance.",
+    "Inspect source-verified motion_diagnostics in review packets or run structure --motion: compare ground-relative body and limb paths, limb-only transitions and the loop join. Unavailable diagnostics require visual inspection; do not treat movement magnitude as artistic approval.",
     "Passing grid collision or planted-socket checks does not establish weight, anticipation, recovery, personality or physical support; inspect those visually and report missing verification.",
     "Compare scale and readability together with the project catalog on real backgrounds.",
     "Treat seamless tiles, nine-slice UI, static illustrations and particles according to their own contracts; do not impose character-only rules.",
