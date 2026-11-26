@@ -1,0 +1,23 @@
+{
+  "width":384,"height":192,"style":"ext_outline","fresh":true,
+  "ops":[
+    {"op":"nature_rig","kind":"rock","variant":"ore","x":0,"y":0,"w":64,"h":64,"shadow":false,"fracture":{"profile":"slab"},"deposit":{"pattern":"network","seams":2}},
+    {"op":"nature_rig","kind":"rock","variant":"ore","x":64,"y":0,"w":64,"h":64,"shadow":false,"fracture":{"profile":"spire"}},
+    {"op":"nature_rig","kind":"rock","variant":"ore","x":128,"y":0,"w":64,"h":64,"shadow":false,"fracture":{"profile":"wedge"},"deposit":{"pattern":"junction","width":0.12}},
+    {"op":"nature_rig","kind":"rock","variant":"ore","x":192,"y":0,"w":64,"h":64,"shadow":false,"fracture":{"profile":"block"},"deposit":{"pattern":"network","seams":3,"width":0.05}},
+    {"op":"nature_rig","kind":"rock","variant":"ore","x":256,"y":0,"w":64,"h":64,"shadow":false,"fracture":{"profile":"shard"}},
+    {"op":"nature_rig","kind":"rock","variant":"ore","x":320,"y":0,"w":64,"h":64,"shadow":false,"fracture":{"profile":"twin"},"deposit":{"pattern":"junction","width":0.12}},
+    {"op":"nature_rig","kind":"rock","variant":"mossy","x":0,"y":64,"w":64,"h":64,"shadow":false,"fracture":{"profile":"slab"}},
+    {"op":"nature_rig","kind":"rock","variant":"mossy","x":64,"y":64,"w":64,"h":64,"shadow":false,"fracture":{"profile":"spire"}},
+    {"op":"nature_rig","kind":"rock","variant":"mossy","x":128,"y":64,"w":64,"h":64,"shadow":false,"fracture":{"profile":"wedge"}},
+    {"op":"nature_rig","kind":"rock","variant":"mossy","x":192,"y":64,"w":64,"h":64,"shadow":false,"fracture":{"profile":"block"}},
+    {"op":"nature_rig","kind":"rock","variant":"mossy","x":256,"y":64,"w":64,"h":64,"shadow":false,"fracture":{"profile":"shard"}},
+    {"op":"nature_rig","kind":"rock","variant":"mossy","x":320,"y":64,"w":64,"h":64,"shadow":false,"fracture":{"profile":"twin"}},
+    {"op":"nature_rig","kind":"rock","variant":"ore","fracture_only":true,"x":0,"y":128,"w":64,"h":64,"shadow":false,"fracture":{"profile":"slab"}},
+    {"op":"nature_rig","kind":"rock","variant":"ore","fracture_only":true,"x":64,"y":128,"w":64,"h":64,"shadow":false,"fracture":{"profile":"spire"}},
+    {"op":"nature_rig","kind":"rock","variant":"ore","fracture_only":true,"x":128,"y":128,"w":64,"h":64,"shadow":false,"fracture":{"profile":"wedge"}},
+    {"op":"nature_rig","kind":"rock","variant":"ore","fracture_only":true,"x":192,"y":128,"w":64,"h":64,"shadow":false,"fracture":{"profile":"block"}},
+    {"op":"nature_rig","kind":"rock","variant":"ore","fracture_only":true,"x":256,"y":128,"w":64,"h":64,"shadow":false,"fracture":{"profile":"shard"}},
+    {"op":"nature_rig","kind":"rock","variant":"ore","fracture_only":true,"x":320,"y":128,"w":64,"h":64,"shadow":false,"fracture":{"profile":"twin"}}
+  ]
+}

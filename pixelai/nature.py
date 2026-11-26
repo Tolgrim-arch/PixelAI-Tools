@@ -137,6 +137,9 @@ def draw_nature_rig(
     variant = str(op.get("variant", variants.get(kind, ("oak",))[0])).lower()
     if kind in variants and variant not in variants[kind]:
         raise ValueError(f"Unknown {kind} variant: {variant!r}; choose {', '.join(variants[kind])}")
+    if "fracture_only" in op or "deposit" in op:
+        if "fracture" not in op:
+            raise ValueError("fracture_only/deposit require an explicit fracture configuration")
     if "fracture" in op:
         if kind != "rock":
             raise ValueError("fracture requires nature_rig kind:rock")

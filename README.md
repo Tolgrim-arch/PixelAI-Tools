@@ -157,7 +157,7 @@ Generate universal metadata directly with
 `pixelai render source.json -o art/sheet.png --manifest asset.json --json`.
 The source must declare `asset_id` and a `runtime` object with explicit
 `pivot`, `ground_anchor` and `sort_origin` coordinate pairs, or
-`"derive":"structure"` for a single rendered anatomy/growth/architecture graph. Optional `regions`
+`"derive":"structure"` for a single rendered anatomy/growth/architecture/fracture graph. Optional `regions`
 and `sockets` use the same native coordinates. `runtime.frame_overrides` maps
 rendered frame index strings to coordinate/region/socket overrides.
 Coordinates are attached before post-processing and follow padding and integer
@@ -237,7 +237,23 @@ and height must be at least 32; cuts accept integers [1,5] and angle accepts
 [-75,75] degrees. Seeded half-plane cuts partition each mass into convex
 facets with a bounded cut budget. Broad color planes follow the facets;
 there is no per-pixel noise or internal dark outline. Unsupported legacy
-controls fail explicitly. This first fracture mode supports bare boulders.
+controls fail explicitly. Omitted cut angles use profile-specific directions.
+
+Variants `ore` and `mossy` add structure-bound material regions.
+`fracture_only:true` hides them for a bare comparison. Ore uses
+`"deposit":{"pattern":"network","seams":2,"width":0.065}`: `vein` follows
+shared fault segments, `network` selects multiple segments, and `junction`
+forms a pocket where at least three facets meet. Width is a half-width/radius
+fraction of the mass's smaller extent, bounded to [0.03,0.12]. Seam counts
+accept integers [1,3] no greater than the cut count; junctions require at least
+two cuts, do not accept `seams`, and fail explicitly when no real junction
+exists. Moss uses `"deposit":{"coverage":0.3,"slope":0}` to clip material
+to an upper exposure plane: coverage accepts [0.1,0.5], slope [-0.5,0.5].
+`accent_color` applies only to ore and `foliage_color` only to moss. Polygons
+are clipped to actual facets and existing stone pixels; deposits preserve
+the silhouette and structural comparison signature. Inspect
+`specs/fracture_deposits.json` for ore/moss/bare comparisons. These simple
+geometric models do not establish convincing mineralogy or mature material art.
 
 `fracture_graph` stores the actual mass outlines, facet polygons and ground
 anchor, following offset/padding/scaling. Structure diagnostics and managed
@@ -428,7 +444,7 @@ Existing specs retain their legacy tree geometry unless `growth` is present.
 These profiles are structural alternatives, not commercial quality approvals.
 
 `pixelai structure first.json --compare second.json --json` compares rendered
-growth, anatomy and architecture topology, normalized geometry and reflected geometry. `--full` includes
+growth, anatomy, architecture and fracture topology, normalized geometry and reflected geometry. `--full` includes
 graph records. Labels and palette changes do not count as structural changes;
 translation and integer scaling do not make a copied graph new. Managed
 proposal reports include these comparisons automatically when both proposals

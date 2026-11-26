@@ -50,7 +50,8 @@ def build_fracture(width, height, seed, options, origin=(0, 0)):
     profile = options.get("profile", "block")
     if not isinstance(profile, str) or profile not in PROFILES:
         raise ValueError(f"fracture.profile must be one of {', '.join(PROFILES)}")
-    cuts, angle = options.get("cuts", 3), options.get("angle", -25)
+    defaults = {"slab": -65, "spire": 10, "wedge": 35, "block": -25, "shard": -60, "twin": 20}
+    cuts, angle = options.get("cuts", 3), options.get("angle", defaults[profile])
     if type(cuts) is not int or not 1 <= cuts <= 5:
         raise ValueError("fracture.cuts must be an integer between 1 and 5")
     if type(angle) not in (int, float) or not math.isfinite(angle) or not -75 <= angle <= 75:
@@ -93,14 +94,20 @@ def build_fracture(width, height, seed, options, origin=(0, 0)):
 
 def draw_fracture(canvas, x, y, palette, op):
     from pixelai.schema import UNIVERSAL_OP_FIELDS
-    supported = {"x", "y", "kind", "variant", "w", "h", "seed", "color", "shadow_color", "fracture"}
+    supported = {"x", "y", "kind", "variant", "w", "h", "seed", "color", "shadow_color", "fracture", "deposit", "fracture_only", "accent_color", "foliage_color"}
     inactive = set(op)-supported-UNIVERSAL_OP_FIELDS
     if inactive:
         raise ValueError("Fracture mode has inactive/unsupported fields: "+", ".join(sorted(inactive)))
-    if op.get("variant", "boulder") != "boulder":
-        raise ValueError("fracture currently supports bare boulder geometry only")
+    variant = str(op.get("variant", "boulder")).lower()
+    if "fracture_only" in op and type(op["fracture_only"]) is not bool:
+        raise ValueError("fracture_only must be a boolean")
+    if ("accent_color" in op and variant != "ore") or ("foliage_color" in op and variant != "mossy") or ("deposit" in op and variant == "boulder"):
+        raise ValueError("Inactive material controls for this fracture variant")
     width, height = op.get("w", 32), op.get("h", 32)
     graph = build_fracture(width, height, op.get("seed", 42), op["fracture"], (x, y))
+    from pixelai.deposits import material_regions, validate_deposit
+    options = op.get("deposit", {})
+    validate_deposit(variant, options, graph["cuts"])
     stone = parse_color(op.get("color", "stone" if "stone" in palette else "#8694a8"), palette)
     if op.get("shadow", True):
         previous = canvas.mark_shadow, canvas.mark_no_outline
@@ -115,4 +122,20 @@ def draw_fracture(canvas, x, y, palette, op):
             factor = 1.35-light
             color = brighten(stone, factor) if factor >= 1 else darken(stone, factor)
             canvas.draw_polygon([[round(v) for v in point] for point in facet["polygon"]], color)
+        if variant != "boulder" and not op.get("fracture_only", False):
+            material = parse_color(op.get("accent_color", "wheat" if "wheat" in palette else "#e6b84c"), palette) if variant == "ore" else parse_color(op.get("foliage_color", "grass" if "grass" in palette else "#589c4c"), palette)
+            regions = material_regions(mass, variant, options)
+            previous_clip = canvas.clip_to_opaque
+            canvas.clip_to_opaque = True
+            try:
+                for record in regions:
+                    center = polygon_center(record["polygon"])
+                    factor = 1.35-(center[0]-x)/width*.32-(center[1]-y)/height*.55
+                    if record["role"] == "ore_highlight":
+                        factor *= 1.22
+                    color = brighten(material, factor) if factor >= 1 else darken(material, factor)
+                    canvas.draw_polygon([[round(v) for v in point] for point in record["polygon"]], color)
+            finally:
+                canvas.clip_to_opaque = previous_clip
+            graph.setdefault("material_regions", []).extend(regions)
     canvas.attachments.append(graph)
