@@ -188,8 +188,12 @@ def _cmd_render(args: argparse.Namespace) -> int:
     if cols is not None and (not isinstance(cols, int) or cols <= 0):
         raise ValueError("columns: expected a positive integer")
 
+    from pixelai.animation_contract import durations_ms, clips_by_index
+    timings = durations_ms(len(frames), fps, spec.get("durations_ms"))
+    clips = clips_by_index(len(frames), spec.get("clips"))
+
     if is_gif:
-        out = export_gif(frames, out_path, fps=fps)
+        out = export_gif(frames, out_path, fps=fps, durations_ms=timings)
         report(f"Rendered GIF ({len(frames)} frames @ {fps}fps, {frames[0].width}x{frames[0].height}) -> {out}")
     elif args.sheet or len(frames) > 1 or args.godot or args.meta:
         out = export_spritesheet(
@@ -199,6 +203,8 @@ def _cmd_render(args: argparse.Namespace) -> int:
             columns=cols,
             meta_path=args.meta,
             spec_json=json.dumps(spec),
+            durations_ms=timings,
+            clips=clips,
         )
         report(f"Rendered spritesheet ({len(frames)} frames) -> {out}")
     else:
@@ -211,7 +217,8 @@ def _cmd_render(args: argparse.Namespace) -> int:
 
     if args.godot:
         tres_out = export_godot_tres(
-            out_path, args.godot, frames, frame_names=names, columns=cols, fps=fps
+            out_path, args.godot, frames, frame_names=names, columns=cols, fps=fps,
+            durations_ms=timings if "durations_ms" in spec else None, clips=clips
         )
         artifacts["godot"] = str(tres_out.resolve())
         report(f"Exported Godot 4 SpriteFrames -> {tres_out}")
@@ -897,6 +904,8 @@ def build_parser() -> argparse.ArgumentParser:
     register(sub)
     from pixelai.manifest import register as register_manifest
     register_manifest(sub)
+    from pixelai.diversity import register as register_diversity
+    register_diversity(sub)
     return parser
 
 

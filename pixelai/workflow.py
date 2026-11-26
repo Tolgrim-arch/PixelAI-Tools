@@ -5,6 +5,7 @@ import sqlite3
 from pathlib import Path
 
 from pixelai.evidence import bind_evidence, verify_evidence
+from pixelai.production_contracts import REQUIREMENTS, validate_submission
 
 
 STAGES = (
@@ -15,6 +16,35 @@ STAGES = (
     ("context_review", "Request another context: verify pivots, collisions, sorting, directions, transitions, backgrounds, relative scale, gameplay states and tile seams where applicable."),
     ("verification", "Provide machine-verifiable runtime evidence and artifact-bound reviews. This initial implementation cannot certify release."),
 )
+
+DEFAULT_BUDGETS = {"rendered_revisions": 36, "visual_reviews": 24}
+
+
+def _budgets(project):
+    brief = json.loads((Path(project) / "brief.json").read_text())
+    configured = brief.get("budgets", {})
+    if not isinstance(configured, dict) or set(configured) - DEFAULT_BUDGETS.keys():
+        raise ValueError("budgets accepts rendered_revisions and visual_reviews only")
+    limits = {**DEFAULT_BUDGETS, **configured}
+    if any(type(value) is not int or value < 1 for value in limits.values()):
+        raise ValueError("Budgets must be positive integers")
+    return limits
+
+
+def _usage(db):
+    counts = dict(db.execute("SELECT t.stage,count(*) FROM events e JOIN tasks t ON t.id=e.task_id WHERE json_extract(e.payload,'$.evidence') IS NOT NULL GROUP BY t.stage"))
+    return {"rendered_revisions": counts.get("construction", 0),
+            "visual_reviews": counts.get("art_review", 0) + counts.get("context_review", 0)}
+
+
+def _invalidate_stale(db, project):
+    for completed_id, payload in db.execute("SELECT id,response FROM tasks WHERE response IS NOT NULL ORDER BY id").fetchall():
+        try:
+            verify_evidence(project, json.loads(payload)["evidence"])
+        except (ValueError, OSError, KeyError, TypeError):
+            db.execute("UPDATE tasks SET response=NULL WHERE id>=?", (completed_id,))
+            db.execute("INSERT INTO events(task_id,payload) VALUES (?,?)", (completed_id, json.dumps({"event": "evidence_invalidated"})))
+            break
 
 
 def connect(project):
@@ -43,28 +73,41 @@ def operate(project, action, task=None, response=None):
     try:
         with db:
             db.execute("BEGIN IMMEDIATE")
+            limits = _budgets(project)
+            _invalidate_stale(db, project)
             if action == "start":
                 db.executemany("INSERT OR IGNORE INTO tasks(stage,guidance) VALUES (?,?)", STAGES)
             if action == "submit":
-                current = db.execute("SELECT id FROM tasks WHERE response IS NULL ORDER BY id LIMIT 1").fetchone()
+                current = db.execute("SELECT id,stage FROM tasks WHERE response IS NULL ORDER BY id LIMIT 1").fetchone()
                 if current is None or current[0] != task:
                     raise ValueError("Only the current pending task may be submitted")
+                budget_key = "visual_reviews" if current[1] in ("art_review", "context_review") else "rendered_revisions" if current[1] == "construction" else None
+                if budget_key and _usage(db)[budget_key] >= limits[budget_key]:
+                    raise ValueError(f"Budget exhausted: {budget_key}")
                 data = json.loads(Path(response).read_text())
                 if not isinstance(data, dict) or not isinstance(data.get("evidence"), list) or not data["evidence"]:
                     raise ValueError("Response requires a nonempty evidence array")
                 data["evidence"] = bind_evidence(project, data["evidence"])
+                previous = {stage: json.loads(payload) for stage, payload in db.execute("SELECT stage,response FROM tasks WHERE response IS NOT NULL")}
+                validate_submission(current[1], data, previous, project)
                 db.execute("UPDATE tasks SET response=? WHERE id=?", (json.dumps(data), task))
                 db.execute("INSERT INTO events(task_id,payload) VALUES (?,?)", (task, json.dumps(data)))
-            for completed_id, payload in db.execute("SELECT id,response FROM tasks WHERE response IS NOT NULL ORDER BY id"):
-                try:
-                    verify_evidence(project, json.loads(payload)["evidence"])
-                except (ValueError, OSError, KeyError, TypeError):
-                    db.execute("UPDATE tasks SET response=NULL WHERE id>=?", (completed_id,))
-                    db.execute("INSERT INTO events(task_id,payload) VALUES (?,?)", (completed_id, json.dumps({"event": "evidence_invalidated"})))
-                    break
+                if current[1] in ("art_review", "context_review"):
+                    defects = {name: result for name, result in data["criteria"].items() if result["score"] < 3}
+                    if defects:
+                        construction = db.execute("SELECT id FROM tasks WHERE stage='construction'").fetchone()[0]
+                        db.execute("UPDATE tasks SET response=NULL WHERE id>=?", (construction,))
+                        db.execute("INSERT INTO events(task_id,payload) VALUES (?,?)", (construction, json.dumps({"event": "repair_required", "defects": defects})))
             row = db.execute("SELECT id,stage,guidance FROM tasks WHERE response IS NULL ORDER BY id LIMIT 1").fetchone()
             if row:
-                return {"status": "needs_agent", "task_id": row[0], "stage": row[1], "guidance": row[2], "approval_supported": False}
+                usage = _usage(db)
+                key = "visual_reviews" if row[1] in ("art_review", "context_review") else "rendered_revisions" if row[1] == "construction" else None
+                if key and usage[key] >= limits[key]:
+                    return {"status": "blocked", "reason": f"Budget exhausted: {key}", "usage": usage, "limits": limits, "approval_supported": False}
+                repair = db.execute("SELECT payload FROM events WHERE json_extract(payload,'$.event')='repair_required' ORDER BY id DESC LIMIT 1").fetchone()
+                return {"status": "needs_agent", "task_id": row[0], "stage": row[1], "guidance": row[2],
+                        "required_output": REQUIREMENTS[row[1]], "usage": usage, "limits": limits,
+                        "latest_repair": json.loads(repair[0]) if repair else None, "approval_supported": False}
             count = db.execute("SELECT count(*) FROM tasks").fetchone()[0]
             return {"status": "blocked", "reason": "Artifact verification and host review adapters are not implemented" if count else "Start the workflow first", "approval_supported": False}
     finally:

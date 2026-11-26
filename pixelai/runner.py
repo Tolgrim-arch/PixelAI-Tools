@@ -799,7 +799,9 @@ def _check_fresh(spec: dict[str, Any]) -> None:
         visit(spec, "spec")
 
 
-_LIBRARY_ROOT = Path(__file__).resolve().parent.parent / "library"
+from pixelai.resources import library_root
+
+_LIBRARY_ROOT = library_root()
 
 
 def _resolve_import_path(ref: str) -> Path:

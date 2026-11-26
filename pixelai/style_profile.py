@@ -13,7 +13,9 @@ from pixelai.canvas import Canvas
 from pixelai.color import RGBA, luminance
 from pixelai.style_study import analyze_lighting, analyze_outline, analyze_shading
 
-LIBRARY_STYLES_DIR = Path(__file__).resolve().parent.parent / "library" / "styles"
+from pixelai.resources import library_root
+
+LIBRARY_STYLES_DIR = library_root() / "styles"
 
 
 def resolve_style_path(ref: str | Path) -> Path:

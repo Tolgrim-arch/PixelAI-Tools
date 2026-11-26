@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 from PIL import Image, PngImagePlugin
 from pixelai.canvas import Canvas
+from pixelai.animation_contract import durations_ms as validate_durations, clips_by_index
 
 
 def _canvas_to_image(canvas: Canvas) -> Image.Image:
@@ -63,14 +64,14 @@ def export_png(
 
 
 def export_gif(
-    frames: list[Canvas], path: str | Path, fps: int = 8
+    frames: list[Canvas], path: str | Path, fps: int = 8, durations_ms: list[int] | None = None
 ) -> Path:
     """Export a list of Canvases as a clean transparent looping animated GIF."""
     if not frames:
         raise ValueError("Cannot export GIF with zero frames")
     out_path = Path(path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    duration_ms = max(20, int(round(1000 / max(1, fps))))
+    duration_ms = [max(20, round(t / 10) * 10) for t in validate_durations(len(frames), fps, durations_ms)]
     p_frames = [_rgba_to_gif_frame(_canvas_to_image(f)) for f in frames]
     p_frames[0].save(
         out_path,
@@ -92,11 +93,15 @@ def export_spritesheet(
     columns: int | None = None,
     meta_path: str | Path | None = None,
     spec_json: str | None = None,
+    durations_ms: list[int] | None = None,
+    clips: dict | None = None,
 ) -> Path:
     """Pack multiple Canvases into a spritesheet PNG and optional JSON metadata."""
     if not frames:
         raise ValueError("Cannot export spritesheet with zero frames")
     fw, fh = frames[0].width, frames[0].height
+    timings = validate_durations(len(frames), values=durations_ms) if durations_ms is not None else None
+    named_clips = clips_by_index(len(frames), clips) if clips is not None else None
     cols = columns if (columns and columns > 0) else len(frames)
     rows = math.ceil(len(frames) / cols)
 
@@ -113,6 +118,8 @@ def export_spritesheet(
             else f"frame_{idx}"
         )
         frame_meta = {"name": name, "x": x, "y": y, "w": fw, "h": fh}
+        if timings is not None:
+            frame_meta["duration_ms"] = timings[idx]
         if frame.attachments:
             frame_meta["attachments"] = frame.attachments
         meta_frames.append(frame_meta)
@@ -132,6 +139,7 @@ def export_spritesheet(
                     "columns": cols,
                     "rows": rows,
                     "frames": meta_frames,
+                    **({"clips": named_clips} if named_clips is not None else {}),
                 },
                 indent=2,
             ),
@@ -147,11 +155,15 @@ def export_godot_tres(
     frame_names: list[str] | None = None,
     columns: int | None = None,
     fps: int = 8,
+    durations_ms: list[int] | None = None,
+    clips: dict | None = None,
 ) -> Path:
     """Export a Godot 4 SpriteFrames .tres resource referencing the spritesheet PNG."""
     if not frames:
         raise ValueError("Cannot export Godot .tres with zero frames")
     fw, fh = frames[0].width, frames[0].height
+    timings = validate_durations(len(frames), fps, durations_ms)
+    named_clips = clips_by_index(len(frames), clips)
     cols = columns if (columns and columns > 0) else len(frames)
     sheet = Path(sheet_path).resolve()
     out = Path(tres_path)
@@ -183,19 +195,15 @@ def export_godot_tres(
             f"region = Rect2({x}, {y}, {fw}, {fh})",
             "",
         ])
-        frame_refs.append(f'{{"duration": 1.0, "texture": SubResource("{sub_id}")}}')
+        weight = timings[idx] * fps / 1000 if durations_ms is not None else 1.0
+        frame_refs.append(f'{{"duration": {weight}, "texture": SubResource("{sub_id}")}}')
 
     _ = frame_names
-    lines.extend([
-        "[resource]",
-        "animations = [{",
-        f'"frames": [{", ".join(frame_refs)}],',
-        '"loop": true,',
-        '"name": &"default",',
-        f'"speed": {float(fps):.1f}',
-        "}]",
-        "",
-    ])
+    animations = []
+    for name, clip in named_clips.items():
+        refs = ", ".join(frame_refs[i] for i in clip["frames"])
+        animations.append("{\n" + f'"frames": [{refs}],\n"loop": {str(clip["loop"]).lower()},\n"name": &{json.dumps(name)},\n"speed": {float(fps)}\n' + "}")
+    lines.extend(["[resource]", "animations = [" + ",\n".join(animations) + "]", ""])
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8")
     return out

@@ -97,9 +97,46 @@ pixelai inspect sprite.png --ascii --ruler ruler.png
 pixelai extract sprite.png
 ```
 
+Animation specs may provide `"durations_ms": [100, 300, 100]` with one positive
+duration per rendered frame, and named clips such as
+`"clips": {"attack": {"frames": [0, 1, 2], "loop": false}}`.
+Spritesheet metadata preserves both; Godot exports named animations with
+duration weights. GIF previews preserve frame holds with GIF timing rounded to
+10 ms and a minimum of 20 ms. A GIF preview plays the complete frame sequence;
+clip selection belongs to the metadata/runtime.
+
 ---
 
 ## Validate and automate renders
+
+### Experimental managed production
+
+The autonomous production foundation provides a persistent agent task queue,
+stage-specific contracts, hash-bound file evidence, downstream invalidation,
+repair tasks and submission budgets. Initialize a project with a JSON brief
+containing a nonempty `goal`, then use:
+
+```sh
+pixelai project init my-project --brief brief.json
+pixelai workflow start my-project --json
+pixelai workflow next my-project --json
+pixelai workflow submit my-project --task 1 --input response.json
+pixelai workflow resume my-project --json
+```
+
+Each task reports its required output. Evidence records use paths relative to
+the project, for example `{"evidence":[{"path":"art/sprite.png"}]}`. Changing
+accepted evidence reopens dependent tasks. Reviews below 3/4 request repair.
+Review context identities are currently declarations, not host-authenticated
+isolation. The experimental workflow never grants production approval.
+
+`pixelai simulate asset.manifest.json --json` validates exported regions,
+texture identity, coordinates and clip timing. It reports unverified runtime
+behaviors explicitly. `pixelai diversity first.png second.png --json` provides
+approximate silhouette similarity diagnostics, not artistic approval.
+
+See [AUTONOMOUS_ROADMAP.md](AUTONOMOUS_ROADMAP.md) for implemented capabilities,
+remaining stages and acceptance criteria.
 
 New artwork can enforce generation without imported assets:
 
